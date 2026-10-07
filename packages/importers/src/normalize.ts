@@ -9,7 +9,7 @@ export interface Replacement {
   count: number;
   /**
    * True when the replacement loses something the reader might care about, such as an
-   * accent ("é" written as "e"). These should be shown to the user before export.
+   * accent ("\u00e9" written as "e"). These should be shown to the user before export.
    */
   lossy: boolean;
 }
