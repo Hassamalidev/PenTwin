@@ -249,13 +249,19 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** the full user flow, locally: upload -> preview -> export.
 
+> **Started with earlier gates open (owner decision, 2026-10-07).** The Phase 1 blind test
+> and the Phase 3 competitor comparison have not been run, and Phase 2 tasks 2.13 and 2.15
+> are not done. All of them wait on a real handwriting sample. If a blind test fails
+> later, the realism fixes will land on top of this phase's work.
+
 - [ ] **4.1 DOCX importer.** mammoth.js -> normalized blocks (headings, paragraphs, lists, tables, images, bold/italic).
   *Acceptance:* fixture DOCX with all block types parses correctly.
 - [ ] **4.2 Text PDF importer.** pdf.js text extraction with reading-order cleanup (columns, headers/footers, hyphenated line breaks).
   *Acceptance:* fixture PDFs produce clean paragraphs.
 - [ ] **4.3 Scanned PDF / OCR (opt-in).** Tesseract.js with a hard page cap, an explicit user opt-in, and a progress indicator. Warn about accuracy and require review before export.
   *Acceptance:* OCR never runs without opt-in; page cap enforced.
-- [ ] **4.4 Normalization & unsupported characters.** Smart quotes, dashes, ligatures, and special symbols mapped sensibly. Anything unsupported is **listed in a pre-export warning**, never silently dropped.
+- [x] **4.4 Normalization & unsupported characters.** Smart quotes, dashes, ligatures, and special symbols mapped sensibly. Anything unsupported is **listed in a pre-export warning**, never silently dropped.
+  *Note:* typographic characters become plain ones; accented letters the bank lacks are written without the accent and reported as lossy; emoji, math symbols and other alphabets stay in place and are listed with a plain-language warning (`describeProblems`). Also adds italic (extra lean) to the engine for the importers to use.
   *Acceptance:* a document with emoji and math symbols produces a clear warning list.
 - [ ] **4.5 Editor UI.** Left: text blocks (editable). Right: live preview (client-side, free, low-res, watermarked). Controls for preset, ink, paper, realism sliders, font size, seed ("reroll look").
   *Acceptance:* preview updates within ~1 second for a typical page.

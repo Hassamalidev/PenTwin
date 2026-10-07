@@ -15,6 +15,8 @@ import { createPageWriter, type PageWriter, type RenderReport, type Token } from
 export interface Run {
   text: string;
   bold?: boolean;
+  /** Written with extra lean, the way emphasis is shown by hand. */
+  italic?: boolean;
 }
 
 export type Block =
@@ -135,7 +137,11 @@ export function renderDocument(
       return text
         .split(/\s+/)
         .filter(Boolean)
-        .map((word) => ({ ...readMarkers(word), bold: style.bold ?? run.bold }));
+        .map((word) => ({
+          ...readMarkers(word),
+          bold: style.bold ?? run.bold,
+          italic: run.italic,
+        }));
     });
 
   /** Greedy word wrap of tokens into lines no wider than `width`. */

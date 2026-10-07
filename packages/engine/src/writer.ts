@@ -39,6 +39,8 @@ export interface Token {
   text: string;
   /** Heavier strokes. */
   bold?: boolean;
+  /** Extra lean. */
+  italic?: boolean;
   /** A mistake: written, then crossed out. */
   struck?: boolean;
   /** Index of a letter that is gone over a second time. */
@@ -91,6 +93,8 @@ export interface WriterSetup {
 
 /** Word gaps shrink at most this far to keep a line inside its right limit. */
 const MIN_GAP_SQUEEZE = 0.5;
+/** Extra lean of italic text, in radians (about 10 degrees). */
+const ITALIC_LEAN = 0.18;
 /** Pen width multiplier for bold stroke glyphs. */
 const BOLD_STROKE = 1.6;
 /** Outline added around bold filled glyphs, as a fraction of the pen width. */
@@ -104,6 +108,7 @@ interface Slot {
   isWordStart: boolean;
   advance: number;
   bold: boolean;
+  italic: boolean;
   /** Which token this belongs to, and where in it. */
   token: number;
   charIndex: number;
@@ -237,6 +242,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           isWordStart,
           advance,
           bold: token.bold ?? false,
+          italic: token.italic ?? false,
           token: tokenIndex,
           charIndex,
         });
@@ -268,7 +274,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
       if (slot.glyph) {
         const { style } = slot;
         const scale = unit * size * style.scale;
-        const tanSlant = Math.tan(style.slant);
+        const tanSlant = Math.tan(style.slant + (slot.italic ? ITALIC_LEAN : 0));
         const angle = style.rotation + lineStyle.slope;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);

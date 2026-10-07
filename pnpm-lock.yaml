@@ -67,7 +67,14 @@ importers:
         specifier: ^1.17.1
         version: 1.17.1
 
-  packages/importers: {}
+  packages/importers:
+    dependencies:
+      '@pentwin/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@pentwin/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared: {}
 
