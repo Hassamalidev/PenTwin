@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { pathBounds, PRESETS, renderText, type JitterParams } from '@pentwin/engine';
 import { loadGlyphBank, sceneToPixels } from '@pentwin/engine/node';
 import { createRng } from '@pentwin/shared';
+import { alignToText } from './align';
+import { cleanImage } from './clean';
 import { boxBlur, rotateGray, toGray, type GrayImage, type RgbaImage } from './image';
 import { sampleTextOf, type SampleText } from './sample-text';
+import { segmentPage } from './segment';
 
 /**
  * Test support: fake "phone photos" of a handwriting sample.
@@ -34,6 +37,9 @@ export interface SamplePage {
   truth: TruthGlyph[];
   /** Pixels per millimetre. */
   pxPerMm: number;
+  /** Lines of writing on the page. */
+  lineCount: number;
+  wordCount: number;
 }
 
 export interface SamplePageOptions {
@@ -61,6 +67,8 @@ export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
   return {
     gray: toGray(sceneToPixels(scene, dpi)),
     pxPerMm,
+    lineCount: scene.baselines.length,
+    wordCount: (options.text ?? SAMPLE_TEXT).split(/\s+/).filter(Boolean).length,
     truth: scene.strokes.map((stroke) => {
       const b = pathBounds(stroke.path);
       return {
@@ -117,6 +125,13 @@ export function toRgba(gray: GrayImage): RgbaImage {
   return { width: gray.width, height: gray.height, data };
 }
 
+/** Runs a photo through cleanup, segmentation and labeling. */
+export function extractLabels(photo: GrayImage, text = SAMPLE_TEXT) {
+  const { binary } = cleanImage(toRgba(photo));
+  const page = segmentPage(binary);
+  return { binary, page, alignment: alignToText(page, binary.width, text) };
+}
+
 /** The conditions the pipeline is tested under. */
 export const CONDITIONS: Record<string, Degradation> = {
   good: { noise: 3 },
@@ -125,3 +140,38 @@ export const CONDITIONS: Record<string, Degradation> = {
   shadowed: { shadow: 0.55, noise: 3 },
   blurry: { blur: 1, noise: 3 },
 };
+
+export interface AlignmentScore {
+  /** Share of the page's characters that got the right label. */
+  correct: number;
+  /** Share of the page's characters that got a wrong label. */
+  wrong: number;
+  /** Share left unlabeled (flagged or missed). */
+  unlabeled: number;
+  mistakes: string[];
+}
+
+/** Compares labeled cuts with the characters actually written at those positions. */
+export function scoreAlignment(
+  glyphs: readonly { char: string; x0: number; y0: number; x1: number; y1: number }[],
+  truth: readonly TruthGlyph[],
+): AlignmentScore {
+  let correct = 0;
+  let wrong = 0;
+  const mistakes: string[] = [];
+  for (const t of truth) {
+    // The cut that contains this character's centre; the tightest one if several do.
+    const hits = glyphs
+      .filter((g) => t.x >= g.x0 - 2 && t.x < g.x1 + 2 && t.y >= g.y0 - 2 && t.y < g.y1 + 2)
+      .sort((a, b) => (a.x1 - a.x0) * (a.y1 - a.y0) - (b.x1 - b.x0) * (b.y1 - b.y0));
+    const hit = hits[0];
+    if (!hit) continue;
+    if (hit.char === t.char) correct++;
+    else {
+      wrong++;
+      mistakes.push(`${t.char}->${hit.char}`);
+    }
+  }
+  const n = truth.length;
+  return { correct: correct / n, wrong: wrong / n, unlabeled: (n - correct - wrong) / n, mistakes };
+}

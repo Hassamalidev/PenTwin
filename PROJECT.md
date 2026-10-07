@@ -167,7 +167,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.4 Image quality gate.** Detect blur (Laplacian variance), low resolution, heavy shadow, cropping. Return specific, friendly instructions ("Move closer", "Add more light") instead of a generic error.
   *Note:* limits are calibrated on synthetic photos only and need checking against real phone photos. A page photographed against a dark table is not handled yet (the surroundings would read as ink).
   *Acceptance:* bad fixtures rejected with the right message; good ones pass.
-- [ ] **2.5 Line & word segmentation (`segment.ts`).** Horizontal projection for lines (handle slanted/uneven lines), gaps for words.
+- [x] **2.5 Line & word segmentation (`segment.ts`).** Horizontal projection for lines (handle slanted/uneven lines), gaps for words.
+  *Note:* line and word counts match on all five synthetic photo conditions (words within 3%). Relies on deskew; lines that curve or drift on their own are not handled.
   *Acceptance:* line count and word count match expected on fixtures within a tolerance.
 - [ ] **2.6 Alignment to known text (`align.ts`).** Match detected words/characters to the expected paragraph so each cut gets a label. Use sequence alignment (edit-distance style) so one missed or merged word doesn't ruin everything after it.
   *Acceptance:* >= 90% of characters labeled correctly on clean fixtures; low-confidence cuts flagged, not guessed.
