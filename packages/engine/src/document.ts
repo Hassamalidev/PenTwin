@@ -19,14 +19,26 @@ export interface Run {
   italic?: boolean;
 }
 
-export type Block =
-  | { type: 'heading'; text: string; level?: 1 | 2 }
+export type Block = (
+  | {
+      type: 'heading';
+      text: string;
+      level?: 1 | 2;
+      /** Size relative to body text. Defaults to 1.35 for level 1 and 1.15 for level 2. */
+      scale?: number;
+      /** Defaults to underlined for level 1 only. */
+      underline?: boolean;
+    }
   | { type: 'paragraph'; text: string | Run[] }
   | { type: 'list'; ordered?: boolean; items: (string | Run[])[] }
   | { type: 'table'; rows: string[][] }
   /** `href` is a data URL (PNG or JPEG) or a link. Size in mm; scaled down if too wide. */
   | { type: 'image'; href: string; width: number; height: number }
-  | { type: 'pageBreak' };
+  | { type: 'pageBreak' }
+) & {
+  /** Leave this block out of the output, without deleting it from the document. */
+  skip?: boolean;
+};
 
 const HEADING_SCALE = { 1: 1.35, 2: 1.15 } as const;
 /** Space between a table cell's border and its text, in mm. */
@@ -173,6 +185,7 @@ export function renderDocument(
   };
 
   for (const block of blocks) {
+    if (block.skip) continue;
     switch (block.type) {
       case 'pageBreak':
         if (sheet.line > 0) sheet = newSheet();
@@ -180,7 +193,8 @@ export function renderDocument(
 
       case 'heading': {
         const level = block.level ?? 1;
-        const scale = HEADING_SCALE[level];
+        const scale = block.scale ?? HEADING_SCALE[level];
+        const underline = block.underline ?? level === 1;
         const lines = wrap(toTokens(block.text, { bold: true }), right - left, scale);
         skip(1);
         // Keep a heading together with at least one line of what follows.
@@ -188,7 +202,7 @@ export function renderDocument(
         for (const line of lines) {
           const at = nextLine();
           const end = sheet.writer.writeLine(line, { ...at, left, right, scale });
-          if (level === 1) {
+          if (underline) {
             const y = at.baseline + page.xHeight * 0.5;
             sheet.writer.drawLine(left, y, end, y);
           }

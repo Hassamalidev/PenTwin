@@ -12,27 +12,34 @@ const run = z.object({
 });
 const content = z.union([text, z.array(run).max(500)]);
 
+const skip = z.boolean().optional();
+
 const block = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('heading'),
     text,
     level: z.union([z.literal(1), z.literal(2)]).optional(),
+    scale: z.number().min(0.8).max(2).optional(),
+    underline: z.boolean().optional(),
+    skip,
   }),
-  z.object({ type: z.literal('paragraph'), text: content }),
+  z.object({ type: z.literal('paragraph'), text: content, skip }),
   z.object({
     type: z.literal('list'),
     ordered: z.boolean().optional(),
     items: z.array(content).max(500),
+    skip,
   }),
-  z.object({ type: z.literal('table'), rows: z.array(z.array(text).max(20)).max(500) }),
+  z.object({ type: z.literal('table'), rows: z.array(z.array(text).max(20)).max(500), skip }),
   z.object({
     type: z.literal('image'),
     // Only pictures carried in the request itself: the worker never fetches a URL.
     href: z.string().regex(/^data:image\/(png|jpe?g);base64,[A-Za-z0-9+/=]+$/),
     width: z.number().positive().max(500),
     height: z.number().positive().max(500),
+    skip,
   }),
-  z.object({ type: z.literal('pageBreak') }),
+  z.object({ type: z.literal('pageBreak'), skip }),
 ]);
 
 const jitter = z.object({

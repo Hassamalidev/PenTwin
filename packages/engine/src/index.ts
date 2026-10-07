@@ -16,3 +16,4 @@ export * from './corrections';
 export * from './effects';
 export * from './document';
 export * from './furniture';
+export * from './quote';

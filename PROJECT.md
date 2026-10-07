@@ -268,9 +268,11 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* a document with emoji and math symbols produces a clear warning list.
 - [ ] **4.5 Editor UI.** Left: text blocks (editable). Right: live preview (client-side, free, low-res, watermarked). Controls for preset, ink, paper, realism sliders, font size, seed ("reroll look").
   *Acceptance:* preview updates within ~1 second for a typical page.
-- [ ] **4.6 Per-block overrides.** Different style for headings, ability to skip blocks, ability to add a page break.
+- [~] **4.6 Per-block overrides.** Different style for headings, ability to skip blocks, ability to add a page break.
+  *Note:* IN PROGRESS. The engine and worker side is done and tested: any block can be skipped, a heading can be resized or (un)underlined, page breaks are blocks, and all of it reaches the exported PDF. **The editor controls for it are not built yet.**
   *Acceptance:* overrides persist in export.
-- [ ] **4.7 Export dialog.** Shows exact page count and credit cost **before** export, with a settings summary.
+- [~] **4.7 Export dialog.** Shows exact page count and credit cost **before** export, with a settings summary.
+  *Note:* IN PROGRESS. `quoteExport` gives the exact page count, cost (1 credit per page) and a plain-words settings summary; tests confirm it equals what the worker then exports for five kinds of document. **The dialog itself is not built yet.**
   *Acceptance:* the displayed cost equals the real cost on export.
 - [x] **4.8 Export worker (local).** Final render on the worker (not client), returns signed download. Idempotent: same document + settings + seed within 24h returns the cached result for free.
   *Note:* plain Node HTTP server, no framework. Same request within 24 hours is served from the cache with `billablePages: 0`; a failed export leaves no file behind (covered by tests). Requests are validated strictly and pictures must be embedded, so the worker never fetches a URL. Start with `pnpm worker`; settings are in `.env.example`. Credits are not deducted here: that is Phase 5.
