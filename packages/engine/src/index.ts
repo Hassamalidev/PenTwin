@@ -10,3 +10,4 @@ export * from './paper';
 export * from './pdf';
 export * from './presets';
 export * from './writer';
+export * from './autotune';

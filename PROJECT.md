@@ -210,7 +210,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** go beyond "letters placed on a line" to output that survives scrutiny.
 
-- [ ] **3.1 Auto-tune jitter from the user's own style.** Use style features from 2.14 so a naturally neat writer isn't made messy and vice versa.
+- [x] **3.1 Auto-tune jitter from the user's own style.** Use style features from 2.14 so a naturally neat writer isn't made messy and vice versa.
+  *Note:* the sample now also yields four consistency measures (slant, size, baseline and spacing variation), and `tuneJitter(style, xHeight)` turns them into settings. It adds no slant, because extracted glyphs already lean the way the writer does. Callers pass the result as `jitter`; nothing applies it automatically yet.
   *Acceptance:* two different profiles give visibly different default behavior.
 - [ ] **3.2 Bigram/ligature support.** Capture common pairs when cleanly cut (th, er, in, an, ing, ll...) and prefer them in rendering to break repetition.
   *Acceptance:* a count of bigram usage in a sample output; no visible join artifacts.

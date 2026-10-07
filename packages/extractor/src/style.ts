@@ -1,28 +1,20 @@
+import type { StyleFeatures } from '@pentwin/shared';
 import type { NormalizedGlyph, PageMetrics } from './normalize';
 import { vectorize } from './vectorize';
 
-/**
- * A few numbers describing how someone writes, independent of the size they wrote at.
- * Stored with the profile; later used to tune the renderer to the writer and to compare
- * handwriting styles.
- */
-export interface StyleFeatures {
-  /** Lean of the upright strokes in degrees. Positive leans right. */
-  slant: number;
-  /** Pen stroke thickness as a fraction of the x-height. */
-  strokeWidth: number;
-  /** x-height as a fraction of the capital height. Low means small letters, tall capitals. */
-  xHeightRatio: number;
-  /** How circular the round letters are, 0 to 1. 1 is a perfect circle. */
-  roundness: number;
-  /** Width of an average lowercase letter as a fraction of the x-height. */
-  letterWidth: number;
-}
+export type { StyleFeatures };
 
 const median = (values: number[], fallback: number): number => {
   if (values.length === 0) return fallback;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)]!;
+};
+
+/** Standard deviation; 0 for fewer than two values. */
+const deviation = (values: number[]): number => {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length);
 };
 
 /**
@@ -87,9 +79,16 @@ export function measureStyle(
   const trusted = glyphs.filter((g) => g.confidence >= 0.6);
   const of = (chars: string): NormalizedGlyph[] => trusted.filter((g) => chars.includes(g.char));
 
+  // Letters built around one long upright stroke.
+  const slants = of('lbdhkIt1').map(slantOf);
+  const small = of('acenorsuvxz');
+
   return {
-    // Letters built around one long upright stroke.
-    slant: median(of('lbdhkIt1').map(slantOf), 0),
+    slant: median(slants, 0),
+    slantVariation: deviation(slants),
+    sizeVariation: deviation(small.map((g) => g.baseline)) / metrics.xHeight,
+    baselineWobble: deviation(small.map((g) => g.bitmap.height - g.baseline)) / metrics.xHeight,
+    spacingVariation: deviation(trusted.map((g) => g.lsb + g.rsb)) / metrics.xHeight,
     strokeWidth: metrics.strokeWidth / metrics.xHeight,
     xHeightRatio: metrics.xHeight / metrics.capHeight,
     roundness: median(
