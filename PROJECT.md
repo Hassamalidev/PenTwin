@@ -254,7 +254,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 > are not done. All of them wait on a real handwriting sample. If a blind test fails
 > later, the realism fixes will land on top of this phase's work.
 
-- [ ] **4.1 DOCX importer.** mammoth.js -> normalized blocks (headings, paragraphs, lists, tables, images, bold/italic).
+- [x] **4.1 DOCX importer.** mammoth.js -> normalized blocks (headings, paragraphs, lists, tables, images, bold/italic).
+  *Note:* mammoth converts to HTML and a small built-in reader turns that into blocks. Nested lists are flattened; table cells keep text only; page layout, fonts, footnotes and comments are dropped. Pictures other than PNG and JPEG produce a warning. The fixture document is built in the test with the `docx` library (dev dependency).
   *Acceptance:* fixture DOCX with all block types parses correctly.
 - [ ] **4.2 Text PDF importer.** pdf.js text extraction with reading-order cleanup (columns, headers/footers, hyphenated line breaks).
   *Acceptance:* fixture PDFs produce clean paragraphs.

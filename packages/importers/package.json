@@ -8,6 +8,11 @@
   },
   "dependencies": {
     "@pentwin/engine": "workspace:*",
-    "@pentwin/shared": "workspace:*"
+    "@pentwin/shared": "workspace:*",
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^6.4.299"
+  },
+  "devDependencies": {
+    "docx": "^9.9.0"
   }
 }
