@@ -5,14 +5,16 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
+  applyEffects,
   DEFAULT_JITTER,
+  encodePng,
   NO_JITTER,
   PRESETS,
   renderText,
   type PaperSpec,
   type RenderOptions,
 } from '../packages/engine/src/index';
-import { loadGlyphBank, sceneToPng } from '../packages/engine/src/node/index';
+import { loadGlyphBank, sceneToPixels, sceneToPng } from '../packages/engine/src/node/index';
 
 const { bank } = loadGlyphBank('tests/fixtures/glyphs/sample-user');
 const sample = readFileSync('tests/sample.txt', 'utf8');
@@ -68,5 +70,23 @@ mkdirSync('docs/samples', { recursive: true });
 for (const [name, [text, options]] of Object.entries(samples)) {
   const { pages } = renderText(text, bank, options);
   writeFileSync(`docs/samples/${name}.png`, sceneToPng(pages[0]!, 110));
+  console.log(`docs/samples/${name}.png`);
+}
+
+// The same page clean, as a flatbed scan, and as a phone photo with a fold.
+const { pages: effectPages } = renderText(sample, bank, {
+  ...base,
+  jitter: PRESETS.normal,
+  ink: 'ballpoint-blue',
+  paper: { kind: 'ruled', ruling: 'college', marginLine: true },
+});
+// A lower resolution than the other samples: noise makes these files large.
+const cleanPage = sceneToPixels(effectPages[0]!, 80);
+for (const [name, options] of [
+  ['effect-scan', { mode: 'scan' }],
+  ['effect-photo', { mode: 'photo', crease: true }],
+] as const) {
+  const image = applyEffects(cleanPage, { seed: 'samples', ...options });
+  writeFileSync(`docs/samples/${name}.png`, await encodePng(image));
   console.log(`docs/samples/${name}.png`);
 }

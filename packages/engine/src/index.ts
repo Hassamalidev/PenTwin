@@ -13,3 +13,4 @@ export * from './writer';
 export * from './autotune';
 export * from './ink';
 export * from './corrections';
+export * from './effects';

@@ -225,7 +225,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.5 Corrections.** Occasional strikethrough with a rewritten word, small overwrites. Frequency is a slider, default low. Never alter meaning-critical text (numbers, names, formulas): protect those tokens.
   *Note:* off by default (`corrections: 0`), not "default low" as the plan says, so existing output does not change silently; 0.01-0.03 looks natural. Only plain lowercase words of 4+ letters are eligible, which is what protects numbers, names and formulas. A test proves the page spells exactly the original text once corrections are set aside. Sample: `docs/samples/corrections.png`.
   *Acceptance:* corrections appear naturally and never corrupt protected tokens.
-- [ ] **3.6 Scan & photo effects (`effects.ts`).** Clean-scan mode and phone-photo mode: gentle shadow gradient, slight rotation, paper grain, vignette, noise, optional crease. Keep subtle; heavy filters look fake.
+- [x] **3.6 Scan & photo effects (`effects.ts`).** Clean-scan mode and phone-photo mode: gentle shadow gradient, slight rotation, paper grain, vignette, noise, optional crease. Keep subtle; heavy filters look fake.
+  *Note:* works on rendered pixels, so it applies to PNG output only, not PDF. Off unless called (`applyEffects`), with a 0-1 strength and an optional crease. Before/after: `docs/samples/effect-scan.png`, `effect-photo.png` against `paper-ruled.png`.
   *Acceptance:* before/after samples; effect is toggleable and tuned.
 - [ ] **3.7 Headers & page furniture.** Handwritten name/roll number/date header, page numbers, underlined headings, optional margin notes.
   *Acceptance:* header fields configurable and rendered in the user's handwriting.
