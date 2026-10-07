@@ -257,7 +257,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **4.1 DOCX importer.** mammoth.js -> normalized blocks (headings, paragraphs, lists, tables, images, bold/italic).
   *Note:* mammoth converts to HTML and a small built-in reader turns that into blocks. Nested lists are flattened; table cells keep text only; page layout, fonts, footnotes and comments are dropped. Pictures other than PNG and JPEG produce a warning. The fixture document is built in the test with the `docx` library (dev dependency).
   *Acceptance:* fixture DOCX with all block types parses correctly.
-- [ ] **4.2 Text PDF importer.** pdf.js text extraction with reading-order cleanup (columns, headers/footers, hyphenated line breaks).
+- [x] **4.2 Text PDF importer.** pdf.js text extraction with reading-order cleanup (columns, headers/footers, hyphenated line breaks).
+  *Note:* handles two columns, running headers and footers, page numbers, hyphenated line breaks and paragraphs that run across pages. Only the text layer is read: pictures and tables in a PDF are not imported. A genuinely hyphenated word that happens to break at its hyphen is rejoined without it. Pages with no text layer are reported, not silently skipped. Fixture PDFs are generated in the tests, not real-world files.
   *Acceptance:* fixture PDFs produce clean paragraphs.
 - [ ] **4.3 Scanned PDF / OCR (opt-in).** Tesseract.js with a hard page cap, an explicit user opt-in, and a progress indicator. Warn about accuracy and require review before export.
   *Acceptance:* OCR never runs without opt-in; page cap enforced.

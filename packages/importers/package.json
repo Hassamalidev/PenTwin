@@ -13,6 +13,7 @@
     "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
-    "docx": "^9.9.0"
+    "docx": "^9.9.0",
+    "pdf-lib": "^1.17.1"
   }
 }
