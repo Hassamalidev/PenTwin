@@ -88,7 +88,7 @@ A task is **not done** until all steps below are complete:
   *Acceptance:* `pnpm typecheck && pnpm lint && pnpm test` pass on an empty-but-wired repo.
 - [x] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
   *Acceptance:* green check on the latest commit.
-- [ ] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
+- [x] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
   *Acceptance:* same seed yields identical sequence; lint fails on `Math.random()` in `packages/engine`.
 - [ ] **0.5 Assumption check: payments.** Research whether Lemon Squeezy, Paddle, or an alternative can pay out to a Pakistan-based seller. Write findings to `docs/payments-decision.md` with sources and the chosen provider plus a backup. *Do not guess; verify current terms.*
   *Acceptance:* a documented decision, flagged for the user to confirm.

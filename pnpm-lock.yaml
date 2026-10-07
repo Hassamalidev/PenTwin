@@ -37,7 +37,11 @@ importers:
 
   apps/worker: {}
 
-  packages/engine: {}
+  packages/engine:
+    dependencies:
+      '@pentwin/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/extractor: {}
 
