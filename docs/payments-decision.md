@@ -1,6 +1,8 @@
 # Payments decision (Task 0.5)
 
-**Status: PROPOSED, needs confirmation by the project owner.** Researched 2026-10-07.
+**Status: CONFIRMED by the project owner on 2026-10-07.** Researched the same day.
+
+> **Approval is unproven.** Neither provider has accepted an application from us yet. Appearing on a supported-country list does not mean an account will be approved, so treat this decision as provisional until one is.
 
 ## Question
 
@@ -48,9 +50,8 @@ Paddle is first because its payout route is the best documented one for Pakistan
 
 ## Action items for the owner
 
-1. Confirm or change the primary/backup choice above.
-2. Open a Payoneer account if there isn't one.
-3. Apply to Paddle and Lemon Squeezy as soon as the landing and legal pages exist (Phase 6), not at Phase 5.
+1. Open a Payoneer account if there isn't one.
+2. Apply to Paddle and Lemon Squeezy as soon as the landing and legal pages exist (Phase 6), not at Phase 5.
 
 ## Sources
 
