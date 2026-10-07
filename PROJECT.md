@@ -120,7 +120,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* unit tests for long words, empty lines, exact-fit lines, page overflow.
 - [x] **1.3 Glyph bank & variant selection (`glyphs.ts`).** Load a bank, pick variants with `variantAvoidRepeat` (never the same variant twice in a row, and avoid repeating within a short window).
   *Acceptance:* test shows no immediate repeats over 10,000 picks with >= 2 variants.
-- [ ] **1.4 Renderer (`render.ts`).** Place glyphs on an SVG page respecting baseline, advance width, and side bearings. Spaces and unknown characters handled safely (report, don't crash).
+- [x] **1.4 Renderer (`render.ts`).** Place glyphs on an SVG page respecting baseline, advance width, and side bearings. Spaces and unknown characters handled safely (report, don't crash).
+  *Note:* sample text is `tests/sample.txt`, golden page is `tests/golden/sample-page-1.svg`.
   *Acceptance:* a generated SVG page for `test/sample.txt` committed as a golden snapshot.
 - [ ] **1.5 Jitter module (`jitter.ts`).** All parameters from CLAUDE.md 5.5 (baseline drift, line slope, rotation, size, word/letter spacing, slant, stroke width), seeded and configurable. Make drift **correlated** (smooth low-frequency noise), not pure white noise. Humans drift smoothly; pure random looks fake.
   *Acceptance:* visual sample with jitter off vs on; same seed reproduces exactly.
