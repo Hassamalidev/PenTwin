@@ -5,3 +5,6 @@ coverage
 pnpm-lock.yaml
 PROJECT.md
 CLAUDE.md
+tests/fixtures
+tests/golden
+scripts/data

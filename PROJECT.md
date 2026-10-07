@@ -112,7 +112,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** text + glyph set + seed -> realistic multi-page PDF. No UI, no accounts. If this doesn't look good, nothing else matters.
 
-- [ ] **1.1 Test glyph set.** Create `tests/fixtures/glyphs/sample-user/` with at least 3 SVG variants per a-z, A-Z, 0-9, and common punctuation, plus `metadata.json` (baseline offset, advance width, side bearings). A script to hand-build or convert from the user's own handwriting photos is fine. Rough quality is OK.
+- [x] **1.1 Test glyph set.** Create `tests/fixtures/glyphs/sample-user/` with at least 3 SVG variants per a-z, A-Z, 0-9, and common punctuation, plus `metadata.json` (baseline offset, advance width, side bearings). A script to hand-build or convert from the user's own handwriting photos is fine. Rough quality is OK.
+  *Note:* the set is synthetic (Hershey single-stroke font, smoothed and perturbed into 3 variants), not real handwriting. Regenerate with `pnpm fixtures:glyphs`.
   *Acceptance:* a loader validates the set with zod and reports missing characters.
 - [ ] **1.2 Layout engine (`layout.ts`).** Greedy line-breaking with word wrap, margins, A4/Letter/A5, pagination, paragraph spacing, hyphenation off by default.
   *Acceptance:* unit tests for long words, empty lines, exact-fit lines, page overflow.
