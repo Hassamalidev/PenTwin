@@ -237,7 +237,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.9 Presets v2.** Add "Exam hall" and "Lecture notes". Each is a parameter bundle plus paper/ink defaults.
   *Note:* `presetOptions(name)` returns the hand plus ink, paper and correction rate for all five presets; `PRESETS` still holds the jitter alone. Samples: `docs/samples/preset-exam.png`, `preset-lecture.png`.
   *Acceptance:* five presets, each distinct.
-- [ ] **3.10 Competitor comparison.** Generate the same text with 2-3 existing font-based tools and PenTwin; save side-by-side images in `docs/benchmarks/`.
+- [!] **3.10 Competitor comparison.** Generate the same text with 2-3 existing font-based tools and PenTwin; save side-by-side images in `docs/benchmarks/`.
+  *Note:* BLOCKED, gate NOT passed. Needs output from real competitor tools, a glyph bank from real handwriting, and 5+ outside testers. Prepared: the protocol in `docs/benchmarks/README.md` and a stand-in image (`pnpm benchmark`) comparing the engine with a font-style rendering of our own glyphs, which is not a competitor and not evidence for the gate.
   *Acceptance:* **Gate:** PenTwin is clearly more natural in a 5+ person blind comparison. If not, iterate before moving on.
 
 **Risk:** realism features combine; always test combinations (fatigue + corrections + photo effect), not just each alone.

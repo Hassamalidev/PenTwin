@@ -2,7 +2,7 @@
 
 Your handwriting's twin. Turn any DOCX/PDF into realistic handwriting built from your own writing sample.
 
-**Status:** early development (Phase 1, rendering engine). See [PROJECT.md](PROJECT.md) for the build plan and task tracker.
+**Status:** early development. The rendering engine and the handwriting extractor work on synthetic test data; neither has been tried on real handwriting yet. See [PROJECT.md](PROJECT.md) for the build plan and task tracker.
 
 ## Development
 
@@ -19,4 +19,8 @@ Engine tools:
 pnpm samples          # render the sample images in docs/samples
 pnpm bench            # 50-page performance benchmark (see docs/perf.md)
 pnpm fixtures:glyphs  # regenerate the synthetic test glyph set
+pnpm extract:demo     # photo -> glyph bank -> written page, on a synthetic photo
+pnpm extract:measure  # extraction accuracy table (docs/extraction-accuracy.md)
+pnpm sample:sheet     # the printable handwriting sample sheet
+pnpm benchmark        # font-style vs engine side-by-side (docs/benchmarks)
 ```

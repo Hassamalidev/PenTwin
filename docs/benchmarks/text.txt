@@ -1,0 +1,1 @@
+The experiment was repeated three times and the results were recorded in a table. Each reading was taken after the liquid had settled, because an early reading gave a value that was too high. The average of the three readings was then compared with the expected value, and the difference between them was found to be small enough to ignore.

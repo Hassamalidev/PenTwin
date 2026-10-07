@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { applyEffects } from './effects';
 import { INKS } from './ink';
+import { sceneToPixels } from './node/png';
 import { pathBounds } from './path';
 import { presetOptions, PRESETS, type PresetName } from './presets';
 import { renderText } from './render';
@@ -72,5 +74,35 @@ describe('presets v2', { timeout: 120_000 }, () => {
     }).pages[0]!;
     expect(scene.inkColor).toBe(INKS.gel.color);
     expect(scene.strokes.some((s) => s.struck)).toBe(false);
+  });
+});
+
+describe('realism features combined', { timeout: 120_000 }, () => {
+  it('fatigue, corrections, ink and a photo effect work together without losing text', () => {
+    const { pages, corrections } = renderText(text, bank, {
+      seed: 'all',
+      ...presetOptions('exam'),
+      corrections: 0.2,
+      header: [{ label: 'Name', value: 'Sara Khan' }],
+      pageNumbers: true,
+    });
+    expect(corrections.struck + corrections.retraced).toBeGreaterThan(5);
+
+    // Everything that is not a correction, header or page number spells the text.
+    const body = pages.flatMap((page, i) => {
+      const top = page.baselines[0]! - 4;
+      return page.strokes
+        .filter((s) => s.char !== '' && !s.struck && !s.retrace)
+        .filter((s) => pathBounds(s.path).maxY > top)
+        .slice(0, -String(i + 1).length);
+    });
+    expect(body.map((s) => s.char).join('')).toBe(text.replace(/\s+/g, ''));
+
+    const clean = sceneToPixels(pages[0]!, 60);
+    const photo = applyEffects(clean, { mode: 'photo', seed: 'all', crease: true });
+    expect(photo.width).toBe(clean.width);
+    let changed = 0;
+    for (let i = 0; i < photo.data.length; i += 4) if (photo.data[i] !== clean.data[i]) changed++;
+    expect(changed / (photo.data.length / 4)).toBeGreaterThan(0.9);
   });
 });
