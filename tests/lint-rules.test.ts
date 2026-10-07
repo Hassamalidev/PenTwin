@@ -8,7 +8,8 @@ const lint = async (filePath: string) => {
   return result?.messages ?? [];
 };
 
-describe('lint rules', () => {
+// Loading ESLint and its config is slow on a cold start.
+describe('lint rules', { timeout: 30_000 }, () => {
   it('bans Math.random() in packages/engine', async () => {
     const messages = await lint('packages/engine/src/example.ts');
     expect(messages.some((m) => m.ruleId === 'no-restricted-properties')).toBe(true);
