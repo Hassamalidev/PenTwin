@@ -132,7 +132,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.7 Paper backgrounds (`paper.ts`).** Plain, ruled (narrow/wide/college), margin line, graph, dotted. Text must sit **on the lines** with believable imperfection.
   *Note:* graph and dotted paper place one line of writing every two 5mm rows. Visual samples: `docs/samples/paper-*.png`.
   *Acceptance:* ruled-page sample where baseline tracks the ruling.
-- [ ] **1.8 PDF/PNG export.** pdf-lib multi-page PDF, plus per-page PNG. Embed vector where possible to keep files small.
+- [x] **1.8 PDF/PNG export.** pdf-lib multi-page PDF, plus per-page PNG. Embed vector where possible to keep files small.
+  *Note:* a 10-page ruled A4 PDF is 1.7 MB (about 170 KB per page), fully vector, and was checked by rasterizing it in a separate PDF renderer. PNG export uses `@resvg/resvg-js` (new dependency, Node only).
   *Acceptance:* 10-page PDF opens in a standard viewer; file size is reasonable (record it).
 - [ ] **1.9 Performance baseline.** Benchmark pages/second and memory for a 50-page document; record in `docs/perf.md`.
   *Acceptance:* a documented baseline and a target (e.g., a page renders in < 1s on a modest server).
