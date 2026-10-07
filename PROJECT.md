@@ -115,7 +115,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.1 Test glyph set.** Create `tests/fixtures/glyphs/sample-user/` with at least 3 SVG variants per a-z, A-Z, 0-9, and common punctuation, plus `metadata.json` (baseline offset, advance width, side bearings). A script to hand-build or convert from the user's own handwriting photos is fine. Rough quality is OK.
   *Note:* the set is synthetic (Hershey single-stroke font, smoothed and perturbed into 3 variants), not real handwriting. Regenerate with `pnpm fixtures:glyphs`.
   *Acceptance:* a loader validates the set with zod and reports missing characters.
-- [ ] **1.2 Layout engine (`layout.ts`).** Greedy line-breaking with word wrap, margins, A4/Letter/A5, pagination, paragraph spacing, hyphenation off by default.
+- [x] **1.2 Layout engine (`layout.ts`).** Greedy line-breaking with word wrap, margins, A4/Letter/A5, pagination, paragraph spacing, hyphenation off by default.
+  *Note:* `hyphenate` only adds a hyphen where an over-long word is force-broken; dictionary hyphenation is not implemented.
   *Acceptance:* unit tests for long words, empty lines, exact-fit lines, page overflow.
 - [ ] **1.3 Glyph bank & variant selection (`glyphs.ts`).** Load a bank, pick variants with `variantAvoidRepeat` (never the same variant twice in a row, and avoid repeating within a short window).
   *Acceptance:* test shows no immediate repeats over 10,000 picks with >= 2 variants.
