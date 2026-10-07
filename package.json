@@ -19,7 +19,8 @@
     "sample:sheet": "tsx scripts/make-sample-sheet.ts",
     "extract:measure": "tsx scripts/measure-extraction.ts",
     "extract:demo": "tsx scripts/extract-demo.ts",
-    "benchmark": "tsx scripts/make-benchmark.ts"
+    "benchmark": "tsx scripts/make-benchmark.ts",
+    "worker": "tsx apps/worker/src/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

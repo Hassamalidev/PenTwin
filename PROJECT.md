@@ -272,7 +272,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* overrides persist in export.
 - [ ] **4.7 Export dialog.** Shows exact page count and credit cost **before** export, with a settings summary.
   *Acceptance:* the displayed cost equals the real cost on export.
-- [ ] **4.8 Export worker (local).** Final render on the worker (not client), returns signed download. Idempotent: same document + settings + seed within 24h returns the cached result for free.
+- [x] **4.8 Export worker (local).** Final render on the worker (not client), returns signed download. Idempotent: same document + settings + seed within 24h returns the cached result for free.
+  *Note:* plain Node HTTP server, no framework. Same request within 24 hours is served from the cache with `billablePages: 0`; a failed export leaves no file behind (covered by tests). Requests are validated strictly and pictures must be embedded, so the worker never fetches a URL. Start with `pnpm worker`; settings are in `.env.example`. Credits are not deducted here: that is Phase 5.
   *Acceptance:* repeated export hits cache; failed export leaves no side effects.
 - [ ] **4.9 Mobile UX pass.** Most users are on phones: test editor, upload, and download at 380px width.
   *Acceptance:* the whole flow is usable on a phone.
