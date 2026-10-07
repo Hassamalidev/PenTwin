@@ -76,7 +76,7 @@ export function measureStyle(
   metrics: PageMetrics,
 ): StyleFeatures {
   // Only cuts we trust, so one bad cut cannot skew the profile.
-  const trusted = glyphs.filter((g) => g.confidence >= 0.6);
+  const trusted = glyphs.filter((g) => g.confidence >= 0.6 && g.char.length === 1);
   const of = (chars: string): NormalizedGlyph[] => trusted.filter((g) => chars.includes(g.char));
 
   // Letters built around one long upright stroke.

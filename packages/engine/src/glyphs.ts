@@ -37,6 +37,17 @@ export const glyphMetadataSchema = z.object({
     z.string().refine((key) => [...key].length === 1, 'Glyph keys must be a single character'),
     z.array(variantSchema).min(1),
   ),
+  /**
+   * Letter pairs written as one glyph ("th", "er"), keyed by the two characters. Optional.
+   * A pair keeps the spacing, overlap and joining stroke the writer really used, which
+   * two separate letters placed side by side cannot.
+   */
+  bigrams: z
+    .record(
+      z.string().refine((key) => [...key].length === 2, 'Bigram keys must be two characters'),
+      z.array(variantSchema).min(1),
+    )
+    .optional(),
 });
 
 export type GlyphMetadata = z.infer<typeof glyphMetadataSchema>;
@@ -61,6 +72,8 @@ export interface GlyphBank {
   spaceAdvance: number;
   paint: 'stroke' | 'fill';
   glyphs: ReadonlyMap<string, readonly Glyph[]>;
+  /** Letter pairs available as a single glyph, keyed by the two characters. */
+  bigrams?: ReadonlyMap<string, readonly Glyph[]>;
 }
 
 const range = (from: string, to: string): string[] =>
@@ -81,27 +94,27 @@ const PATH_D = /<path\b[^>]*?\sd="([^"]*)"/g;
 /** Validates metadata and assembles a bank. `readSvg` returns the SVG source for a file name. */
 export function buildGlyphBank(metadata: unknown, readSvg: (file: string) => string): GlyphBank {
   const meta = glyphMetadataSchema.parse(metadata);
-  const glyphs = new Map<string, Glyph[]>();
-
-  for (const [char, variants] of Object.entries(meta.glyphs)) {
-    glyphs.set(
-      char,
-      variants.map((v, variant) => {
-        const d = [...readSvg(v.file).matchAll(PATH_D)].map((m) => m[1]).join(' ');
-        if (!d.trim()) throw new Error(`No path data in ${v.file} (glyph "${char}")`);
-        const path = transformPath(parsePath(d), (x, y) => [x + v.lsb, y - v.baseline]);
-        return {
-          char,
-          variant,
-          path,
-          advance: v.advance,
-          lsb: v.lsb,
-          rsb: v.rsb,
-          ...(v.derivedFrom ? { derivedFrom: v.derivedFrom } : {}),
-        };
-      }),
+  const load = (entries: GlyphMetadata['glyphs']): Map<string, Glyph[]> =>
+    new Map(
+      Object.entries(entries).map(([char, variants]) => [
+        char,
+        variants.map((v, variant): Glyph => {
+          const d = [...readSvg(v.file).matchAll(PATH_D)].map((m) => m[1]).join(' ');
+          if (!d.trim()) throw new Error(`No path data in ${v.file} (glyph "${char}")`);
+          const path = transformPath(parsePath(d), (x, y) => [x + v.lsb, y - v.baseline]);
+          return {
+            char,
+            variant,
+            path,
+            advance: v.advance,
+            lsb: v.lsb,
+            rsb: v.rsb,
+            ...(v.derivedFrom ? { derivedFrom: v.derivedFrom } : {}),
+          };
+        }),
+      ]),
     );
-  }
+  const glyphs = load(meta.glyphs);
 
   return {
     name: meta.name,
@@ -111,6 +124,7 @@ export function buildGlyphBank(metadata: unknown, readSvg: (file: string) => str
     spaceAdvance: meta.spaceAdvance,
     paint: meta.paint,
     glyphs,
+    ...(meta.bigrams ? { bigrams: load(meta.bigrams) } : {}),
   };
 }
 
@@ -136,8 +150,8 @@ export function checkCoverage(
 }
 
 export interface VariantPicker {
-  /** Returns a glyph for `char`, or undefined when the bank has none. */
-  pick(char: string): Glyph | undefined;
+  /** Returns a glyph for a character or letter pair, or undefined when the bank has none. */
+  pick(key: string): Glyph | undefined;
 }
 
 /**
@@ -151,7 +165,7 @@ export function createVariantPicker(bank: GlyphBank, rng: Rng, avoidWindow = 2):
 
   return {
     pick(char) {
-      const variants = bank.glyphs.get(char);
+      const variants = bank.glyphs.get(char) ?? bank.bigrams?.get(char);
       if (!variants || variants.length === 0) return undefined;
       if (variants.length === 1) return variants[0];
 

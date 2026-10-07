@@ -213,7 +213,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.1 Auto-tune jitter from the user's own style.** Use style features from 2.14 so a naturally neat writer isn't made messy and vice versa.
   *Note:* the sample now also yields four consistency measures (slant, size, baseline and spacing variation), and `tuneJitter(style, xHeight)` turns them into settings. It adds no slant, because extracted glyphs already lean the way the writer does. Callers pass the result as `jitter`; nothing applies it automatically yet.
   *Acceptance:* two different profiles give visibly different default behavior.
-- [ ] **3.2 Bigram/ligature support.** Capture common pairs when cleanly cut (th, er, in, an, ing, ll...) and prefer them in rendering to break repetition.
+- [x] **3.2 Bigram/ligature support.** Capture common pairs when cleanly cut (th, er, in, an, ing, ll...) and prefer them in rendering to break repetition.
+  *Note:* pairs only, no three-letter groups ("ing" is covered by "ng"). A clean sample yields about 29 pairs and the bank grows from about 160 KB to 236 KB. In a test sentence 24 pairs were used with no join artifacts. Pair glyphs are used 70% of the time by default (`bigrams` option).
   *Acceptance:* a count of bigram usage in a sample output; no visible join artifacts.
 - [ ] **3.3 Ink engine (`ink.ts`).** Ballpoint (blue/black), gel, fountain (shading + slight bleed), pencil (grain). Pressure variation along strokes where data allows; otherwise stroke-width variation.
   *Acceptance:* each ink visibly distinct; fountain shows shading.

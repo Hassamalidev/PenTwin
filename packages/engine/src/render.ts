@@ -26,6 +26,11 @@ export interface RenderOptions {
    * baseline themselves, overriding `lineHeight` and `margins.top`.
    */
   paper?: PaperSpec;
+  /**
+   * Chance, 0 to 1, of writing a letter pair with a single pair glyph when the bank has
+   * one. 0 turns pair glyphs off. Defaults to 0.7.
+   */
+  bigrams?: number;
 }
 
 /** A fully resolved page: every exporter (SVG, PDF, PNG) draws from this. */
@@ -90,12 +95,13 @@ export function resolvePage(bank: GlyphBank, options: RenderOptions) {
 
 export function renderText(text: string, bank: GlyphBank, options: RenderOptions): RenderResult {
   const page = resolvePage(bank, options);
-  const report: RenderReport = { pageCount: 0, glyphCount: 0, unknownChars: {} };
+  const report: RenderReport = { pageCount: 0, glyphCount: 0, unknownChars: {}, bigramCount: 0 };
   const setup = {
     bank,
     xHeight: page.xHeight,
     penWidth: page.penWidth,
     jitter: page.jitter,
+    bigramRate: options.bigrams,
     report,
   };
 

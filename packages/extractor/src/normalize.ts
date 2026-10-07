@@ -20,6 +20,8 @@ export interface NormalizedGlyph {
   confidence: number;
   cut: LabeledGlyph['cut'];
   line: number;
+  /** Index of the word this glyph belongs to. */
+  word: number;
   bitmap: GlyphBitmap;
   /** Where the writing baseline crosses this glyph, in pixels below the bitmap's top. */
   baseline: number;
@@ -30,9 +32,9 @@ export interface NormalizedGlyph {
 
 const HANGS = new Set('gjpqy');
 const X_HIGH = new Set('acemnorsuvwxz');
-const CAP_HIGH = /[A-Zbdhkl]/;
+const CAP_HIGH = /^[A-Zbdhkl]$/;
 /** Characters that rest on the baseline: letters and digits without a descender. */
-const sitsOnBaseline = (char: string): boolean => /[a-zA-Z0-9]/.test(char) && !HANGS.has(char);
+const sitsOnBaseline = (char: string): boolean => /^[a-zA-Z0-9]$/.test(char) && !HANGS.has(char);
 
 const median = (values: number[], fallback = 0): number => {
   if (values.length === 0) return fallback;
@@ -69,7 +71,9 @@ export function normalizeGlyphs(
   page: Segmentation,
   imageWidth: number,
 ): { glyphs: NormalizedGlyph[]; metrics: PageMetrics } {
-  const cuts = alignment.glyphs.flatMap((glyph) => {
+  // Joined pairs come along as glyphs of their own. The single-character tests below
+  // never match them, so they do not disturb the measurements.
+  const cuts = [...alignment.glyphs, ...alignment.joined].flatMap((glyph) => {
     const bitmap = cutGlyph(glyph, page.labels, imageWidth);
     return bitmap ? [{ glyph, bitmap }] : [];
   });
@@ -165,6 +169,7 @@ export function normalizeGlyphs(
       confidence: c.glyph.confidence,
       cut: c.glyph.cut,
       line: c.glyph.line,
+      word: c.glyph.word,
       bitmap: c.bitmap,
       baseline: baselineOf(c) - c.bitmap.y,
       lsb: bearing(gapBefore.get(c)),

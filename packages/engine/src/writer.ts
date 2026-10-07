@@ -25,6 +25,8 @@ export interface RenderReport {
   glyphCount: number;
   /** Characters the bank has no glyph for, with how often each occurred. A gap is left. */
   unknownChars: Record<string, number>;
+  /** How many letter pairs were written with a single pair glyph. */
+  bigramCount: number;
 }
 
 /** One word to write, with how to write it. */
@@ -65,6 +67,11 @@ export interface WriterSetup {
   pageSeed: string;
   jitter?: JitterParams;
   report: RenderReport;
+  /**
+   * Chance, 0 to 1, of using a pair glyph where the bank has one. Not always, so the
+   * same pair does not look identical every time. Defaults to 0.7.
+   */
+  bigramRate?: number;
 }
 
 /** Word gaps shrink at most this far to keep a line inside its right limit. */
@@ -114,6 +121,9 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
       })
     : identityStyler;
   const strokes: InkStroke[] = [];
+  const bigrams = bank.bigrams?.size ? bank.bigrams : undefined;
+  const bigramRate = setup.bigramRate ?? 0.7;
+  const bigramRng = createRng(`${setup.pageSeed}/bigrams`);
 
   const writeLine = (tokens: readonly Token[], spec: LineSpec): number => {
     const size = spec.scale ?? 1;
@@ -123,7 +133,15 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     const slots: Slot[] = [];
     for (const token of tokens) {
       let prev = '';
-      for (const char of token.text) {
+      const chars = [...token.text];
+      for (let i = 0; i < chars.length; i++) {
+        let char = chars[i]!;
+        const pair = char + (chars[i + 1] ?? '');
+        if (bigrams?.has(pair) && bigramRng.next() < bigramRate) {
+          char = pair;
+          i++;
+          report.bigramCount++;
+        }
         const glyph = picker.pick(char);
         const style = styler.glyph(char);
         const isWordStart = prev === '';
@@ -131,11 +149,11 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           ? slots.length > 0
             ? spaceWidth * size * styler.wordGap()
             : 0
-          : styler.letterGap(prev, char) * size;
+          : styler.letterGap(prev, char[0]!) * size;
         if (!glyph) report.unknownChars[char] = (report.unknownChars[char] ?? 0) + 1;
         const advance = glyph ? glyph.advance * unit * size * style.scale : spaceWidth * size;
         slots.push({ glyph, style, gapBefore, isWordStart, advance, bold: token.bold ?? false });
-        prev = char;
+        prev = char.at(-1)!;
       }
     }
 

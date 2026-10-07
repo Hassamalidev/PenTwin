@@ -26,6 +26,11 @@ export interface Alignment {
   glyphs: LabeledGlyph[];
   /** Words (or parts of words) left unlabeled rather than guessed. */
   flagged: FlaggedWord[];
+  /**
+   * Letter pairs written joined together, kept whole. `char` holds both letters. They
+   * are too joined to cut apart, but as a pair they are exactly how the writer joins them.
+   */
+  joined: LabeledGlyph[];
   expectedChars: number;
 }
 
@@ -298,6 +303,7 @@ export function alignToText(
   );
   const expected = expectedText.split(/\s+/).filter(Boolean);
   const glyphs: LabeledGlyph[] = [];
+  const joined: LabeledGlyph[] = [];
   const flagged: FlaggedWord[] = [];
 
   for (const group of alignWords(detected, expected)) {
@@ -362,7 +368,16 @@ export function alignToText(
         const [left, right] = [relativeWidth(chars[c]!), relativeWidth(chars[c + 1]!)];
         const cutAt = findCut(segment, left / (left + right), page, imageWidth);
         if (cutAt === undefined) {
-          flagged.push({ expected: chars[c]! + chars[c + 1]!, line, reason: 'letters-joined' });
+          const pair = chars[c]! + chars[c + 1]!;
+          flagged.push({ expected: pair, line, reason: 'letters-joined' });
+          joined.push({
+            ...segment,
+            char: pair,
+            cut: 'clean',
+            line,
+            word: wordIndex,
+            confidence: 0.8 * certainty,
+          });
         } else {
           emit(
             chars[c]!,
@@ -385,5 +400,5 @@ export function alignToText(
     }
   }
 
-  return { glyphs, flagged, expectedChars: expected.join('').length };
+  return { glyphs, flagged, joined, expectedChars: expected.join('').length };
 }
