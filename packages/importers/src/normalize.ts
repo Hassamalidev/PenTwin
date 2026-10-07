@@ -58,11 +58,11 @@ const EXACT: Record<string, string> = {
   '\u00bd': '1/2',
   '\u00bc': '1/4',
   '\u00be': '3/4',
-  ﬀ: 'ff', // ligatures
-  ﬁ: 'fi',
-  ﬂ: 'fl',
-  ﬃ: 'ffi',
-  ﬄ: 'ffl',
+  ['\ufb00']: 'ff', // ligatures
+  ['\ufb01']: 'fi',
+  ['\ufb02']: 'fl',
+  ['\ufb03']: 'ffi',
+  ['\ufb04']: 'ffl',
   '\u00a9': '(c)',
   '\u00ae': '(R)',
   '\u2122': '(TM)',
