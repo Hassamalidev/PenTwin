@@ -141,7 +141,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.10 Presets v1.** "Neat", "Normal", "Rushed" as parameter bundles.
   *Note:* visual samples: `docs/samples/preset-*.png`.
   *Acceptance:* three visibly different outputs from the same text.
-- [ ] **1.11 Blind test protocol.** Write `docs/blind-test.md`: print one generated page beside a real handwritten page, ask 5+ people to identify the generated one, record results.
+- [x] **1.11 Blind test protocol.** Write `docs/blind-test.md`: print one generated page beside a real handwritten page, ask 5+ people to identify the generated one, record results.
+  *Note:* protocol written; the test itself has NOT been run and the Phase 1 gate is NOT passed. It needs a glyph bank made from real handwriting, which the synthetic test set is not.
   *Acceptance:* protocol committed. **Gate:** most testers can't identify the generated page.
 
 **Risks:**
