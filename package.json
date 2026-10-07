@@ -16,7 +16,8 @@
     "samples": "tsx scripts/make-samples.ts",
     "bench": "tsx scripts/bench.ts",
     "sample:check": "tsx scripts/check-sample-text.ts",
-    "sample:sheet": "tsx scripts/make-sample-sheet.ts"
+    "sample:sheet": "tsx scripts/make-sample-sheet.ts",
+    "extract:measure": "tsx scripts/measure-extraction.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

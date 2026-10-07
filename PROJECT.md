@@ -173,7 +173,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.6 Alignment to known text (`align.ts`).** Match detected words/characters to the expected paragraph so each cut gets a label. Use sequence alignment (edit-distance style) so one missed or merged word doesn't ruin everything after it.
   *Note:* about 99% of characters labeled correctly and under 1% wrongly on the synthetic photos; a skipped or extra word no longer shifts what follows. Unplaceable words and joined letters are flagged, not guessed.
   *Acceptance:* >= 90% of characters labeled correctly on clean fixtures; low-confidence cuts flagged, not guessed.
-- [ ] **2.7 Character cutting.** Connected components + splitting of touching letters (semi-cursive is common). Keep a confidence score per glyph. Where letters connect and can't be split reliably, mark them and don't force a bad cut.
+- [x] **2.7 Character cutting.** Connected components + splitting of touching letters (semi-cursive is common). Keep a confidence score per glyph. Where letters connect and can't be split reliably, mark them and don't force a bad cut.
+  *Note:* bad-cut rate 0.0-0.2% on synthetic photos, with joined letters refused rather than cut. Numbers and limits are in `docs/extraction-accuracy.md`. Not measured on real handwriting.
   *Acceptance:* confidence scores exist; the bad-cut rate is measured on fixtures.
 - [ ] **2.8 Normalization.** Baseline detection, x-height, bounding box, stroke-width normalization, advance width and side bearings per glyph.
   *Acceptance:* glyphs from different lines are consistently scaled and baselined in a test render.
