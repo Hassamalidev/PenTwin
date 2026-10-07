@@ -164,7 +164,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.3 Image preprocessing (`clean.ts`).** Load photo -> grayscale -> illumination correction -> adaptive threshold -> deskew/perspective correction -> denoise. OpenCV.js in the browser.
   *Note:* written in plain TypeScript instead of OpenCV.js, so there is no multi-megabyte download on phones and it runs unchanged in tests. Rotation is corrected; **perspective correction is not implemented**. Tested on synthetic photos (engine-rendered pages, degraded), not real ones.
   *Acceptance:* tested on fixtures: good, dim, skewed, shadowed, slightly blurry.
-- [ ] **2.4 Image quality gate.** Detect blur (Laplacian variance), low resolution, heavy shadow, cropping. Return specific, friendly instructions ("Move closer", "Add more light") instead of a generic error.
+- [x] **2.4 Image quality gate.** Detect blur (Laplacian variance), low resolution, heavy shadow, cropping. Return specific, friendly instructions ("Move closer", "Add more light") instead of a generic error.
+  *Note:* limits are calibrated on synthetic photos only and need checking against real phone photos. A page photographed against a dark table is not handled yet (the surroundings would read as ink).
   *Acceptance:* bad fixtures rejected with the right message; good ones pass.
 - [ ] **2.5 Line & word segmentation (`segment.ts`).** Horizontal projection for lines (handle slanted/uneven lines), gaps for words.
   *Acceptance:* line count and word count match expected on fixtures within a tolerance.
