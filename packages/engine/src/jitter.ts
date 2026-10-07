@@ -26,6 +26,8 @@ export interface JitterParams {
   marginDrift: number;
   /** Fraction of the x-height. How much each placed glyph's shape is bent. */
   warp: number;
+  /** Fraction of the x-height. Constant extra gap between letters; loose, hurried writing. */
+  tracking: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -40,6 +42,7 @@ export const NO_JITTER: JitterParams = {
   strokeWidth: 0,
   marginDrift: 0,
   warp: 0,
+  tracking: 0,
 };
 
 export const DEFAULT_JITTER: JitterParams = {
@@ -54,6 +57,7 @@ export const DEFAULT_JITTER: JitterParams = {
   strokeWidth: 0.08,
   marginDrift: 0.8,
   warp: 0.05,
+  tracking: 0,
 };
 
 const DEG = Math.PI / 180;
@@ -143,6 +147,7 @@ export function createJitterStyler(
       Math.max(0.4, 1 + params.wordSpacing * (0.5 * gap(wordIndex++ / 6) + 0.5 * wobble())),
 
     letterGap: (prev, char) =>
-      xHeight * params.letterSpacing * (0.6 * pairBias(prev, char) + 0.4 * wobble()),
+      xHeight *
+      (params.tracking + params.letterSpacing * (0.6 * pairBias(prev, char) + 0.4 * wobble())),
   };
 }

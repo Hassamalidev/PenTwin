@@ -138,7 +138,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.9 Performance baseline.** Benchmark pages/second and memory for a 50-page document; record in `docs/perf.md`.
   *Note:* 126-156 ms per page to PDF (6-8 pages/s) and about 450 MB for 50 pages on a laptop i5; target is under 1 s per page. Re-run with `pnpm bench`.
   *Acceptance:* a documented baseline and a target (e.g., a page renders in < 1s on a modest server).
-- [ ] **1.10 Presets v1.** "Neat", "Normal", "Rushed" as parameter bundles.
+- [x] **1.10 Presets v1.** "Neat", "Normal", "Rushed" as parameter bundles.
+  *Note:* visual samples: `docs/samples/preset-*.png`.
   *Acceptance:* three visibly different outputs from the same text.
 - [ ] **1.11 Blind test protocol.** Write `docs/blind-test.md`: print one generated page beside a real handwritten page, ask 5+ people to identify the generated one, record results.
   *Acceptance:* protocol committed. **Gate:** most testers can't identify the generated page.

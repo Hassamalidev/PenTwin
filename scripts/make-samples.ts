@@ -7,7 +7,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   DEFAULT_JITTER,
   NO_JITTER,
+  PRESETS,
   renderText,
+  type PaperSpec,
   type RenderOptions,
 } from '../packages/engine/src/index';
 import { loadGlyphBank, sceneToPng } from '../packages/engine/src/node/index';
@@ -15,6 +17,7 @@ import { loadGlyphBank, sceneToPng } from '../packages/engine/src/node/index';
 const { bank } = loadGlyphBank('tests/fixtures/glyphs/sample-user');
 const sample = readFileSync('tests/sample.txt', 'utf8');
 const base: RenderOptions = { seed: 'samples', pageSize: 'A5' };
+const RULED: PaperSpec = { kind: 'ruled', ruling: 'wide' };
 
 const samples: Record<string, [text: string, options: RenderOptions]> = {
   'jitter-off': [sample, base],
@@ -29,6 +32,9 @@ const samples: Record<string, [text: string, options: RenderOptions]> = {
   ],
   'paper-graph': [sample, { ...base, jitter: DEFAULT_JITTER, paper: { kind: 'graph' } }],
   'paper-dotted': [sample, { ...base, jitter: DEFAULT_JITTER, paper: { kind: 'dotted' } }],
+  'preset-neat': [sample, { ...base, jitter: PRESETS.neat, paper: RULED }],
+  'preset-normal': [sample, { ...base, jitter: PRESETS.normal, paper: RULED }],
+  'preset-rushed': [sample, { ...base, jitter: PRESETS.rushed, paper: RULED }],
   // Only the warp is on, so every difference between two letters comes from it.
   'warp-e': [
     'eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee',

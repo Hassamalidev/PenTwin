@@ -8,3 +8,4 @@ export * from './jitter';
 export * from './warp';
 export * from './paper';
 export * from './pdf';
+export * from './presets';
