@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "fixtures:glyphs": "tsx scripts/build-test-glyphs.ts",
-    "samples": "tsx scripts/make-samples.ts"
+    "samples": "tsx scripts/make-samples.ts",
+    "bench": "tsx scripts/bench.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
