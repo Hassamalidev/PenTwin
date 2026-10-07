@@ -118,7 +118,7 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.2 Layout engine (`layout.ts`).** Greedy line-breaking with word wrap, margins, A4/Letter/A5, pagination, paragraph spacing, hyphenation off by default.
   *Note:* `hyphenate` only adds a hyphen where an over-long word is force-broken; dictionary hyphenation is not implemented.
   *Acceptance:* unit tests for long words, empty lines, exact-fit lines, page overflow.
-- [ ] **1.3 Glyph bank & variant selection (`glyphs.ts`).** Load a bank, pick variants with `variantAvoidRepeat` (never the same variant twice in a row, and avoid repeating within a short window).
+- [x] **1.3 Glyph bank & variant selection (`glyphs.ts`).** Load a bank, pick variants with `variantAvoidRepeat` (never the same variant twice in a row, and avoid repeating within a short window).
   *Acceptance:* test shows no immediate repeats over 10,000 picks with >= 2 variants.
 - [ ] **1.4 Renderer (`render.ts`).** Place glyphs on an SVG page respecting baseline, advance width, and side bearings. Spaces and unknown characters handled safely (report, don't crash).
   *Acceptance:* a generated SVG page for `test/sample.txt` committed as a golden snapshot.

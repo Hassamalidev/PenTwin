@@ -1,3 +1,4 @@
+import type { Rng } from '@pentwin/shared';
 import { z } from 'zod';
 import { parsePath, transformPath, type PathCommand } from './path';
 
@@ -117,4 +118,35 @@ export function checkCoverage(
     else if (count < minVariants) report.weak.push(char);
   }
   return report;
+}
+
+export interface VariantPicker {
+  /** Returns a glyph for `char`, or undefined when the bank has none. */
+  pick(char: string): Glyph | undefined;
+}
+
+/**
+ * Picks variants so the same one is never used twice in a row for a character, and is not
+ * reused within the last `avoidWindow` picks when the bank has enough variants to allow it.
+ */
+export function createVariantPicker(bank: GlyphBank, rng: Rng, avoidWindow = 2): VariantPicker {
+  const recent = new Map<string, number[]>();
+
+  return {
+    pick(char) {
+      const variants = bank.glyphs.get(char);
+      if (!variants || variants.length === 0) return undefined;
+      if (variants.length === 1) return variants[0];
+
+      const history = recent.get(char) ?? [];
+      // Always leave at least one candidate.
+      const blocked = history.slice(-Math.min(avoidWindow, variants.length - 1));
+      const glyph = rng.pick(variants.filter((v) => !blocked.includes(v.variant)));
+
+      history.push(glyph.variant);
+      if (history.length > avoidWindow) history.shift();
+      recent.set(char, history);
+      return glyph;
+    },
+  };
 }
