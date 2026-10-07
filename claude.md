@@ -83,11 +83,12 @@ A task is **not done** until all steps below are complete:
 - [x] **0.1 Repo init & first push.** Run the setup in section 0.1. Add `.gitignore` (node_modules, .env*, .next, dist, uploads, fixtures-private). Add README stub.
   *Note:* the repo has a single `claude.md` holding this tracker; the separate rules/architecture file it refers to does not exist yet.
   *Acceptance:* `main` visible on GitHub with CLAUDE.md and PROJECT.md.
-- [ ] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
+- [x] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
+  *Note:* pnpm pinned to 10.x via `packageManager` (pnpm 12 binary fails to launch on the dev machine); TypeScript held at 6.x until typescript-eslint supports 7.
   *Acceptance:* `pnpm typecheck && pnpm lint && pnpm test` pass on an empty-but-wired repo.
-- [ ] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
+- [x] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
   *Acceptance:* green check on the latest commit.
-- [ ] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
+- [x] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
   *Acceptance:* same seed yields identical sequence; lint fails on `Math.random()` in `packages/engine`.
 - [ ] **0.5 Assumption check: payments.** Research whether Lemon Squeezy, Paddle, or an alternative can pay out to a Pakistan-based seller. Write findings to `docs/payments-decision.md` with sources and the chosen provider plus a backup. *Do not guess; verify current terms.*
   *Acceptance:* a documented decision, flagged for the user to confirm.
