@@ -20,6 +20,8 @@ export interface ExtractionOptions {
   maxVariants?: number;
   /** Skip the photo quality gate (for images already known to be clean). */
   skipQualityGate?: boolean;
+  /** The page is expected to hold very little writing (a top-up sheet). */
+  sparse?: boolean;
 }
 
 export interface Extraction {
@@ -77,7 +79,11 @@ export function extractGlyphBank(
   };
 
   const quality = timed('quality', () => assessQuality(photo));
-  if (!quality.ok && !options.skipQualityGate) {
+  // A top-up sheet holds only a few characters, so "no writing found" does not apply to it.
+  const blocking = quality.issues.filter(
+    (issue) => !(options.sparse && issue.code === 'no-writing'),
+  );
+  if (blocking.length > 0 && !options.skipQualityGate) {
     return { quality, flagged: [], bankBytes: 0, timings };
   }
 

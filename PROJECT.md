@@ -188,7 +188,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.11 Fallback chain (`fallback.ts`).** Implement in order: reuse own variants -> transform from a related glyph (scaled lowercase for c, o, s, v, w, x, z capitals; and similar) -> top-up request. Mark every derived glyph. **Never substitute silently.**
   *Note:* characters with no sound recipe (`# % * @ & $ ? ! /` and most letters) are never invented; they go to the top-up list. Known flaw: a capital made by enlarging a lowercase letter also gets thicker strokes.
   *Acceptance:* a fixture with deliberately missing letters yields a complete bank with derived glyphs flagged.
-- [ ] **2.12 Top-up flow.** Generate a small "write these N characters" sheet and merge the results into the existing bank.
+- [x] **2.12 Top-up flow.** Generate a small "write these N characters" sheet and merge the results into the existing bank.
+  *Note:* each top-up line starts with the word "none" so letter size and baseline can be measured. Handwritten glyphs are never overwritten; derived stand-ins are dropped when a handwritten one arrives. **"%" cannot be topped up yet**: it is three separate marks and the cutter only joins two.
   *Acceptance:* merging improves coverage without overwriting good glyphs.
 - [ ] **2.13 Review screen UI.** Grid of every extracted glyph with quality indicator, "replace this letter" and "retake" options, and a live test sentence rendered with the bank.
   *Acceptance:* a user can fix a bad "g" in under 30 seconds.

@@ -11,3 +11,4 @@ export * from './extract';
 export * from './normalize';
 export * from './vectorize';
 export * from './fallback';
+export * from './topup';
