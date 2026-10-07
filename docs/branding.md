@@ -1,6 +1,8 @@
 # Name & domain check (Task 0.7)
 
-Checked 2026-10-07. **Decision: keep "PenTwin" as the working name.** Three items below need the owner before it is final.
+Checked 2026-10-07. **Decision (owner, 2026-10-07): "PenTwin" is a placeholder, not the final name.** Two things stand in its way: the similar existing product InkTwin, and pentwin.com being registered by someone else.
+
+Because the name may change, it is defined once in `packages/shared/src/brand.ts`. Code and UI must read it from there and never hard-code it.
 
 ## Domains
 
@@ -27,11 +29,13 @@ Checked by RDAP lookup. "No record" means no registration was found; confirm at 
 - **InkTwin** ("Your handwriting, digitally yours") is an existing handwriting product listed on Product Hunt. Same category and a very similar name, so there is some risk of confusion.
 - No trademark registry was searched. This is not a clearance.
 
-## Open items for the owner
+## Before the name is final
 
-1. **pentwin.com**: is this yours? If not, choose between `pentwin.app` and trying to buy the .com.
-2. Check the X and Instagram handles and register the ones you want.
-3. Search USPTO, WIPO Global Brand Database and IPO Pakistan for "PenTwin" in software classes (9 and 42), and decide whether InkTwin is close enough to matter.
+Settle this before Phase 6 (landing page, SEO), where the name gets baked into public pages and search listings.
+
+1. Pick the final name. If it stays PenTwin, choose between `pentwin.app` and trying to buy the .com.
+2. Check the X and Instagram handles for the chosen name and register them.
+3. Search USPTO, WIPO Global Brand Database and IPO Pakistan for the chosen name in software classes (9 and 42).
 
 ## Fallback
 

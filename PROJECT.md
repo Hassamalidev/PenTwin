@@ -81,7 +81,7 @@ A task is **not done** until all steps below are complete:
 **Goal:** a clean repo and proof that the riskiest assumptions hold, *before* heavy building.
 
 - [x] **0.1 Repo init & first push.** Run the setup in section 0.1. Add `.gitignore` (node_modules, .env*, .next, dist, uploads, fixtures-private). Add README stub.
-  *Note:* the repo has a single `claude.md` holding this tracker; the separate rules/architecture file it refers to does not exist yet.
+  *Note:* this tracker was first committed as `claude.md` and later renamed to `PROJECT.md`.
   *Acceptance:* `main` visible on GitHub with CLAUDE.md and PROJECT.md.
 - [x] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
   *Note:* pnpm pinned to 10.x via `packageManager` (pnpm 12 binary fails to launch on the dev machine); TypeScript held at 6.x until typescript-eslint supports 7.
@@ -91,12 +91,12 @@ A task is **not done** until all steps below are complete:
 - [x] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
   *Acceptance:* same seed yields identical sequence; lint fails on `Math.random()` in `packages/engine`.
 - [x] **0.5 Assumption check: payments.** Research whether Lemon Squeezy, Paddle, or an alternative can pay out to a Pakistan-based seller. Write findings to `docs/payments-decision.md` with sources and the chosen provider plus a backup. *Do not guess; verify current terms.*
-  *Note:* proposed Paddle (primary) and Lemon Squeezy (backup); awaiting owner confirmation. Account approval is unverified until an application is accepted.
+  *Note:* owner confirmed Paddle (primary) and Lemon Squeezy (backup) on 2026-10-07. Account approval is unproven until an application is accepted.
   *Acceptance:* a documented decision, flagged for the user to confirm.
 - [x] **0.6 Assumption check: willingness to pay.** Create `docs/user-interviews.md` with a 5-question script for the user to ask 10 students (current solution, price tolerance, must-have features). Claude Code only prepares the template; the user fills it.
   *Acceptance:* template committed. Gate: price tiers in CLAUDE.md are revisited after interviews.
 - [x] **0.7 Name & domain check.** Document PenTwin domain/social/trademark check results in `docs/branding.md` (fallback: OwnHand).
-  *Note:* pentwin.com is already registered (owner unknown) and no trademark registry was searched; see open items in the doc.
+  *Note:* "PenTwin" is a placeholder (InkTwin conflict, pentwin.com owned by someone else). The name lives only in `packages/shared/src/brand.ts`.
   *Acceptance:* decision recorded.
 
 **Decision gate:** if payments can't be solved, fix that before Phase 5. It doesn't block Phases 1-4.

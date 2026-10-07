@@ -1,7 +1,5 @@
 import type { PageSize, PageSizeName } from './types';
 
-export const APP_NAME = 'PenTwin';
-
 /** Millimetres to PDF points (1pt = 1/72in). */
 export const MM_TO_PT = 72 / 25.4;
 

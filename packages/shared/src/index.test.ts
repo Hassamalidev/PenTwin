@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { APP_NAME } from './index';
+import { BRAND } from './index';
 
 describe('shared', () => {
-  it('exports the app name', () => {
-    expect(APP_NAME).toBe('PenTwin');
+  it('exports the brand', () => {
+    expect(BRAND.name).not.toBe('');
   });
 });
