@@ -30,6 +30,8 @@ export interface RenderOptions {
 }
 
 export interface InkStroke {
+  /** The character this glyph stands for. */
+  char: string;
   /** Path in page coordinates (mm). */
   path: PathCommand[];
   /** Pen width in mm. Ignored when the bank's glyphs are filled outlines. */
@@ -174,6 +176,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
             Math.tan(lineStyle.slope) * (pen - startX);
 
           strokes.push({
+            char: slot.glyph.char,
             width: penWidth * style.strokeScale,
             path: transformPath(slot.glyph.path, (gx, gy) => {
               const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];

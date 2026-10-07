@@ -161,7 +161,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.2 Printable/on-screen sample sheet.** A page showing the text in a clear, readable font with instructions: plain white paper, dark pen, normal handwriting, normal speed, don't try to be neat. Generate a printable PDF.
   *Note:* a PDF (`docs/sample-sheet.pdf`, regenerate with `pnpm sample:sheet`). The on-screen version belongs to the web app and is not built yet.
   *Acceptance:* sheet renders on mobile and prints on A4.
-- [ ] **2.3 Image preprocessing (`clean.ts`).** Load photo -> grayscale -> illumination correction -> adaptive threshold -> deskew/perspective correction -> denoise. OpenCV.js in the browser.
+- [x] **2.3 Image preprocessing (`clean.ts`).** Load photo -> grayscale -> illumination correction -> adaptive threshold -> deskew/perspective correction -> denoise. OpenCV.js in the browser.
+  *Note:* written in plain TypeScript instead of OpenCV.js, so there is no multi-megabyte download on phones and it runs unchanged in tests. Rotation is corrected; **perspective correction is not implemented**. Tested on synthetic photos (engine-rendered pages, degraded), not real ones.
   *Acceptance:* tested on fixtures: good, dim, skewed, shadowed, slightly blurry.
 - [ ] **2.4 Image quality gate.** Detect blur (Laplacian variance), low resolution, heavy shadow, cropping. Return specific, friendly instructions ("Move closer", "Add more light") instead of a generic error.
   *Acceptance:* bad fixtures rejected with the right message; good ones pass.
