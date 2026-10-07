@@ -216,7 +216,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.2 Bigram/ligature support.** Capture common pairs when cleanly cut (th, er, in, an, ing, ll...) and prefer them in rendering to break repetition.
   *Note:* pairs only, no three-letter groups ("ing" is covered by "ng"). A clean sample yields about 29 pairs and the bank grows from about 160 KB to 236 KB. In a test sentence 24 pairs were used with no join artifacts. Pair glyphs are used 70% of the time by default (`bigrams` option).
   *Acceptance:* a count of bigram usage in a sample output; no visible join artifacts.
-- [ ] **3.3 Ink engine (`ink.ts`).** Ballpoint (blue/black), gel, fountain (shading + slight bleed), pencil (grain). Pressure variation along strokes where data allows; otherwise stroke-width variation.
+- [x] **3.3 Ink engine (`ink.ts`).** Ballpoint (blue/black), gel, fountain (shading + slight bleed), pencil (grain). Pressure variation along strokes where data allows; otherwise stroke-width variation.
+  *Note:* shading and width follow slow, correlated noise standing in for pressure, since glyphs carry no pressure data. Grain and bleed appear in PNG output only; PDF shows colour, opacity and width. On extracted (filled) glyphs a broader pen is drawn as an outline around the glyph. Samples: `docs/samples/ink-*.png`.
   *Acceptance:* each ink visibly distinct; fountain shows shading.
 - [ ] **3.4 Fatigue mode.** Writing degrades gradually through a page: more drift, slightly larger spacing, a bit more slant. Must be **subtle**; overdone it looks fake.
   *Acceptance:* blind check that page 1 vs last line differ believably.

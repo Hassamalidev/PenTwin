@@ -35,6 +35,14 @@ const samples: Record<string, [text: string, options: RenderOptions]> = {
   'preset-neat': [sample, { ...base, jitter: PRESETS.neat, paper: RULED }],
   'preset-normal': [sample, { ...base, jitter: PRESETS.normal, paper: RULED }],
   'preset-rushed': [sample, { ...base, jitter: PRESETS.rushed, paper: RULED }],
+  ...Object.fromEntries(
+    (['ballpoint-blue', 'ballpoint-black', 'gel', 'fountain', 'pencil'] as const).map(
+      (ink): [string, [string, RenderOptions]] => [
+        `ink-${ink}`,
+        [sample, { ...base, jitter: PRESETS.normal, ink, lineHeight: 9, penWidth: 0.45 }],
+      ],
+    ),
+  ),
   // Only the warp is on, so every difference between two letters comes from it.
   'warp-e': [
     'eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee',

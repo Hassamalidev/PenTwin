@@ -1,6 +1,7 @@
 import { createRng } from '@pentwin/shared';
 import { createVariantPicker, type Glyph, type GlyphBank } from './glyphs';
-import { createJitterStyler, type JitterParams } from './jitter';
+import type { Ink } from './ink';
+import { createJitterStyler, createNoise, type JitterParams } from './jitter';
 import { transformPath, type PathCommand } from './path';
 import { identityStyler, type GlyphStyle, type Styler } from './style';
 
@@ -72,6 +73,8 @@ export interface WriterSetup {
    * same pair does not look identical every time. Defaults to 0.7.
    */
   bigramRate?: number;
+  /** The pen. Omit for plain, uniform strokes. */
+  ink?: Ink;
 }
 
 /** Word gaps shrink at most this far to keep a line inside its right limit. */
@@ -124,6 +127,11 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const bigrams = bank.bigrams?.size ? bank.bigrams : undefined;
   const bigramRate = setup.bigramRate ?? 0.7;
   const bigramRng = createRng(`${setup.pageSeed}/bigrams`);
+  const { ink } = setup;
+  const inkRng = createRng(`${setup.pageSeed}/ink`);
+  const flow = createNoise(inkRng);
+  const pressure = createNoise(inkRng);
+  let inkIndex = 0;
 
   const writeLine = (tokens: readonly Token[], spec: LineSpec): number => {
     const size = spec.scale ?? 1;
@@ -188,14 +196,25 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
             return [originX + x * cos - y * sin, originY + x * sin + y * cos];
           }),
         };
-        if (slot.bold) {
+        if (bank.paint === 'fill') stroke.width = 0;
+        if (ink) {
+          // Both change slowly from glyph to glyph, like ink flow and hand pressure do.
+          const t = inkIndex++;
+          stroke.opacity = ink.opacity * (1 - ink.shading * (0.5 + 0.5 * flow(t / 14)));
+          const swell = ink.width * (1 + ink.widthVariation * pressure(t / 9));
           if (bank.paint === 'fill') {
-            stroke.mode = 'both';
-            stroke.width *= BOLD_OUTLINE;
+            // A filled outline has no pen width to change; a broader pen is drawn as an
+            // outline around the glyph.
+            stroke.width = Math.max(0, penWidth * (swell - 1));
           } else {
-            stroke.width *= BOLD_STROKE;
+            stroke.width *= swell;
           }
         }
+        if (slot.bold) {
+          if (bank.paint === 'fill') stroke.width += penWidth * BOLD_OUTLINE;
+          else stroke.width *= BOLD_STROKE;
+        }
+        if (bank.paint === 'fill' && stroke.width > 0) stroke.mode = 'both';
         strokes.push(stroke);
         report.glyphCount++;
       }

@@ -1,5 +1,6 @@
 import { PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
 import type { GlyphBank } from './glyphs';
+import { INKS, type Ink, type InkName } from './ink';
 import type { JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
 import { createPaper, type Paper, type PaperSpec } from './paper';
@@ -17,6 +18,9 @@ export interface RenderOptions {
   /** Extra gap after each paragraph, in lines. */
   paragraphSpacing?: number;
   hyphenate?: boolean;
+  /** The pen: a named ink or custom settings. Omit for plain, uniform strokes. */
+  ink?: InkName | Ink;
+  /** Overrides the ink's colour. */
   inkColor?: string;
   penWidth?: number;
   /** Human variation. Omit for perfectly regular output. */
@@ -38,6 +42,8 @@ export interface PageScene {
   width: number;
   height: number;
   inkColor: string;
+  /** Bleed and grain of the ink, drawn in raster output only. */
+  inkEffects?: Pick<Ink, 'bleed' | 'grain'>;
   paint: 'stroke' | 'fill';
   strokes: InkStroke[];
   /** Ideal baseline of each text line, before any variation. */
@@ -69,6 +75,8 @@ export function resolvePage(bank: GlyphBank, options: RenderOptions) {
     lineSlope: options.jitter.lineSlope * paper.driftScale,
   };
   const xHeight = options.xHeight ?? lineHeight * 0.35;
+  const ink = typeof options.ink === 'string' ? INKS[options.ink] : options.ink;
+  const inkColor = options.inkColor ?? ink?.color ?? DEFAULT_INK;
 
   return {
     width: size.widthMm,
@@ -79,12 +87,16 @@ export function resolvePage(bank: GlyphBank, options: RenderOptions) {
     jitter,
     xHeight,
     penWidth: options.penWidth ?? DEFAULT_PEN_WIDTH,
-    inkColor: options.inkColor ?? DEFAULT_INK,
+    ink,
+    inkColor,
     /** A blank page scene to add strokes to. */
     scene: (strokes: InkStroke[], baselines: number[]): PageScene => ({
       width: size.widthMm,
       height: size.heightMm,
-      inkColor: options.inkColor ?? DEFAULT_INK,
+      inkColor,
+      ...(ink && (ink.bleed > 0 || ink.grain > 0)
+        ? { inkEffects: { bleed: ink.bleed, grain: ink.grain } }
+        : {}),
       paint: bank.paint,
       strokes,
       baselines,
@@ -101,6 +113,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     xHeight: page.xHeight,
     penWidth: page.penWidth,
     jitter: page.jitter,
+    ink: page.ink,
     bigramRate: options.bigrams,
     report,
   };

@@ -1,3 +1,4 @@
+import { inkFilter } from './ink';
 import { serializePath, type PathCommand } from './path';
 import type { PageScene } from './render';
 
@@ -58,6 +59,12 @@ export function sceneToSvg(scene: PageScene): string {
   // An empty page still gets its (empty) ink group, so the document shape is constant.
   if (!current) ink.push(open[scene.paint]);
   ink.push('</g>');
+
+  const filter = scene.inkEffects && inkFilter(scene.inkEffects, width, height);
+  if (filter) {
+    ink.unshift(`<defs>${filter}</defs>`, '<g filter="url(#ink)">');
+    ink.push('</g>');
+  }
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}">`,
