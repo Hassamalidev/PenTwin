@@ -151,7 +151,8 @@ describe('corrections in rendering', { timeout: 120_000 }, () => {
     expect(lines.length).toBeLessThanOrEqual(corrections.struck * 2);
     for (const line of lines) {
       expect(line.mode).toBe('stroke');
-      const [start, end] = line.path as unknown as { x: number; y: number }[];
+      const points = line.path as unknown as { x: number; y: number }[];
+      const [start, end] = [points[0], points.at(-1)];
       expect(end!.x - start!.x).toBeGreaterThan(3); // mm: spans a word
       expect(Math.abs(end!.y - start!.y)).toBeLessThan(1.5); // roughly level
     }

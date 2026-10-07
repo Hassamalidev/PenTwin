@@ -228,7 +228,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.6 Scan & photo effects (`effects.ts`).** Clean-scan mode and phone-photo mode: gentle shadow gradient, slight rotation, paper grain, vignette, noise, optional crease. Keep subtle; heavy filters look fake.
   *Note:* works on rendered pixels, so it applies to PNG output only, not PDF. Off unless called (`applyEffects`), with a 0-1 strength and an optional crease. Before/after: `docs/samples/effect-scan.png`, `effect-photo.png` against `paper-ruled.png`.
   *Acceptance:* before/after samples; effect is toggleable and tuned.
-- [ ] **3.7 Headers & page furniture.** Handwritten name/roll number/date header, page numbers, underlined headings, optional margin notes.
+- [x] **3.7 Headers & page furniture.** Handwritten name/roll number/date header, page numbers, underlined headings, optional margin notes.
+  *Note:* header fields share a row when they fit side by side, otherwise stack; on lined paper header and body stay on the ruling. **Margin notes are not built.** Underlined headings come with 3.8. Tests are in `document.test.ts`.
   *Acceptance:* header fields configurable and rendered in the user's handwriting.
 - [ ] **3.8 Structured content rendering.** Headings (bigger/underlined), bold (heavier stroke), lists with handwritten bullets/numbers, tables with slightly wobbly lines, images placed on the page.
   *Acceptance:* a document with all structure types renders sensibly.

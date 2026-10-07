@@ -13,6 +13,8 @@ export interface LayoutOptions {
   lineHeight: number;
   /** Baseline of the first line on each page. Defaults to `margins.top + lineHeight`. */
   firstBaseline?: number;
+  /** Baseline of the first line on the first page only, when it differs (a header). */
+  firstPageBaseline?: number;
   /** Extra gap after each paragraph, in lines. Defaults to 0. */
   paragraphSpacing?: number;
   spaceWidth: number;
@@ -56,7 +58,7 @@ export function layoutText(text: string, options: LayoutOptions): LaidOutPage[] 
   const hyphenWidth = options.hyphenate ? measure('-') : 0;
 
   const pages: LaidOutPage[] = [{ lines: [] }];
-  let baseline = firstBaseline;
+  let baseline = options.firstPageBaseline ?? firstBaseline;
 
   const emit = (words: LaidOutWord[]): void => {
     let page = pages.at(-1)!;

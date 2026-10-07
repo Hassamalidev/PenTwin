@@ -1,5 +1,6 @@
 import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
 import { addCorrections, readMarkers, RETRACE, STRUCK, type CorrectionCounts } from './corrections';
+import { layoutHeader, writeFurniture, type FurnitureOptions } from './furniture';
 import type { GlyphBank } from './glyphs';
 import { INKS, type Ink, type InkName } from './ink';
 import type { JitterParams } from './jitter';
@@ -8,7 +9,7 @@ import { createPaper, type Paper, type PaperSpec } from './paper';
 import { createPageWriter, type InkStroke, type RenderReport } from './writer';
 
 /** All lengths are in millimetres. */
-export interface RenderOptions {
+export interface RenderOptions extends FurnitureOptions {
   /** Same text + bank + options + seed always gives the same pages. */
   seed: Seed;
   pageSize?: PageSizeName;
@@ -45,6 +46,16 @@ export interface RenderOptions {
   corrections?: number;
 }
 
+/** A picture placed on the page. Lengths in mm. */
+export interface SceneImage {
+  /** A data URL (PNG or JPEG) or a link. Only data URLs are embedded in PDF output. */
+  href: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** A fully resolved page: every exporter (SVG, PDF, PNG) draws from this. */
 export interface PageScene {
   width: number;
@@ -57,6 +68,8 @@ export interface PageScene {
   /** Ideal baseline of each text line, before any variation. */
   baselines: number[];
   paper: Pick<Paper, 'background' | 'layers'>;
+  /** Pictures on the page, drawn under the ink. */
+  images?: SceneImage[];
 }
 
 export interface RenderResult {
@@ -135,12 +148,17 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     options.corrections ?? 0,
     createRng(`${options.seed}/corrections`),
   );
+  const header = options.header?.length
+    ? layoutHeader(page, options.header, (text) => ruler.measure(text))
+    : undefined;
   const laidOut = layoutText(corrected.text, {
     pageWidth: page.width,
     pageHeight: page.height,
     margins: page.margins,
     lineHeight: page.lineHeight,
-    firstBaseline: page.paper.firstBaseline,
+    firstBaseline:
+      (options.headerOnEveryPage ? header?.bodyStart : undefined) ?? page.paper.firstBaseline,
+    firstPageBaseline: header?.bodyStart,
     paragraphSpacing: options.paragraphSpacing,
     hyphenate: options.hyphenate,
     spaceWidth: ruler.spaceWidth,
@@ -163,6 +181,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
         lineIndex,
       });
     });
+    writeFurniture(writer, page, options, pageIndex, header);
     return page.scene(
       writer.strokes,
       lines.lines.map((line) => line.baseline),

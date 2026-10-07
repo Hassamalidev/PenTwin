@@ -60,6 +60,8 @@ export interface LineSpec {
 export interface PageWriter {
   /** Writes the tokens along a line and returns the x where the pen ended up. */
   writeLine(tokens: readonly Token[], spec: LineSpec): number;
+  /** Draws a freehand straight line: an underline, a table rule. */
+  drawLine(x0: number, y0: number, x1: number, y1: number): void;
   /** Width the text would nominally take at the given size. */
   measure(text: string, scale?: number): number;
   /** Nominal width of a space. */
@@ -180,16 +182,23 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
 
   /** A hand-drawn line: nearly straight, slightly bowed, never ruler-perfect. */
   const drawnLine = (x0: number, y0: number, x1: number, y1: number): InkStroke => {
-    const wobble = (): number => markRng.float(-1, 1) * xHeight * 0.12;
-    return {
-      char: '',
-      mode: 'stroke',
-      width: penWidth,
-      path: [
-        { type: 'M', x: x0, y: y0 + wobble() },
-        { type: 'Q', x1: (x0 + x1) / 2, y1: (y0 + y1) / 2 + wobble() * 2, x: x1, y: y1 + wobble() },
-      ],
-    };
+    const length = Math.hypot(x1 - x0, y1 - y0);
+    // Sideways drift, perpendicular to the line.
+    const nx = length > 0 ? -(y1 - y0) / length : 0;
+    const ny = length > 0 ? (x1 - x0) / length : 1;
+    const drift = (): number => markRng.float(-1, 1) * xHeight * 0.12;
+    // A long line is drawn in several sweeps of the hand, each a little off the last.
+    const sweeps = Math.max(1, Math.round(length / 22));
+    const points = Array.from({ length: sweeps * 2 + 1 }, (_, i) => {
+      const t = i / (sweeps * 2);
+      const d = drift() * (i % 2 === 1 ? 2 : 1);
+      return { x: x0 + (x1 - x0) * t + nx * d, y: y0 + (y1 - y0) * t + ny * d };
+    });
+    const path: PathCommand[] = [{ type: 'M', ...points[0]! }];
+    for (let i = 1; i < points.length; i += 2) {
+      path.push({ type: 'Q', x1: points[i]!.x, y1: points[i]!.y, ...points[i + 1]! });
+    }
+    return { char: '', mode: 'stroke', width: penWidth, path };
   };
 
   const writeLine = (tokens: readonly Token[], spec: LineSpec): number => {
@@ -319,5 +328,8 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     return pen;
   };
 
-  return { writeLine, measure, spaceWidth, strokes };
+  const drawLine = (x0: number, y0: number, x1: number, y1: number): void => {
+    strokes.push(drawnLine(x0, y0, x1, y1));
+  };
+  return { writeLine, drawLine, measure, spaceWidth, strokes };
 }

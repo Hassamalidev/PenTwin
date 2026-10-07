@@ -108,6 +108,19 @@ export async function scenesToPdf(scenes: readonly PageScene[]): Promise<Uint8Ar
       }
       return name;
     };
+    // Pictures first, so the ink is drawn over them.
+    for (const image of scene.images ?? []) {
+      const match = /^data:image\/(png|jpe?g);base64,(.+)$/.exec(image.href);
+      if (!match) continue;
+      const bytes = Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0));
+      const embedded = match[1] === 'png' ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+      page.drawImage(embedded, {
+        x: image.x * MM_TO_PT,
+        y: (scene.height - image.y - image.height) * MM_TO_PT,
+        width: image.width * MM_TO_PT,
+        height: image.height * MM_TO_PT,
+      });
+    }
     const content = await deflate(pageContent(scene, opacityState));
     page.node.addContentStream(
       doc.context.register(doc.context.stream(content, { Filter: 'FlateDecode' })),

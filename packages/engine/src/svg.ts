@@ -73,6 +73,11 @@ export function sceneToSvg(scene: PageScene): string {
       (l) =>
         `<path fill="none" stroke="${l.color}" stroke-width="${l.width}" stroke-linecap="round" d="${l.d}"/>`,
     ),
+    ...(scene.images ?? []).map(
+      (image) =>
+        `<image x="${image.x}" y="${image.y}" width="${image.width}" height="${image.height}" ` +
+        `preserveAspectRatio="none" href="${image.href.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"/>`,
+    ),
     ...ink,
     '</svg>',
     '',
