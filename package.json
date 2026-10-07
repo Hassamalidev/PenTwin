@@ -14,7 +14,8 @@
     "test": "vitest run",
     "fixtures:glyphs": "tsx scripts/build-test-glyphs.ts",
     "samples": "tsx scripts/make-samples.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "sample:check": "tsx scripts/check-sample-text.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

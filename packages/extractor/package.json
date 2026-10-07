@@ -5,5 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pentwin/engine": "workspace:*",
+    "@pentwin/shared": "workspace:*",
+    "pdf-lib": "^1.17.1"
   }
 }

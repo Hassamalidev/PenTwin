@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "title": "Handwriting sample",
+  "paragraphs": [
+    "Amy, Ben, Cara, Dev, Eli, Fay, Gus, Hana, Ivy, Jack, Kim, Leo, Mia, Noah, Omar, Pria, Quinn, Raj, Sara, Tom, Uma, Vik, Wes, Xena, Yusuf and Zoe.",
+    "The quick brown fox jumps over the lazy dog, and my five boxing wizards jump quickly through the cold, green street.",
+    "On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). \"Really?\" she asked; 'Yes,' I said - reading, writing & learning take much attention.",
+    "Last August, Quentin and Zara drove from Boston to Xenia, Ohio. Every Friday in June they visit Uncle Hugo in Denver, and Grandma Wendy joins from Kansas City on Sundays. Their flight, number 3679, leaves at 8:10. Next Monday, Professor Lopez will quiz six jazz players about Vienna, York and Iceland."
+  ],
+  "targets": {
+    "lowercaseMin": 3,
+    "uppercaseMin": 2,
+    "digitMin": 2,
+    "punctuation": ".,;:!?'\"-()/&$",
+    "pairs": ["th", "er", "ing", "tion", "ll", "ee", "oo", "ou", "st", "ch"]
+  }
+}

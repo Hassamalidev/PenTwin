@@ -155,7 +155,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** user copies a designed paragraph in their own writing, photographs it, and gets a personal glyph bank. This is the hardest technical phase.
 
-- [ ] **2.1 Design the copy-paragraph.** Write 1-2 pages of natural-sounding text that guarantees: every lowercase letter >= 3 times, every capital >= 2, digits 0-9, common punctuation, and common pairs (th, er, ing, tion, ll, ee, oo, ou, st, ch). Store in `docs/sample-text.json`.
+- [x] **2.1 Design the copy-paragraph.** Write 1-2 pages of natural-sounding text that guarantees: every lowercase letter >= 3 times, every capital >= 2, digits 0-9, common punctuation, and common pairs (th, er, ing, tion, ll, ee, oo, ou, st, ch). Store in `docs/sample-text.json`.
+  *Note:* built on the paragraph given in this file, plus one more paragraph for second capitals, digits and q/x/z (126 words). It does not contain # % * + = @, so those need the fallback or top-up flow. Check with `pnpm sample:check`.
   *Acceptance:* a **coverage script** counts characters and pairs and fails if any target is missed. Paragraph must read naturally, since awkward text makes people write unnaturally.
 - [ ] **2.2 Printable/on-screen sample sheet.** A page showing the text in a clear, readable font with instructions: plain white paper, dark pen, normal handwriting, normal speed, don't try to be neat. Generate a printable PDF.
   *Acceptance:* sheet renders on mobile and prints on A4.
