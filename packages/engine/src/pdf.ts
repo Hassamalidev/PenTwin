@@ -43,8 +43,13 @@ function pathOperators(path: readonly PathCommand[]): string {
   return out;
 }
 
-/** The page's whole content stream, written in scene coordinates (mm, origin top-left). */
-function pageContent(scene: PageScene): string {
+const PAINT = { stroke: 'S', fill: 'f', both: 'B' } as const;
+
+/**
+ * The page's whole content stream, written in scene coordinates (mm, origin top-left).
+ * `opacityState` returns the name of a graphics state with the given opacity.
+ */
+function pageContent(scene: PageScene, opacityState: (opacity: number) => string): string {
   const parts = [
     'q',
     // Flip the y axis and scale mm to points. Line widths below are therefore in mm too.
@@ -63,11 +68,13 @@ function pageContent(scene: PageScene): string {
     );
   }
 
-  const filled = scene.paint === 'fill';
-  parts.push(`${color(scene.inkColor)} ${filled ? 'rg' : 'RG'}`);
-  for (const { width, paths } of groupInk(scene)) {
-    if (!filled) parts.push(`${n(width)} w`);
-    parts.push(paths.map(pathOperators).join(''), filled ? 'f' : 'S');
+  const ink = color(scene.inkColor);
+  parts.push(`${ink} rg ${ink} RG`);
+  for (const group of groupInk(scene)) {
+    parts.push('q');
+    if (group.opacity < 1) parts.push(`${opacityState(group.opacity)} gs`);
+    if (group.mode !== 'fill') parts.push(`${n(group.width)} w`);
+    parts.push(group.paths.map(pathOperators).join(''), PAINT[group.mode], 'Q');
   }
 
   parts.push('Q');
@@ -91,7 +98,17 @@ export async function scenesToPdf(scenes: readonly PageScene[]): Promise<Uint8Ar
   const doc = await PDFDocument.create();
   for (const scene of scenes) {
     const page = doc.addPage([scene.width * MM_TO_PT, scene.height * MM_TO_PT]);
-    const content = await deflate(pageContent(scene));
+    const states = new Map<number, string>();
+    const opacityState = (opacity: number): string => {
+      let name = states.get(opacity);
+      if (!name) {
+        const state = doc.context.obj({ Type: 'ExtGState', ca: opacity, CA: opacity });
+        name = page.node.newExtGState('GS', state).toString();
+        states.set(opacity, name);
+      }
+      return name;
+    };
+    const content = await deflate(pageContent(scene, opacityState));
     page.node.addContentStream(
       doc.context.register(doc.context.stream(content, { Filter: 'FlateDecode' })),
     );

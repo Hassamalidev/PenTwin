@@ -1,10 +1,9 @@
-import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
-import { createVariantPicker, type Glyph, type GlyphBank } from './glyphs';
-import { createJitterStyler, type JitterParams } from './jitter';
+import { PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
+import type { GlyphBank } from './glyphs';
+import type { JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
 import { createPaper, type Paper, type PaperSpec } from './paper';
-import { transformPath, type PathCommand } from './path';
-import { identityStyler, type GlyphStyle, type Styler } from './style';
+import { createPageWriter, type InkStroke, type RenderReport } from './writer';
 
 /** All lengths are in millimetres. */
 export interface RenderOptions {
@@ -29,15 +28,6 @@ export interface RenderOptions {
   paper?: PaperSpec;
 }
 
-export interface InkStroke {
-  /** The character this glyph stands for. */
-  char: string;
-  /** Path in page coordinates (mm). */
-  path: PathCommand[];
-  /** Pen width in mm. Ignored when the bank's glyphs are filled outlines. */
-  width: number;
-}
-
 /** A fully resolved page: every exporter (SVG, PDF, PNG) draws from this. */
 export interface PageScene {
   width: number;
@@ -50,13 +40,6 @@ export interface PageScene {
   paper: Pick<Paper, 'background' | 'layers'>;
 }
 
-export interface RenderReport {
-  pageCount: number;
-  glyphCount: number;
-  /** Characters the bank has no glyph for, with how often each occurred. A gap is left. */
-  unknownChars: Record<string, number>;
-}
-
 export interface RenderResult {
   pages: PageScene[];
   report: RenderReport;
@@ -66,19 +49,9 @@ const DEFAULT_MARGINS: Margins = { top: 20, right: 20, bottom: 20, left: 20 };
 const DEFAULT_LINE_HEIGHT = 8;
 const DEFAULT_INK = '#1b2a6b';
 const DEFAULT_PEN_WIDTH = 0.4;
-/** Word gaps shrink at most this far to keep a line inside the right margin. */
-const MIN_GAP_SQUEEZE = 0.5;
 
-interface Slot {
-  glyph?: Glyph;
-  style: GlyphStyle;
-  /** Space before this slot: a letter gap, or a word gap for the first slot of a word. */
-  gapBefore: number;
-  isWordStart: boolean;
-  advance: number;
-}
-
-export function renderText(text: string, bank: GlyphBank, options: RenderOptions): RenderResult {
+/** Page geometry and writing settings shared by every way of rendering. */
+export function resolvePage(bank: GlyphBank, options: RenderOptions) {
   const size = PAGE_SIZES[options.pageSize ?? 'A4'];
   const paper = createPaper(options.paper ?? { kind: 'plain' }, size.widthMm, size.heightMm);
   const margins = { ...DEFAULT_MARGINS, ...options.margins };
@@ -91,115 +64,70 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     lineSlope: options.jitter.lineSlope * paper.driftScale,
   };
   const xHeight = options.xHeight ?? lineHeight * 0.35;
-  const penWidth = options.penWidth ?? DEFAULT_PEN_WIDTH;
-  const unit = xHeight / bank.xHeight;
-  const spaceWidth = bank.spaceAdvance * unit;
 
-  const nominalAdvance = new Map<string, number>();
-  for (const [char, variants] of bank.glyphs) {
-    const mean = variants.reduce((sum, v) => sum + v.advance, 0) / variants.length;
-    nominalAdvance.set(char, mean * unit);
-  }
-
-  const laidOut = layoutText(text, {
-    pageWidth: size.widthMm,
-    pageHeight: size.heightMm,
+  return {
+    width: size.widthMm,
+    height: size.heightMm,
+    paper,
     margins,
     lineHeight,
-    firstBaseline: paper.firstBaseline,
-    paragraphSpacing: options.paragraphSpacing,
-    hyphenate: options.hyphenate,
-    spaceWidth,
-    measure: (char) => nominalAdvance.get(char) ?? spaceWidth,
-  });
-
-  const report: RenderReport = { pageCount: laidOut.length, glyphCount: 0, unknownChars: {} };
-
-  const pages = laidOut.map((page, pageIndex): PageScene => {
-    // Separate streams, so changing the styling never changes which variants are picked.
-    const picker = createVariantPicker(
-      bank,
-      createRng(`${options.seed}/page${pageIndex}/variants`),
-    );
-    const styler: Styler = jitter
-      ? createJitterStyler(jitter, createRng(`${options.seed}/page${pageIndex}/style`), {
-          xHeight,
-          glyphXHeight: bank.xHeight,
-        })
-      : identityStyler;
-    const strokes: InkStroke[] = [];
-
-    page.lines.forEach((line, lineIndex) => {
-      const lineStyle = styler.line(lineIndex);
-      const startX = margins.left + lineStyle.offsetX;
-
-      const slots: Slot[] = [];
-      for (const word of line.words) {
-        let prev = '';
-        for (const char of word.text) {
-          const glyph = picker.pick(char);
-          const style = styler.glyph(char);
-          const isWordStart = prev === '';
-          const gapBefore = isWordStart
-            ? slots.length > 0
-              ? spaceWidth * styler.wordGap()
-              : 0
-            : styler.letterGap(prev, char);
-          if (!glyph) report.unknownChars[char] = (report.unknownChars[char] ?? 0) + 1;
-          const advance = glyph ? glyph.advance * unit * style.scale : spaceWidth;
-          slots.push({ glyph, style, gapBefore, isWordStart, advance });
-          prev = char;
-        }
-      }
-
-      // Like a writer running out of room, tighten the word gaps before crossing the margin.
-      const natural = slots.reduce((sum, s) => sum + s.gapBefore + s.advance, 0);
-      const wordGaps = slots.reduce((sum, s) => sum + (s.isWordStart ? s.gapBefore : 0), 0);
-      const overflow = startX + natural - (size.widthMm - margins.right);
-      const squeeze =
-        overflow > 0 && wordGaps > 0 ? Math.max(MIN_GAP_SQUEEZE, 1 - overflow / wordGaps) : 1;
-
-      let pen = startX;
-      for (const slot of slots) {
-        pen += slot.isWordStart ? slot.gapBefore * squeeze : slot.gapBefore;
-        if (slot.glyph) {
-          const { style } = slot;
-          const scale = unit * style.scale;
-          const tanSlant = Math.tan(style.slant);
-          const angle = style.rotation + lineStyle.slope;
-          const cos = Math.cos(angle);
-          const sin = Math.sin(angle);
-          const originX = pen;
-          const originY =
-            line.baseline +
-            lineStyle.baselineShift(pen) +
-            Math.tan(lineStyle.slope) * (pen - startX);
-
-          strokes.push({
-            char: slot.glyph.char,
-            width: penWidth * style.strokeScale,
-            path: transformPath(slot.glyph.path, (gx, gy) => {
-              const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];
-              const x = (wx - wy * tanSlant) * scale;
-              const y = wy * scale;
-              return [originX + x * cos - y * sin, originY + x * sin + y * cos];
-            }),
-          });
-          report.glyphCount++;
-        }
-        pen += slot.advance;
-      }
-    });
-
-    return {
+    jitter,
+    xHeight,
+    penWidth: options.penWidth ?? DEFAULT_PEN_WIDTH,
+    inkColor: options.inkColor ?? DEFAULT_INK,
+    /** A blank page scene to add strokes to. */
+    scene: (strokes: InkStroke[], baselines: number[]): PageScene => ({
       width: size.widthMm,
       height: size.heightMm,
       inkColor: options.inkColor ?? DEFAULT_INK,
       paint: bank.paint,
       strokes,
-      baselines: page.lines.map((line) => line.baseline),
+      baselines,
       paper: { background: paper.background, layers: paper.layers },
-    };
+    }),
+  };
+}
+
+export function renderText(text: string, bank: GlyphBank, options: RenderOptions): RenderResult {
+  const page = resolvePage(bank, options);
+  const report: RenderReport = { pageCount: 0, glyphCount: 0, unknownChars: {} };
+  const setup = {
+    bank,
+    xHeight: page.xHeight,
+    penWidth: page.penWidth,
+    jitter: page.jitter,
+    report,
+  };
+
+  // Layout only needs nominal widths, which do not depend on the page.
+  const ruler = createPageWriter({ ...setup, pageSeed: `${options.seed}/ruler` });
+  const laidOut = layoutText(text, {
+    pageWidth: page.width,
+    pageHeight: page.height,
+    margins: page.margins,
+    lineHeight: page.lineHeight,
+    firstBaseline: page.paper.firstBaseline,
+    paragraphSpacing: options.paragraphSpacing,
+    hyphenate: options.hyphenate,
+    spaceWidth: ruler.spaceWidth,
+    measure: (char) => ruler.measure(char),
+  });
+  report.pageCount = laidOut.length;
+
+  const pages = laidOut.map((lines, pageIndex): PageScene => {
+    const writer = createPageWriter({ ...setup, pageSeed: `${options.seed}/page${pageIndex}` });
+    lines.lines.forEach((line, lineIndex) => {
+      writer.writeLine(line.words, {
+        baseline: line.baseline,
+        left: page.margins.left,
+        right: page.width - page.margins.right,
+        lineIndex,
+      });
+    });
+    return page.scene(
+      writer.strokes,
+      lines.lines.map((line) => line.baseline),
+    );
   });
 
   return { pages, report };
