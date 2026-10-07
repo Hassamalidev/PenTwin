@@ -31,7 +31,9 @@ const wrap = (text: string, font: PDFFont, size: number, maxWidth: number): stri
  * Builds the one-page A4 sheet a user reads from while writing their sample: the
  * instructions, then the text to copy in a large, clear typeface.
  */
-export async function buildSampleSheet(sample: SampleText): Promise<Uint8Array> {
+export async function buildSampleSheet(
+  sample: Pick<SampleText, 'title' | 'paragraphs'>,
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`${BRAND.name}: ${sample.title}`);
   const regular = await doc.embedFont(StandardFonts.Helvetica);

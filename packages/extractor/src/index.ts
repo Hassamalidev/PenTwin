@@ -10,3 +10,4 @@ export * from './coverage';
 export * from './extract';
 export * from './normalize';
 export * from './vectorize';
+export * from './fallback';

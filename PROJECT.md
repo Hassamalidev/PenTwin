@@ -185,7 +185,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.10 Coverage report (`coverage.ts`).** For each character: variant count and quality score. Classify as strong (>= 3), weak (1-2), or missing.
   *Note:* from one page: 36 strong, 40 weak, 6 missing. Capitals are weak because the copy-paragraph only guarantees two of each; the six missing symbols are not in the paragraph at all.
   *Acceptance:* report matches reality on fixtures.
-- [ ] **2.11 Fallback chain (`fallback.ts`).** Implement in order: reuse own variants -> transform from a related glyph (scaled lowercase for c, o, s, v, w, x, z capitals; and similar) -> top-up request. Mark every derived glyph. **Never substitute silently.**
+- [x] **2.11 Fallback chain (`fallback.ts`).** Implement in order: reuse own variants -> transform from a related glyph (scaled lowercase for c, o, s, v, w, x, z capitals; and similar) -> top-up request. Mark every derived glyph. **Never substitute silently.**
+  *Note:* characters with no sound recipe (`# % * @ & $ ? ! /` and most letters) are never invented; they go to the top-up list. Known flaw: a capital made by enlarging a lowercase letter also gets thicker strokes.
   *Acceptance:* a fixture with deliberately missing letters yields a complete bank with derived glyphs flagged.
 - [ ] **2.12 Top-up flow.** Generate a small "write these N characters" sheet and merge the results into the existing bank.
   *Acceptance:* merging improves coverage without overwriting good glyphs.

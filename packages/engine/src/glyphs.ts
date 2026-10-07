@@ -16,6 +16,11 @@ const variantSchema = z.object({
   lsb: z.number(),
   rsb: z.number(),
   baseline: z.number(),
+  /**
+   * Set when this variant was not written by the user but made from other glyphs, e.g.
+   * "scaled from c". Derived glyphs must always be marked so they can be shown as such.
+   */
+  derivedFrom: z.string().optional(),
 });
 
 export const glyphMetadataSchema = z.object({
@@ -44,6 +49,8 @@ export interface Glyph {
   advance: number;
   lsb: number;
   rsb: number;
+  /** Present when the glyph was derived from other glyphs instead of written by the user. */
+  derivedFrom?: string;
 }
 
 export interface GlyphBank {
@@ -83,7 +90,15 @@ export function buildGlyphBank(metadata: unknown, readSvg: (file: string) => str
         const d = [...readSvg(v.file).matchAll(PATH_D)].map((m) => m[1]).join(' ');
         if (!d.trim()) throw new Error(`No path data in ${v.file} (glyph "${char}")`);
         const path = transformPath(parsePath(d), (x, y) => [x + v.lsb, y - v.baseline]);
-        return { char, variant, path, advance: v.advance, lsb: v.lsb, rsb: v.rsb };
+        return {
+          char,
+          variant,
+          path,
+          advance: v.advance,
+          lsb: v.lsb,
+          rsb: v.rsb,
+          ...(v.derivedFrom ? { derivedFrom: v.derivedFrom } : {}),
+        };
       }),
     );
   }
