@@ -128,6 +128,8 @@ export interface VariantPicker {
 /**
  * Picks variants so the same one is never used twice in a row for a character, and is not
  * reused within the last `avoidWindow` picks when the bank has enough variants to allow it.
+ * With three or more variants there are always at least two candidates, so the sequence
+ * never settles into a fixed cycle.
  */
 export function createVariantPicker(bank: GlyphBank, rng: Rng, avoidWindow = 2): VariantPicker {
   const recent = new Map<string, number[]>();
@@ -139,8 +141,7 @@ export function createVariantPicker(bank: GlyphBank, rng: Rng, avoidWindow = 2):
       if (variants.length === 1) return variants[0];
 
       const history = recent.get(char) ?? [];
-      // Always leave at least one candidate.
-      const blocked = history.slice(-Math.min(avoidWindow, variants.length - 1));
+      const blocked = history.slice(-Math.max(1, Math.min(avoidWindow, variants.length - 2)));
       const glyph = rng.pick(variants.filter((v) => !blocked.includes(v.variant)));
 
       history.push(glyph.variant);

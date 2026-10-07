@@ -41,9 +41,9 @@ describe('createVariantPicker', () => {
     for (let i = 2; i < sequence.length; i++) expect(sequence[i]).not.toBe(sequence[i - 2]);
   });
 
-  it('is not a fixed cycle', () => {
-    const sequence = picks(bankWith({ e: 4 }), 'e', 400).join('');
-    expect(sequence).not.toBe(sequence.slice(0, 4).repeat(100));
+  it.each([3, 4])('is not a fixed cycle with %i variants', (n) => {
+    const sequence = picks(bankWith({ e: n }), 'e', 100 * n).join('');
+    expect(sequence).not.toBe(sequence.slice(0, n).repeat(100));
   });
 
   it('tracks each character separately', () => {
