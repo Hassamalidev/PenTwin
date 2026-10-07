@@ -10,6 +10,7 @@ import {
   encodePng,
   NO_JITTER,
   PRESETS,
+  renderDocument,
   renderText,
   type PaperSpec,
   type RenderOptions,
@@ -90,3 +91,60 @@ for (const [name, options] of [
   writeFileSync(`docs/samples/${name}.png`, await encodePng(image));
   console.log(`docs/samples/${name}.png`);
 }
+
+// Structured content: header fields, headings, bold, lists, a table and a picture.
+const swatch = await encodePng({
+  width: 60,
+  height: 40,
+  data: Uint8Array.from({ length: 60 * 40 * 4 }, (_, i) =>
+    i % 4 === 3 ? 255 : i % 4 === 0 ? 90 + ((i / 4) % 60) * 2 : i % 4 === 1 ? 150 : 200,
+  ),
+});
+const { pages: documentPages } = renderDocument(
+  [
+    { type: 'heading', text: 'Water cycle notes' },
+    {
+      type: 'paragraph',
+      text: [
+        { text: 'Water moves between the sea, the air and the land. The main driver is' },
+        { text: 'heat from the sun,', bold: true },
+        { text: 'which lifts water into the air.' },
+      ],
+    },
+    { type: 'heading', text: 'Stages', level: 2 },
+    {
+      type: 'list',
+      ordered: true,
+      items: ['Evaporation from seas and lakes', 'Condensation into clouds', 'Rain or snow falls'],
+    },
+    {
+      type: 'table',
+      rows: [
+        ['Stage', 'Where', 'State'],
+        ['Evaporation', 'sea surface', 'gas'],
+        ['Rainfall', 'over land and sea', 'liquid'],
+      ],
+    },
+    {
+      type: 'image',
+      href: `data:image/png;base64,${Buffer.from(swatch).toString('base64')}`,
+      width: 36,
+      height: 24,
+    },
+    { type: 'list', items: ['rivers return it to the sea', 'then it starts again'] },
+  ],
+  bank,
+  {
+    ...base,
+    jitter: PRESETS.normal,
+    paper: { kind: 'ruled', ruling: 'college', marginLine: true },
+    header: [
+      { label: 'Name', value: 'Sara Khan' },
+      { label: 'Date', value: '14/03/2025' },
+      { label: 'Roll no', value: '2041' },
+    ],
+    pageNumbers: true,
+  },
+);
+writeFileSync('docs/samples/document.png', sceneToPng(documentPages[0]!, 110));
+console.log('docs/samples/document.png');

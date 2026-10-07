@@ -14,3 +14,5 @@ export * from './autotune';
 export * from './ink';
 export * from './corrections';
 export * from './effects';
+export * from './document';
+export * from './furniture';
