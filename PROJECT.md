@@ -176,7 +176,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.7 Character cutting.** Connected components + splitting of touching letters (semi-cursive is common). Keep a confidence score per glyph. Where letters connect and can't be split reliably, mark them and don't force a bad cut.
   *Note:* bad-cut rate 0.0-0.2% on synthetic photos, with joined letters refused rather than cut. Numbers and limits are in `docs/extraction-accuracy.md`. Not measured on real handwriting.
   *Acceptance:* confidence scores exist; the bad-cut rate is measured on fixtures.
-- [ ] **2.8 Normalization.** Baseline detection, x-height, bounding box, stroke-width normalization, advance width and side bearings per glyph.
+- [x] **2.8 Normalization.** Baseline detection, x-height, bounding box, stroke-width normalization, advance width and side bearings per glyph.
+  *Note:* baselines are fitted per line and the same letter comes out the same height on every line (spread under 10%). Stroke width is measured and stored, but glyphs are **not** thinned or thickened to a common width.
   *Acceptance:* glyphs from different lines are consistently scaled and baselined in a test render.
 - [ ] **2.9 Vectorization (`vectorize.ts`).** Potrace WASM -> clean SVG paths, simplified to keep bank size small (target a few hundred KB per profile).
   *Acceptance:* bank size recorded; visual diff vs raster is acceptable.
