@@ -193,7 +193,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* merging improves coverage without overwriting good glyphs.
 - [ ] **2.13 Review screen UI.** Grid of every extracted glyph with quality indicator, "replace this letter" and "retake" options, and a live test sentence rendered with the bank.
   *Acceptance:* a user can fix a bad "g" in under 30 seconds.
-- [ ] **2.14 Style features.** Compute slant, stroke width, x-height ratio, roundness, letter width and store with the profile (used later for the optional donor library and for auto-tuning jitter to the user's own style).
+- [x] **2.14 Style features.** Compute slant, stroke width, x-height ratio, roundness, letter width and store with the profile (used later for the optional donor library and for auto-tuning jitter to the user's own style).
+  *Note:* between two samples from the same synthetic writer: slant identical, stroke width within 5%, letter width within 1.3%, the rest identical. Slant is recovered to about 1 degree. Returned as `style` from the extractor; saving it to a profile comes with storage in Phase 5.
   *Acceptance:* features stable across two samples from the same writer (record variance).
 - [ ] **2.15 End-to-end timing.** Measure photo -> usable bank on a mid-range phone browser.
   *Acceptance:* **Gate: under 60 seconds** with no server compute.

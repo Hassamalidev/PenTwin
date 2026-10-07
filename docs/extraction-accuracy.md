@@ -1,4 +1,4 @@
-# Extraction accuracy (Tasks 2.5 to 2.7)
+# Extraction accuracy (Phase 2)
 
 Measured 2026-10-07 with `pnpm extract:measure`.
 
@@ -59,6 +59,26 @@ Two things follow directly from the copy-paragraph, not from the extractor:
 
 The time is for a desktop CPU. A mid-range phone will be several times slower; that is
 what Task 2.15 has to measure.
+
+## Style features (Task 2.14)
+
+Measured on four synthetic pages. "Page one" and "page two" are the same writer (same
+style settings, different random seed); the other two differ only in the slant they
+were written with.
+
+| Page                    | Slant (deg) | Stroke / x-height | x-height / cap | Roundness | Letter width / x-height |
+| ----------------------- | ----------- | ----------------- | -------------- | --------- | ----------------------- |
+| page one (written at 4) | 3           | 0.168             | 0.689          | 0.971     | 0.899                   |
+| page two (written at 4) | 3           | 0.176             | 0.689          | 0.971     | 0.887                   |
+| upright (written at 0)  | 0           | 0.165             | 0.685          | 0.969     | 0.889                   |
+| leaning (written at 14) | 13          | 0.168             | 0.700          | 0.963     | 0.952                   |
+
+- **Same writer, two samples:** slant identical, stroke width differs by 5%, letter width
+  by 1.3%, the other two not at all.
+- **Slant is recovered to within about 1 degree** of what the page was written with, in
+  whole-degree steps.
+- Only slant was varied between "writers" here, so this does not show how well the other
+  four features separate real people.
 
 ## What holds up
 

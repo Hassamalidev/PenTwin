@@ -12,3 +12,4 @@ export * from './normalize';
 export * from './vectorize';
 export * from './fallback';
 export * from './topup';
+export * from './style';

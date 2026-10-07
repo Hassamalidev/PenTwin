@@ -6,6 +6,7 @@ import type { RgbaImage } from './image';
 import { normalizeGlyphs, type NormalizedGlyph, type PageMetrics } from './normalize';
 import { assessQuality, type QualityReport } from './quality';
 import { segmentPage } from './segment';
+import { measureStyle, type StyleFeatures } from './style';
 import { vectorize } from './vectorize';
 
 /** A glyph bank in the engine's format: metadata plus one SVG document per variant. */
@@ -30,6 +31,8 @@ export interface Extraction {
   bank?: ExtractedBank;
   coverage?: CoverageReport;
   metrics?: PageMetrics;
+  /** The writer's style, to be stored with the profile. */
+  style?: StyleFeatures;
   /** Words and letter pairs that were left out rather than guessed. */
   flagged: FlaggedWord[];
   /** Size of the bank in bytes (metadata and all SVG files). */
@@ -145,6 +148,7 @@ export function extractGlyphBank(
     bank: { metadata, files },
     coverage: reportCoverage(confidences),
     metrics,
+    style: measureStyle(glyphs, metrics),
     flagged: alignment.flagged,
     bankBytes,
     timings,
