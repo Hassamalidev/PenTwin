@@ -4,3 +4,4 @@ export * from './clean';
 export * from './image';
 export * from './quality';
 export * from './segment';
+export * from './align';
