@@ -18,6 +18,7 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     marginDrift: 0.3,
     warp: 0.03,
     tracking: 0,
+    fatigue: 0,
   },
 
   normal: DEFAULT_JITTER,
@@ -36,5 +37,6 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     marginDrift: 2,
     warp: 0.1,
     tracking: 0.05,
+    fatigue: 0,
   },
 };

@@ -28,6 +28,12 @@ export interface JitterParams {
   warp: number;
   /** Fraction of the x-height. Constant extra gap between letters; loose, hurried writing. */
   tracking: number;
+  /**
+   * 0 to 1. How much the writing loosens from the top of a page to the bottom: more
+   * drift, a little more lean, slightly wider gaps. Keep it low; a tired hand is only
+   * a little worse, and overdone it looks fake.
+   */
+  fatigue: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -43,6 +49,7 @@ export const NO_JITTER: JitterParams = {
   marginDrift: 0,
   warp: 0,
   tracking: 0,
+  fatigue: 0,
 };
 
 export const DEFAULT_JITTER: JitterParams = {
@@ -58,6 +65,7 @@ export const DEFAULT_JITTER: JitterParams = {
   marginDrift: 0.8,
   warp: 0.05,
   tracking: 0,
+  fatigue: 0,
 };
 
 const DEG = Math.PI / 180;
@@ -99,14 +107,24 @@ export interface StyleMetrics {
   xHeight: number;
   /** x-height of the bank's glyphs, in glyph units. */
   glyphXHeight: number;
+  /** Lines of writing on the page, so fatigue knows how far down a line is. */
+  lineCount?: number;
 }
 
 /** Builds the styler for one page. */
 export function createJitterStyler(
   params: JitterParams,
   rng: Rng,
-  { xHeight, glyphXHeight }: StyleMetrics,
+  { xHeight, glyphXHeight, lineCount = 1 }: StyleMetrics,
 ): Styler {
+  // How tired the hand is on the line being written: 0 at the top of the page, rising
+  // to `fatigue` at the bottom, slowly at first.
+  let tired = 0;
+  const tiredAt = (lineIndex: number): number => {
+    const progress = Math.max(0, Math.min(1, lineIndex / Math.max(1, lineCount - 1)));
+    return params.fatigue * progress ** 1.5;
+  };
+
   // Sum of two uniforms: mostly small values, occasionally a larger one.
   const wobble = (): number => rng.next() + rng.next() - 1;
 
@@ -122,32 +140,48 @@ export function createJitterStyler(
   let wordIndex = 0;
 
   return {
-    line: (lineIndex) => ({
-      offsetX: params.marginDrift * margin(lineIndex / 5),
-      slope: params.lineSlope * DEG * slope(lineIndex / 4),
-      // A slow wander across the page plus a much smaller, quicker ripple.
-      baselineShift: (x) =>
-        params.baselineDrift *
-        (0.8 * baseline(x / 50 + lineIndex * 7.31) + 0.2 * ripple(x / 8 + lineIndex * 3.17)),
-    }),
+    line: (lineIndex) => {
+      const t = tiredAt(lineIndex);
+      tired = t;
+      return {
+        offsetX: params.marginDrift * margin(lineIndex / 5),
+        slope: params.lineSlope * (1 + 0.8 * t) * DEG * slope(lineIndex / 4),
+        // A slow wander across the page plus a much smaller, quicker ripple.
+        baselineShift: (x) =>
+          params.baselineDrift *
+          (1 + t) *
+          (0.8 * baseline(x / 50 + lineIndex * 7.31) + 0.2 * ripple(x / 8 + lineIndex * 3.17)),
+      };
+    },
 
     glyph: () => {
       const t = glyphIndex++;
       return {
-        scale: 1 + params.size * (0.7 * size(t / 20) + 0.3 * wobble()),
-        rotation: params.rotation * DEG * wobble(),
+        scale: 1 + params.size * (1 + 0.6 * tired) * (0.7 * size(t / 20) + 0.3 * wobble()),
+        rotation: params.rotation * (1 + 0.5 * tired) * DEG * wobble(),
         slant:
-          (params.slant + params.slantVariation * (0.7 * slant(t / 30) + 0.3 * wobble())) * DEG,
+          (params.slant +
+            3 * tired +
+            params.slantVariation * (0.7 * slant(t / 30) + 0.3 * wobble())) *
+          DEG,
         strokeScale: 1 + params.strokeWidth * (0.6 * stroke(t / 12) + 0.4 * wobble()),
-        warp: params.warp > 0 ? createWarp(rng, params.warp, glyphXHeight) : undefined,
+        warp:
+          params.warp > 0
+            ? createWarp(rng, params.warp * (1 + 0.5 * tired), glyphXHeight)
+            : undefined,
       };
     },
 
     wordGap: () =>
-      Math.max(0.4, 1 + params.wordSpacing * (0.5 * gap(wordIndex++ / 6) + 0.5 * wobble())),
+      Math.max(
+        0.4,
+        1 + 0.1 * tired + params.wordSpacing * (0.5 * gap(wordIndex++ / 6) + 0.5 * wobble()),
+      ),
 
     letterGap: (prev, char) =>
       xHeight *
-      (params.tracking + params.letterSpacing * (0.6 * pairBias(prev, char) + 0.4 * wobble())),
+      (params.tracking +
+        0.02 * tired +
+        params.letterSpacing * (0.6 * pairBias(prev, char) + 0.4 * wobble())),
   };
 }

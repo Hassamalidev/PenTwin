@@ -43,6 +43,16 @@ const samples: Record<string, [text: string, options: RenderOptions]> = {
       ],
     ),
   ),
+  // Top of the page against the bottom: the hand tires as it goes.
+  fatigue: [
+    `${sample}${sample}`,
+    {
+      ...base,
+      jitter: { ...PRESETS.normal, fatigue: 0.6 },
+      lineHeight: 8.2,
+      margins: { top: 12, bottom: 10 },
+    },
+  ],
   // Only the warp is on, so every difference between two letters comes from it.
   'warp-e': [
     'eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee',

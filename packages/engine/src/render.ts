@@ -134,7 +134,11 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
   report.pageCount = laidOut.length;
 
   const pages = laidOut.map((lines, pageIndex): PageScene => {
-    const writer = createPageWriter({ ...setup, pageSeed: `${options.seed}/page${pageIndex}` });
+    const writer = createPageWriter({
+      ...setup,
+      pageSeed: `${options.seed}/page${pageIndex}`,
+      lineCount: lines.lines.length,
+    });
     lines.lines.forEach((line, lineIndex) => {
       writer.writeLine(line.words, {
         baseline: line.baseline,

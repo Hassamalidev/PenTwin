@@ -219,7 +219,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.3 Ink engine (`ink.ts`).** Ballpoint (blue/black), gel, fountain (shading + slight bleed), pencil (grain). Pressure variation along strokes where data allows; otherwise stroke-width variation.
   *Note:* shading and width follow slow, correlated noise standing in for pressure, since glyphs carry no pressure data. Grain and bleed appear in PNG output only; PDF shows colour, opacity and width. On extracted (filled) glyphs a broader pen is drawn as an outline around the glyph. Samples: `docs/samples/ink-*.png`.
   *Acceptance:* each ink visibly distinct; fountain shows shading.
-- [ ] **3.4 Fatigue mode.** Writing degrades gradually through a page: more drift, slightly larger spacing, a bit more slant. Must be **subtle**; overdone it looks fake.
+- [x] **3.4 Fatigue mode.** Writing degrades gradually through a page: more drift, slightly larger spacing, a bit more slant. Must be **subtle**; overdone it looks fake.
+  *Note:* off by default (`fatigue: 0`); the top of the page is untouched and the effect builds slowly. Measured: the bottom quarter drifts at least 30% more than the top at full strength. The human blind check has NOT been done. Sample: `docs/samples/fatigue.png`.
   *Acceptance:* blind check that page 1 vs last line differ believably.
 - [ ] **3.5 Corrections.** Occasional strikethrough with a rewritten word, small overwrites. Frequency is a slider, default low. Never alter meaning-critical text (numbers, names, formulas): protect those tokens.
   *Acceptance:* corrections appear naturally and never corrupt protected tokens.

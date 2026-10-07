@@ -75,6 +75,8 @@ export interface WriterSetup {
   bigramRate?: number;
   /** The pen. Omit for plain, uniform strokes. */
   ink?: Ink;
+  /** Lines of writing on this page; fatigue builds up over them. */
+  lineCount?: number;
 }
 
 /** Word gaps shrink at most this far to keep a line inside its right limit. */
@@ -121,6 +123,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     ? createJitterStyler(setup.jitter, createRng(`${setup.pageSeed}/style`), {
         xHeight,
         glyphXHeight: bank.xHeight,
+        lineCount: setup.lineCount,
       })
     : identityStyler;
   const strokes: InkStroke[] = [];
