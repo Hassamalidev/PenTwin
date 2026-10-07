@@ -86,7 +86,7 @@ A task is **not done** until all steps below are complete:
 - [x] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
   *Note:* pnpm pinned to 10.x via `packageManager` (pnpm 12 binary fails to launch on the dev machine); TypeScript held at 6.x until typescript-eslint supports 7.
   *Acceptance:* `pnpm typecheck && pnpm lint && pnpm test` pass on an empty-but-wired repo.
-- [ ] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
+- [x] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
   *Acceptance:* green check on the latest commit.
 - [ ] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
   *Acceptance:* same seed yields identical sequence; lint fails on `Math.random()` in `packages/engine`.
