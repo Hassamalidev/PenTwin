@@ -6,3 +6,7 @@ export * from './quality';
 export * from './segment';
 export * from './align';
 export * from './cut';
+export * from './coverage';
+export * from './extract';
+export * from './normalize';
+export * from './vectorize';

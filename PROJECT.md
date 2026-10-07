@@ -179,7 +179,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.8 Normalization.** Baseline detection, x-height, bounding box, stroke-width normalization, advance width and side bearings per glyph.
   *Note:* baselines are fitted per line and the same letter comes out the same height on every line (spread under 10%). Stroke width is measured and stored, but glyphs are **not** thinned or thickened to a common width.
   *Acceptance:* glyphs from different lines are consistently scaled and baselined in a test render.
-- [ ] **2.9 Vectorization (`vectorize.ts`).** Potrace WASM -> clean SVG paths, simplified to keep bank size small (target a few hundred KB per profile).
+- [x] **2.9 Vectorization (`vectorize.ts`).** Potrace WASM -> clean SVG paths, simplified to keep bank size small (target a few hundred KB per profile).
+  *Note:* uses a small built-in outline tracer instead of Potrace WASM (no extra download, runs in tests). A full bank from one page is about 160 KB. Traced outlines overlap the source bitmaps by over 80% on average; visual check: `docs/samples/extracted-bank.png` (`pnpm extract:demo`).
   *Acceptance:* bank size recorded; visual diff vs raster is acceptable.
 - [ ] **2.10 Coverage report (`coverage.ts`).** For each character: variant count and quality score. Classify as strong (>= 3), weak (1-2), or missing.
   *Acceptance:* report matches reality on fixtures.
