@@ -90,11 +90,13 @@ A task is **not done** until all steps below are complete:
   *Acceptance:* green check on the latest commit.
 - [x] **0.4 Shared foundations.** `shared/rng.ts` (seeded PRNG, e.g. mulberry32), `shared/constants.ts`, shared types. Ban `Math.random()` in engine via lint rule.
   *Acceptance:* same seed yields identical sequence; lint fails on `Math.random()` in `packages/engine`.
-- [ ] **0.5 Assumption check: payments.** Research whether Lemon Squeezy, Paddle, or an alternative can pay out to a Pakistan-based seller. Write findings to `docs/payments-decision.md` with sources and the chosen provider plus a backup. *Do not guess; verify current terms.*
+- [x] **0.5 Assumption check: payments.** Research whether Lemon Squeezy, Paddle, or an alternative can pay out to a Pakistan-based seller. Write findings to `docs/payments-decision.md` with sources and the chosen provider plus a backup. *Do not guess; verify current terms.*
+  *Note:* proposed Paddle (primary) and Lemon Squeezy (backup); awaiting owner confirmation. Account approval is unverified until an application is accepted.
   *Acceptance:* a documented decision, flagged for the user to confirm.
-- [ ] **0.6 Assumption check: willingness to pay.** Create `docs/user-interviews.md` with a 5-question script for the user to ask 10 students (current solution, price tolerance, must-have features). Claude Code only prepares the template; the user fills it.
+- [x] **0.6 Assumption check: willingness to pay.** Create `docs/user-interviews.md` with a 5-question script for the user to ask 10 students (current solution, price tolerance, must-have features). Claude Code only prepares the template; the user fills it.
   *Acceptance:* template committed. Gate: price tiers in CLAUDE.md are revisited after interviews.
-- [ ] **0.7 Name & domain check.** Document PenTwin domain/social/trademark check results in `docs/branding.md` (fallback: OwnHand).
+- [x] **0.7 Name & domain check.** Document PenTwin domain/social/trademark check results in `docs/branding.md` (fallback: OwnHand).
+  *Note:* pentwin.com is already registered (owner unknown) and no trademark registry was searched; see open items in the doc.
   *Acceptance:* decision recorded.
 
 **Decision gate:** if payments can't be solved, fix that before Phase 5. It doesn't block Phases 1-4.
