@@ -37,6 +37,29 @@ How to read the columns:
 - **Pairs refused** counts touching letter pairs that were joined by more than a thin
   stroke and were deliberately not cut.
 
+## The bank from one page (Tasks 2.8 to 2.10)
+
+From `pnpm extract:demo`: one synthetic photo, shadowed and rotated 2.5 degrees.
+
+| Measure                    | Result                                                     |
+| -------------------------- | ---------------------------------------------------------- |
+| Strong characters (3+)     | 36: every lowercase letter and the digits 0, 1, 2, 5       |
+| Weak characters (1-2)      | 40: all capitals, six digits, most punctuation             |
+| Missing characters         | 6: `# % * + = @`                                           |
+| Bank size                  | 162 KB (up to 6 variants per character)                    |
+| Time, photo to bank        | 2.3 s on a laptop (quality 0.7, cleanup 1.2, the rest 0.4) |
+| Traced outline vs original | over 80% overlap on average                                |
+
+Two things follow directly from the copy-paragraph, not from the extractor:
+
+- **Capitals are weak by design.** The paragraph guarantees each capital only twice, and
+  "strong" needs three. Either lengthen the paragraph or accept two variants for capitals.
+- **Six symbols are missing** because the paragraph does not contain them. They need the
+  fallback chain (2.11) or a top-up sheet (2.12).
+
+The time is for a desktop CPU. A mid-range phone will be several times slower; that is
+what Task 2.15 has to measure.
+
 ## What holds up
 
 - Dim light, shadow and a few degrees of rotation make no measurable difference.

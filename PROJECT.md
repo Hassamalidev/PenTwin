@@ -182,7 +182,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.9 Vectorization (`vectorize.ts`).** Potrace WASM -> clean SVG paths, simplified to keep bank size small (target a few hundred KB per profile).
   *Note:* uses a small built-in outline tracer instead of Potrace WASM (no extra download, runs in tests). A full bank from one page is about 160 KB. Traced outlines overlap the source bitmaps by over 80% on average; visual check: `docs/samples/extracted-bank.png` (`pnpm extract:demo`).
   *Acceptance:* bank size recorded; visual diff vs raster is acceptable.
-- [ ] **2.10 Coverage report (`coverage.ts`).** For each character: variant count and quality score. Classify as strong (>= 3), weak (1-2), or missing.
+- [x] **2.10 Coverage report (`coverage.ts`).** For each character: variant count and quality score. Classify as strong (>= 3), weak (1-2), or missing.
+  *Note:* from one page: 36 strong, 40 weak, 6 missing. Capitals are weak because the copy-paragraph only guarantees two of each; the six missing symbols are not in the paragraph at all.
   *Acceptance:* report matches reality on fixtures.
 - [ ] **2.11 Fallback chain (`fallback.ts`).** Implement in order: reuse own variants -> transform from a related glyph (scaled lowercase for c, o, s, v, w, x, z capitals; and similar) -> top-up request. Mark every derived glyph. **Never substitute silently.**
   *Acceptance:* a fixture with deliberately missing letters yields a complete bank with derived glyphs flagged.
