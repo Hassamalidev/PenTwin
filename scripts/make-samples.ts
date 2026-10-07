@@ -9,6 +9,7 @@ import {
   DEFAULT_JITTER,
   encodePng,
   NO_JITTER,
+  presetOptions,
   PRESETS,
   renderDocument,
   renderText,
@@ -38,6 +39,9 @@ const samples: Record<string, [text: string, options: RenderOptions]> = {
   'preset-neat': [sample, { ...base, jitter: PRESETS.neat, paper: RULED }],
   'preset-normal': [sample, { ...base, jitter: PRESETS.normal, paper: RULED }],
   'preset-rushed': [sample, { ...base, jitter: PRESETS.rushed, paper: RULED }],
+  // The two bundled presets, with their own pen, paper and slips.
+  'preset-exam': [`${sample}${sample}`, { ...base, ...presetOptions('exam') }],
+  'preset-lecture': [`${sample}${sample}`, { ...base, ...presetOptions('lecture') }],
   ...Object.fromEntries(
     (['ballpoint-blue', 'ballpoint-black', 'gel', 'fountain', 'pencil'] as const).map(
       (ink): [string, [string, RenderOptions]] => [

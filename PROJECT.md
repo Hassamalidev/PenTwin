@@ -234,7 +234,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.8 Structured content rendering.** Headings (bigger/underlined), bold (heavier stroke), lists with handwritten bullets/numbers, tables with slightly wobbly lines, images placed on the page.
   *Note:* new `renderDocument(blocks, ...)` alongside `renderText`; every block sits on one line grid, so it stays on the ruling of lined paper. Bold is a heavier pen (an added outline on extracted glyphs). Images embed in PDF only when given as PNG or JPEG data URLs. A table cell's single word wider than its column overflows it. Sample: `docs/samples/document.png`.
   *Acceptance:* a document with all structure types renders sensibly.
-- [ ] **3.9 Presets v2.** Add "Exam hall" and "Lecture notes". Each is a parameter bundle plus paper/ink defaults.
+- [x] **3.9 Presets v2.** Add "Exam hall" and "Lecture notes". Each is a parameter bundle plus paper/ink defaults.
+  *Note:* `presetOptions(name)` returns the hand plus ink, paper and correction rate for all five presets; `PRESETS` still holds the jitter alone. Samples: `docs/samples/preset-exam.png`, `preset-lecture.png`.
   *Acceptance:* five presets, each distinct.
 - [ ] **3.10 Competitor comparison.** Generate the same text with 2-3 existing font-based tools and PenTwin; save side-by-side images in `docs/benchmarks/`.
   *Acceptance:* **Gate:** PenTwin is clearly more natural in a 5+ person blind comparison. If not, iterate before moving on.
