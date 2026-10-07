@@ -104,11 +104,10 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
       createRng(`${options.seed}/page${pageIndex}/variants`),
     );
     const styler: Styler = options.jitter
-      ? createJitterStyler(
-          options.jitter,
-          createRng(`${options.seed}/page${pageIndex}/style`),
+      ? createJitterStyler(options.jitter, createRng(`${options.seed}/page${pageIndex}/style`), {
           xHeight,
-        )
+          glyphXHeight: bank.xHeight,
+        })
       : identityStyler;
     const strokes: InkStroke[] = [];
 

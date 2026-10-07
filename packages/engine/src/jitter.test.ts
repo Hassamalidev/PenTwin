@@ -14,6 +14,7 @@ import { sceneToSvg } from './svg';
 import { loadSampleBank } from './testing';
 
 const bank = loadSampleBank();
+const metrics = { xHeight: 3, glyphXHeight: bank.xHeight };
 const text = 'The quick brown fox jumps over the lazy dog. '.repeat(12);
 const svg = (jitter: JitterParams | undefined, seed = 'j'): string =>
   sceneToSvg(renderText(text, bank, { seed, jitter }).pages[0]!);
@@ -55,7 +56,7 @@ describe('jitter', () => {
   });
 
   it('keeps baseline drift within its amplitude and makes it smooth', () => {
-    const styler = createJitterStyler({ ...NO_JITTER, baselineDrift: 0.5 }, createRng(4), 3);
+    const styler = createJitterStyler({ ...NO_JITTER, baselineDrift: 0.5 }, createRng(4), metrics);
     const line = styler.line(3);
     let previous = line.baselineShift(20);
     let moved = false;
@@ -86,7 +87,7 @@ describe('jitter', () => {
   });
 
   it('varies size, pen width and word gaps within their limits', () => {
-    const styler = createJitterStyler(DEFAULT_JITTER, createRng(8), 3);
+    const styler = createJitterStyler(DEFAULT_JITTER, createRng(8), metrics);
     for (let i = 0; i < 2000; i++) {
       const g = styler.glyph('a');
       expect(Math.abs(g.scale - 1)).toBeLessThanOrEqual(DEFAULT_JITTER.size + 1e-9);

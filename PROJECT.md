@@ -126,7 +126,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.5 Jitter module (`jitter.ts`).** All parameters from CLAUDE.md 5.5 (baseline drift, line slope, rotation, size, word/letter spacing, slant, stroke width), seeded and configurable. Make drift **correlated** (smooth low-frequency noise), not pure white noise. Humans drift smoothly; pure random looks fake.
   *Note:* CLAUDE.md was empty when this was built, so the parameter values are the engine's own defaults, not those of section 5.5. Visual sample: `docs/samples/jitter-off.png` vs `jitter-on.png`.
   *Acceptance:* visual sample with jitter off vs on; same seed reproduces exactly.
-- [ ] **1.6 Procedural glyph warping.** Per-placement tiny affine + low-frequency noise warp so 3 stored variants never look like 3 variants.
+- [x] **1.6 Procedural glyph warping.** Per-placement tiny affine + low-frequency noise warp so 3 stored variants never look like 3 variants.
+  *Note:* visual sample: `docs/samples/warp-e.png`.
   *Acceptance:* a paragraph with the letter "e" repeated shows visible but natural variation.
 - [ ] **1.7 Paper backgrounds (`paper.ts`).** Plain, ruled (narrow/wide/college), margin line, graph, dotted. Text must sit **on the lines** with believable imperfection.
   *Acceptance:* ruled-page sample where baseline tracks the ruling.

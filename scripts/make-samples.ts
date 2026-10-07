@@ -4,7 +4,12 @@
  *   pnpm samples
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { DEFAULT_JITTER, renderText, type RenderOptions } from '../packages/engine/src/index';
+import {
+  DEFAULT_JITTER,
+  NO_JITTER,
+  renderText,
+  type RenderOptions,
+} from '../packages/engine/src/index';
 import { loadGlyphBank, sceneToPng } from '../packages/engine/src/node/index';
 
 const { bank } = loadGlyphBank('tests/fixtures/glyphs/sample-user');
@@ -14,6 +19,11 @@ const base: RenderOptions = { seed: 'samples', pageSize: 'A5' };
 const samples: Record<string, [text: string, options: RenderOptions]> = {
   'jitter-off': [sample, base],
   'jitter-on': [sample, { ...base, jitter: DEFAULT_JITTER }],
+  // Only the warp is on, so every difference between two letters comes from it.
+  'warp-e': [
+    'eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee',
+    { ...base, lineHeight: 14, jitter: { ...NO_JITTER, warp: 0.05 } },
+  ],
 };
 
 mkdirSync('docs/samples', { recursive: true });

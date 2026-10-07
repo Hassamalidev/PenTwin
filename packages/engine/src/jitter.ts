@@ -1,5 +1,6 @@
 import type { Rng } from '@pentwin/shared';
 import type { Styler } from './style';
+import { createWarp } from './warp';
 
 /** How far the writing strays from the ideal. All zeros means perfectly mechanical output. */
 export interface JitterParams {
@@ -23,6 +24,8 @@ export interface JitterParams {
   strokeWidth: number;
   /** mm. How far the left edge of the text wanders from line to line. */
   marginDrift: number;
+  /** Fraction of the x-height. How much each placed glyph's shape is bent. */
+  warp: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -36,6 +39,7 @@ export const NO_JITTER: JitterParams = {
   slantVariation: 0,
   strokeWidth: 0,
   marginDrift: 0,
+  warp: 0,
 };
 
 export const DEFAULT_JITTER: JitterParams = {
@@ -49,6 +53,7 @@ export const DEFAULT_JITTER: JitterParams = {
   slantVariation: 2,
   strokeWidth: 0.08,
   marginDrift: 0.8,
+  warp: 0.05,
 };
 
 const DEG = Math.PI / 180;
@@ -85,8 +90,19 @@ export function createNoise(rng: Rng): (t: number) => number {
 export const pairBias = (prev: string, char: string): number =>
   hash((prev.codePointAt(0) ?? 0) * 0x10001 + (char.codePointAt(0) ?? 0));
 
-/** Builds the styler for one page. `xHeight` is in mm. */
-export function createJitterStyler(params: JitterParams, rng: Rng, xHeight: number): Styler {
+export interface StyleMetrics {
+  /** x-height on the page, in mm. */
+  xHeight: number;
+  /** x-height of the bank's glyphs, in glyph units. */
+  glyphXHeight: number;
+}
+
+/** Builds the styler for one page. */
+export function createJitterStyler(
+  params: JitterParams,
+  rng: Rng,
+  { xHeight, glyphXHeight }: StyleMetrics,
+): Styler {
   // Sum of two uniforms: mostly small values, occasionally a larger one.
   const wobble = (): number => rng.next() + rng.next() - 1;
 
@@ -119,6 +135,7 @@ export function createJitterStyler(params: JitterParams, rng: Rng, xHeight: numb
         slant:
           (params.slant + params.slantVariation * (0.7 * slant(t / 30) + 0.3 * wobble())) * DEG,
         strokeScale: 1 + params.strokeWidth * (0.6 * stroke(t / 12) + 0.4 * wobble()),
+        warp: params.warp > 0 ? createWarp(rng, params.warp, glyphXHeight) : undefined,
       };
     },
 
