@@ -4,3 +4,4 @@ export * from './layout';
 export * from './render';
 export * from './style';
 export * from './svg';
+export * from './jitter';

@@ -123,7 +123,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.4 Renderer (`render.ts`).** Place glyphs on an SVG page respecting baseline, advance width, and side bearings. Spaces and unknown characters handled safely (report, don't crash).
   *Note:* sample text is `tests/sample.txt`, golden page is `tests/golden/sample-page-1.svg`.
   *Acceptance:* a generated SVG page for `test/sample.txt` committed as a golden snapshot.
-- [ ] **1.5 Jitter module (`jitter.ts`).** All parameters from CLAUDE.md 5.5 (baseline drift, line slope, rotation, size, word/letter spacing, slant, stroke width), seeded and configurable. Make drift **correlated** (smooth low-frequency noise), not pure white noise. Humans drift smoothly; pure random looks fake.
+- [x] **1.5 Jitter module (`jitter.ts`).** All parameters from CLAUDE.md 5.5 (baseline drift, line slope, rotation, size, word/letter spacing, slant, stroke width), seeded and configurable. Make drift **correlated** (smooth low-frequency noise), not pure white noise. Humans drift smoothly; pure random looks fake.
+  *Note:* CLAUDE.md was empty when this was built, so the parameter values are the engine's own defaults, not those of section 5.5. Visual sample: `docs/samples/jitter-off.png` vs `jitter-on.png`.
   *Acceptance:* visual sample with jitter off vs on; same seed reproduces exactly.
 - [ ] **1.6 Procedural glyph warping.** Per-placement tiny affine + low-frequency noise warp so 3 stored variants never look like 3 variants.
   *Acceptance:* a paragraph with the letter "e" repeated shows visible but natural variation.

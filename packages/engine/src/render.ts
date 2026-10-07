@@ -1,5 +1,6 @@
 import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
 import { createVariantPicker, type Glyph, type GlyphBank } from './glyphs';
+import { createJitterStyler, type JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
 import { transformPath, type PathCommand } from './path';
 import { identityStyler, type GlyphStyle, type Styler } from './style';
@@ -18,6 +19,8 @@ export interface RenderOptions {
   hyphenate?: boolean;
   inkColor?: string;
   penWidth?: number;
+  /** Human variation. Omit for perfectly regular output. */
+  jitter?: JitterParams;
 }
 
 export interface InkStroke {
@@ -100,7 +103,13 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
       bank,
       createRng(`${options.seed}/page${pageIndex}/variants`),
     );
-    const styler: Styler = identityStyler;
+    const styler: Styler = options.jitter
+      ? createJitterStyler(
+          options.jitter,
+          createRng(`${options.seed}/page${pageIndex}/style`),
+          xHeight,
+        )
+      : identityStyler;
     const strokes: InkStroke[] = [];
 
     page.lines.forEach((line, lineIndex) => {
