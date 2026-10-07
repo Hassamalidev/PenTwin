@@ -31,7 +31,11 @@ export function sceneToSvg(scene: PageScene): string {
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}">`,
-    `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
+    `<rect width="${width}" height="${height}" fill="${scene.paper.background}"/>`,
+    ...scene.paper.layers.map(
+      (l) =>
+        `<path fill="none" stroke="${l.color}" stroke-width="${l.width}" stroke-linecap="round" d="${l.d}"/>`,
+    ),
     ink,
     ...paths,
     '</g>',

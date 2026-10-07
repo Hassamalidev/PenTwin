@@ -129,7 +129,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **1.6 Procedural glyph warping.** Per-placement tiny affine + low-frequency noise warp so 3 stored variants never look like 3 variants.
   *Note:* visual sample: `docs/samples/warp-e.png`.
   *Acceptance:* a paragraph with the letter "e" repeated shows visible but natural variation.
-- [ ] **1.7 Paper backgrounds (`paper.ts`).** Plain, ruled (narrow/wide/college), margin line, graph, dotted. Text must sit **on the lines** with believable imperfection.
+- [x] **1.7 Paper backgrounds (`paper.ts`).** Plain, ruled (narrow/wide/college), margin line, graph, dotted. Text must sit **on the lines** with believable imperfection.
+  *Note:* graph and dotted paper place one line of writing every two 5mm rows. Visual samples: `docs/samples/paper-*.png`.
   *Acceptance:* ruled-page sample where baseline tracks the ruling.
 - [ ] **1.8 PDF/PNG export.** pdf-lib multi-page PDF, plus per-page PNG. Embed vector where possible to keep files small.
   *Acceptance:* 10-page PDF opens in a standard viewer; file size is reasonable (record it).

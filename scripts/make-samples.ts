@@ -19,6 +19,16 @@ const base: RenderOptions = { seed: 'samples', pageSize: 'A5' };
 const samples: Record<string, [text: string, options: RenderOptions]> = {
   'jitter-off': [sample, base],
   'jitter-on': [sample, { ...base, jitter: DEFAULT_JITTER }],
+  'paper-ruled': [
+    sample,
+    {
+      ...base,
+      jitter: DEFAULT_JITTER,
+      paper: { kind: 'ruled', ruling: 'college', marginLine: true },
+    },
+  ],
+  'paper-graph': [sample, { ...base, jitter: DEFAULT_JITTER, paper: { kind: 'graph' } }],
+  'paper-dotted': [sample, { ...base, jitter: DEFAULT_JITTER, paper: { kind: 'dotted' } }],
   // Only the warp is on, so every difference between two letters comes from it.
   'warp-e': [
     'eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee',

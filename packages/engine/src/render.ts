@@ -2,6 +2,7 @@ import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/sh
 import { createVariantPicker, type Glyph, type GlyphBank } from './glyphs';
 import { createJitterStyler, type JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
+import { createPaper, type Paper, type PaperSpec } from './paper';
 import { transformPath, type PathCommand } from './path';
 import { identityStyler, type GlyphStyle, type Styler } from './style';
 
@@ -21,6 +22,11 @@ export interface RenderOptions {
   penWidth?: number;
   /** Human variation. Omit for perfectly regular output. */
   jitter?: JitterParams;
+  /**
+   * Paper pattern. Ruled, graph and dotted paper set the line spacing and the first
+   * baseline themselves, overriding `lineHeight` and `margins.top`.
+   */
+  paper?: PaperSpec;
 }
 
 export interface InkStroke {
@@ -39,6 +45,7 @@ export interface PageScene {
   strokes: InkStroke[];
   /** Ideal baseline of each text line, before any variation. */
   baselines: number[];
+  paper: Pick<Paper, 'background' | 'layers'>;
 }
 
 export interface RenderReport {
@@ -71,8 +78,16 @@ interface Slot {
 
 export function renderText(text: string, bank: GlyphBank, options: RenderOptions): RenderResult {
   const size = PAGE_SIZES[options.pageSize ?? 'A4'];
+  const paper = createPaper(options.paper ?? { kind: 'plain' }, size.widthMm, size.heightMm);
   const margins = { ...DEFAULT_MARGINS, ...options.margins };
-  const lineHeight = options.lineHeight ?? DEFAULT_LINE_HEIGHT;
+  margins.left = Math.max(margins.left, paper.minLeft ?? 0);
+  // Printed lines dictate the spacing: the writing has to sit on them.
+  const lineHeight = paper.lineHeight ?? options.lineHeight ?? DEFAULT_LINE_HEIGHT;
+  const jitter = options.jitter && {
+    ...options.jitter,
+    baselineDrift: options.jitter.baselineDrift * paper.driftScale,
+    lineSlope: options.jitter.lineSlope * paper.driftScale,
+  };
   const xHeight = options.xHeight ?? lineHeight * 0.35;
   const penWidth = options.penWidth ?? DEFAULT_PEN_WIDTH;
   const unit = xHeight / bank.xHeight;
@@ -89,6 +104,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     pageHeight: size.heightMm,
     margins,
     lineHeight,
+    firstBaseline: paper.firstBaseline,
     paragraphSpacing: options.paragraphSpacing,
     hyphenate: options.hyphenate,
     spaceWidth,
@@ -103,8 +119,8 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
       bank,
       createRng(`${options.seed}/page${pageIndex}/variants`),
     );
-    const styler: Styler = options.jitter
-      ? createJitterStyler(options.jitter, createRng(`${options.seed}/page${pageIndex}/style`), {
+    const styler: Styler = jitter
+      ? createJitterStyler(jitter, createRng(`${options.seed}/page${pageIndex}/style`), {
           xHeight,
           glyphXHeight: bank.xHeight,
         })
@@ -179,6 +195,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
       paint: bank.paint,
       strokes,
       baselines: page.lines.map((line) => line.baseline),
+      paper: { background: paper.background, layers: paper.layers },
     };
   });
 

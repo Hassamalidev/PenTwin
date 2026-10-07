@@ -6,3 +6,4 @@ export * from './style';
 export * from './svg';
 export * from './jitter';
 export * from './warp';
+export * from './paper';
