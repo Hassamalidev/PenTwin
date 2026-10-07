@@ -83,7 +83,8 @@ A task is **not done** until all steps below are complete:
 - [x] **0.1 Repo init & first push.** Run the setup in section 0.1. Add `.gitignore` (node_modules, .env*, .next, dist, uploads, fixtures-private). Add README stub.
   *Note:* the repo has a single `claude.md` holding this tracker; the separate rules/architecture file it refers to does not exist yet.
   *Acceptance:* `main` visible on GitHub with CLAUDE.md and PROJECT.md.
-- [ ] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
+- [x] **0.2 Monorepo toolchain.** pnpm workspaces, TypeScript strict, ESLint, Prettier, Vitest. Folders per CLAUDE.md (`apps/web`, `apps/worker`, `packages/engine|extractor|importers|shared`).
+  *Note:* pnpm pinned to 10.x via `packageManager` (pnpm 12 binary fails to launch on the dev machine); TypeScript held at 6.x until typescript-eslint supports 7.
   *Acceptance:* `pnpm typecheck && pnpm lint && pnpm test` pass on an empty-but-wired repo.
 - [ ] **0.3 CI.** GitHub Actions running typecheck, lint, tests on every push and PR.
   *Acceptance:* green check on the latest commit.
