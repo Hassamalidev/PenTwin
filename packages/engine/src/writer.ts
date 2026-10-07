@@ -19,6 +19,10 @@ export interface InkStroke {
    * `both` fills the outline and strokes it too, which is how filled glyphs are made bold.
    */
   mode?: 'stroke' | 'fill' | 'both';
+  /** Part of a word that was struck out, or the line striking it. Not part of the text. */
+  struck?: true;
+  /** A second pass over a letter already written. Not part of the text. */
+  retrace?: true;
 }
 
 export interface RenderReport {
@@ -35,6 +39,10 @@ export interface Token {
   text: string;
   /** Heavier strokes. */
   bold?: boolean;
+  /** A mistake: written, then crossed out. */
+  struck?: boolean;
+  /** Index of a letter that is gone over a second time. */
+  retrace?: number;
 }
 
 /** Where one line of writing goes. All lengths in mm. */
@@ -94,6 +102,9 @@ interface Slot {
   isWordStart: boolean;
   advance: number;
   bold: boolean;
+  /** Which token this belongs to, and where in it. */
+  token: number;
+  charIndex: number;
 }
 
 /**
@@ -135,6 +146,51 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const flow = createNoise(inkRng);
   const pressure = createNoise(inkRng);
   let inkIndex = 0;
+  const markRng = createRng(`${setup.pageSeed}/marks`);
+
+  /** Applies the pen (ink, bold) to a placed glyph outline. */
+  const inked = (
+    char: string,
+    path: PathCommand[],
+    strokeScale: number,
+    bold: boolean,
+  ): InkStroke => {
+    const stroke: InkStroke = { char, width: penWidth * strokeScale, path };
+    if (bank.paint === 'fill') stroke.width = 0;
+    if (ink) {
+      // Both change slowly from glyph to glyph, like ink flow and hand pressure do.
+      const t = inkIndex++;
+      stroke.opacity = ink.opacity * (1 - ink.shading * (0.5 + 0.5 * flow(t / 14)));
+      const swell = ink.width * (1 + ink.widthVariation * pressure(t / 9));
+      if (bank.paint === 'fill') {
+        // A filled outline has no pen width to change; a broader pen is drawn as an
+        // outline around the glyph.
+        stroke.width = Math.max(0, penWidth * (swell - 1));
+      } else {
+        stroke.width *= swell;
+      }
+    }
+    if (bold) {
+      if (bank.paint === 'fill') stroke.width += penWidth * BOLD_OUTLINE;
+      else stroke.width *= BOLD_STROKE;
+    }
+    if (bank.paint === 'fill' && stroke.width > 0) stroke.mode = 'both';
+    return stroke;
+  };
+
+  /** A hand-drawn line: nearly straight, slightly bowed, never ruler-perfect. */
+  const drawnLine = (x0: number, y0: number, x1: number, y1: number): InkStroke => {
+    const wobble = (): number => markRng.float(-1, 1) * xHeight * 0.12;
+    return {
+      char: '',
+      mode: 'stroke',
+      width: penWidth,
+      path: [
+        { type: 'M', x: x0, y: y0 + wobble() },
+        { type: 'Q', x1: (x0 + x1) / 2, y1: (y0 + y1) / 2 + wobble() * 2, x: x1, y: y1 + wobble() },
+      ],
+    };
+  };
 
   const writeLine = (tokens: readonly Token[], spec: LineSpec): number => {
     const size = spec.scale ?? 1;
@@ -142,13 +198,15 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     const startX = spec.left + lineStyle.offsetX;
 
     const slots: Slot[] = [];
-    for (const token of tokens) {
+    for (const [tokenIndex, token] of tokens.entries()) {
       let prev = '';
       const chars = [...token.text];
       for (let i = 0; i < chars.length; i++) {
+        const charIndex = i;
         let char = chars[i]!;
         const pair = char + (chars[i + 1] ?? '');
-        if (bigrams?.has(pair) && bigramRng.next() < bigramRate) {
+        const retraced = token.retrace === i || token.retrace === i + 1;
+        if (!retraced && bigrams?.has(pair) && bigramRng.next() < bigramRate) {
           char = pair;
           i++;
           report.bigramCount++;
@@ -163,7 +221,16 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           : styler.letterGap(prev, char[0]!) * size;
         if (!glyph) report.unknownChars[char] = (report.unknownChars[char] ?? 0) + 1;
         const advance = glyph ? glyph.advance * unit * size * style.scale : spaceWidth * size;
-        slots.push({ glyph, style, gapBefore, isWordStart, advance, bold: token.bold ?? false });
+        slots.push({
+          glyph,
+          style,
+          gapBefore,
+          isWordStart,
+          advance,
+          bold: token.bold ?? false,
+          token: tokenIndex,
+          charIndex,
+        });
         prev = char.at(-1)!;
       }
     }
@@ -175,9 +242,20 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     const squeeze =
       overflow > 0 && wordGaps > 0 ? Math.max(MIN_GAP_SQUEEZE, 1 - overflow / wordGaps) : 1;
 
+    const baselineAt = (x: number): number =>
+      spec.baseline + lineStyle.baselineShift(x) + Math.tan(lineStyle.slope) * (x - startX);
+    // Where each struck word starts and ends, so it can be crossed out afterwards.
+    const spans = new Map<number, { from: number; to: number }>();
+
     let pen = startX;
     for (const slot of slots) {
       pen += slot.isWordStart ? slot.gapBefore * squeeze : slot.gapBefore;
+      const token = tokens[slot.token]!;
+      if (token.struck) {
+        const span = spans.get(slot.token);
+        if (span) span.to = pen + slot.advance;
+        else spans.set(slot.token, { from: pen, to: pen + slot.advance });
+      }
       if (slot.glyph) {
         const { style } = slot;
         const scale = unit * size * style.scale;
@@ -186,42 +264,57 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
         const originX = pen;
-        const originY =
-          spec.baseline + lineStyle.baselineShift(pen) + Math.tan(lineStyle.slope) * (pen - startX);
+        const originY = baselineAt(pen);
 
-        const stroke: InkStroke = {
-          char: slot.glyph.char,
-          width: penWidth * style.strokeScale,
-          path: transformPath(slot.glyph.path, (gx, gy) => {
+        const place = (glyph: Glyph, dx: number, dy: number): PathCommand[] =>
+          transformPath(glyph.path, (gx, gy) => {
             const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];
             const x = (wx - wy * tanSlant) * scale;
             const y = wy * scale;
-            return [originX + x * cos - y * sin, originY + x * sin + y * cos];
-          }),
-        };
-        if (bank.paint === 'fill') stroke.width = 0;
-        if (ink) {
-          // Both change slowly from glyph to glyph, like ink flow and hand pressure do.
-          const t = inkIndex++;
-          stroke.opacity = ink.opacity * (1 - ink.shading * (0.5 + 0.5 * flow(t / 14)));
-          const swell = ink.width * (1 + ink.widthVariation * pressure(t / 9));
-          if (bank.paint === 'fill') {
-            // A filled outline has no pen width to change; a broader pen is drawn as an
-            // outline around the glyph.
-            stroke.width = Math.max(0, penWidth * (swell - 1));
-          } else {
-            stroke.width *= swell;
-          }
-        }
-        if (slot.bold) {
-          if (bank.paint === 'fill') stroke.width += penWidth * BOLD_OUTLINE;
-          else stroke.width *= BOLD_STROKE;
-        }
-        if (bank.paint === 'fill' && stroke.width > 0) stroke.mode = 'both';
+            return [originX + dx + x * cos - y * sin, originY + dy + x * sin + y * cos];
+          });
+        const stroke = inked(
+          slot.glyph.char,
+          place(slot.glyph, 0, 0),
+          style.strokeScale,
+          slot.bold,
+        );
+        if (token.struck) stroke.struck = true;
         strokes.push(stroke);
         report.glyphCount++;
+
+        if (token.retrace === slot.charIndex && slot.glyph.char.length === 1) {
+          // Gone over again, a fraction of a millimetre off: another try at the same letter.
+          const again = picker.pick(slot.glyph.char) ?? slot.glyph;
+          const offset = (): number => markRng.float(-1, 1) * xHeight * 0.07;
+          const second = inked(
+            again.char,
+            place(again, offset(), offset()),
+            style.strokeScale,
+            slot.bold,
+          );
+          second.retrace = true;
+          strokes.push(second);
+        }
       }
       pen += slot.advance;
+    }
+
+    for (const { from, to } of spans.values()) {
+      // Through the middle of the small letters, a little past both ends.
+      const lift = xHeight * size * 0.5;
+      const overshoot = xHeight * 0.25;
+      const passes = markRng.next() < 0.35 ? 2 : 1;
+      for (let i = 0; i < passes; i++) {
+        const line = drawnLine(
+          from - overshoot,
+          baselineAt(from) - lift,
+          to + overshoot,
+          baselineAt(to) - lift,
+        );
+        line.struck = true;
+        strokes.push(line);
+      }
     }
     return pen;
   };

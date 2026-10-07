@@ -222,7 +222,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **3.4 Fatigue mode.** Writing degrades gradually through a page: more drift, slightly larger spacing, a bit more slant. Must be **subtle**; overdone it looks fake.
   *Note:* off by default (`fatigue: 0`); the top of the page is untouched and the effect builds slowly. Measured: the bottom quarter drifts at least 30% more than the top at full strength. The human blind check has NOT been done. Sample: `docs/samples/fatigue.png`.
   *Acceptance:* blind check that page 1 vs last line differ believably.
-- [ ] **3.5 Corrections.** Occasional strikethrough with a rewritten word, small overwrites. Frequency is a slider, default low. Never alter meaning-critical text (numbers, names, formulas): protect those tokens.
+- [x] **3.5 Corrections.** Occasional strikethrough with a rewritten word, small overwrites. Frequency is a slider, default low. Never alter meaning-critical text (numbers, names, formulas): protect those tokens.
+  *Note:* off by default (`corrections: 0`), not "default low" as the plan says, so existing output does not change silently; 0.01-0.03 looks natural. Only plain lowercase words of 4+ letters are eligible, which is what protects numbers, names and formulas. A test proves the page spells exactly the original text once corrections are set aside. Sample: `docs/samples/corrections.png`.
   *Acceptance:* corrections appear naturally and never corrupt protected tokens.
 - [ ] **3.6 Scan & photo effects (`effects.ts`).** Clean-scan mode and phone-photo mode: gentle shadow gradient, slight rotation, paper grain, vignette, noise, optional crease. Keep subtle; heavy filters look fake.
   *Acceptance:* before/after samples; effect is toggleable and tuned.

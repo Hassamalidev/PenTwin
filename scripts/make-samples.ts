@@ -43,6 +43,10 @@ const samples: Record<string, [text: string, options: RenderOptions]> = {
       ],
     ),
   ),
+  corrections: [
+    'the weather was pleasant through most of that long afternoon, although several people wondered whether another storm might arrive before evening and spoil their carefully planned outing. Dr. Khan paid $1,250.75 on 03/14/2025.',
+    { ...base, seed: 'fix', jitter: PRESETS.normal, corrections: 0.25, lineHeight: 10 },
+  ],
   // Top of the page against the bottom: the hand tires as it goes.
   fatigue: [
     `${sample}${sample}`,

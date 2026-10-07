@@ -1,4 +1,5 @@
-import { PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
+import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/shared';
+import { addCorrections, readMarkers, RETRACE, STRUCK, type CorrectionCounts } from './corrections';
 import type { GlyphBank } from './glyphs';
 import { INKS, type Ink, type InkName } from './ink';
 import type { JitterParams } from './jitter';
@@ -35,6 +36,13 @@ export interface RenderOptions {
    * one. 0 turns pair glyphs off. Defaults to 0.7.
    */
   bigrams?: number;
+  /**
+   * Chance, 0 to 1, per eligible word of a correction: a slip that is struck out and
+   * rewritten, or a letter gone over twice. Off (0) by default; 0.01 to 0.03 looks
+   * natural. Only plain lowercase words are ever touched, so numbers, names, formulas
+   * and anything capitalised are always written exactly as given.
+   */
+  corrections?: number;
 }
 
 /** A fully resolved page: every exporter (SVG, PDF, PNG) draws from this. */
@@ -54,6 +62,8 @@ export interface PageScene {
 export interface RenderResult {
   pages: PageScene[];
   report: RenderReport;
+  /** Corrections that were added, if any were asked for. */
+  corrections: CorrectionCounts;
 }
 
 const DEFAULT_MARGINS: Margins = { top: 20, right: 20, bottom: 20, left: 20 };
@@ -120,7 +130,12 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
 
   // Layout only needs nominal widths, which do not depend on the page.
   const ruler = createPageWriter({ ...setup, pageSeed: `${options.seed}/ruler` });
-  const laidOut = layoutText(text, {
+  const corrected = addCorrections(
+    text,
+    options.corrections ?? 0,
+    createRng(`${options.seed}/corrections`),
+  );
+  const laidOut = layoutText(corrected.text, {
     pageWidth: page.width,
     pageHeight: page.height,
     margins: page.margins,
@@ -129,7 +144,7 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     paragraphSpacing: options.paragraphSpacing,
     hyphenate: options.hyphenate,
     spaceWidth: ruler.spaceWidth,
-    measure: (char) => ruler.measure(char),
+    measure: (char) => (char === STRUCK || char === RETRACE ? 0 : ruler.measure(char)),
   });
   report.pageCount = laidOut.length;
 
@@ -140,7 +155,8 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
       lineCount: lines.lines.length,
     });
     lines.lines.forEach((line, lineIndex) => {
-      writer.writeLine(line.words, {
+      const tokens = line.words.map((word) => readMarkers(word.text));
+      writer.writeLine(tokens, {
         baseline: line.baseline,
         left: page.margins.left,
         right: page.width - page.margins.right,
@@ -153,5 +169,5 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     );
   });
 
-  return { pages, report };
+  return { pages, report, corrections: corrected.counts };
 }
