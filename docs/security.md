@@ -88,6 +88,9 @@ This is a self-review by the people who wrote the code. Nobody independent has t
       through the command-line part of the Word reader (`mammoth > argparse`), which the
       app never runs. CI fails on any high or critical finding.
 
+- [x] Changing each secret, and what breaks when you do, is written down.
+      _Evidence: `docs/runbook.md` ("Changing a secret"); never rehearsed._
+
 ## Not done
 
 - [ ] **Nothing here has been checked on a real deployment.** HSTS, TLS and the headers
@@ -100,4 +103,3 @@ This is a self-review by the people who wrote the code. Nobody independent has t
       when it restarts. They need shared storage before a second worker is added.
 - [ ] No independent security review or penetration test has been done.
 - [ ] Database backups (7.4) and error monitoring (7.7) are tracked in their own tasks.
-- [ ] Secret rotation has no written procedure yet (7.10).

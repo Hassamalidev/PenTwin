@@ -409,7 +409,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [~] **7.9 Cross-browser/device QA.** Android Chrome, iOS Safari, desktop Chrome/Firefox/Edge, especially the photo-capture flow.
   *Note:* IN PROGRESS. The browser flows (photo to PDF, uploads, editor, landing, pricing) now run on every push in CI on Chrome, Firefox, WebKit (Safari's engine) and emulated iPhone 13 and Pixel 7, and all pass. **No real device has been used:** no real iPhone or Android phone, no Mac, no Edge, and nothing about a real camera, which is the photo-capture flow this task singles out. Firefox and WebKit cannot start on the development laptop, so their results come from CI on Linux only. `docs/qa-checklist.md` has the results and the list still to be checked by hand, starting with HEIC photos from iPhones.
   *Acceptance:* a checklist with results.
-- [ ] **7.10 Rollback plan.** Document the Vercel rollback, tagged worker images, and a DB migration rollback approach.
+- [x] **7.10 Rollback plan.** Document the Vercel rollback, tagged worker images, and a DB migration rollback approach.
+  *Note:* `docs/runbook.md` covers the first five minutes, stopping exports, rolling back the site (Vercel), the worker (labelled images) and a database migration (roll forward; write migrations the old code can live with), what changing each secret breaks, and a table of likely failures. **It was written before anything was deployed and no step has been rehearsed**; it should be tried on staging and corrected.
   *Acceptance:* `docs/runbook.md` written.
 
 ---
