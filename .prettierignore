@@ -8,3 +8,6 @@ CLAUDE.md
 tests/fixtures
 tests/golden
 scripts/data
+next-env.d.ts
+apps/web/public
+.kilo

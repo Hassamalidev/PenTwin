@@ -1,0 +1,349 @@
+:root {
+  --ink: #1b2a6b;
+  --text: #1c1d22;
+  --muted: #5d6170;
+  --line: #d9dce6;
+  --surface: #ffffff;
+  --page: #f4f5f9;
+  --warn: #8a4b00;
+  --warn-bg: #fff4dc;
+  --danger: #a11a1a;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--page);
+}
+
+a {
+  color: var(--ink);
+}
+
+h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  margin: 0 0 0.75rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+main {
+  padding: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.narrow {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.steps li {
+  margin-bottom: 0.5rem;
+}
+
+/* Controls: large enough to tap comfortably on a phone. */
+button,
+select,
+input[type='text'],
+textarea,
+.file-button {
+  font: inherit;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+}
+
+button,
+.file-button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+button.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+button.small {
+  min-height: 36px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.field {
+  margin-bottom: 0.75rem;
+}
+
+.field select,
+.field input[type='range'] {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.notice {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.notice ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* Editor: one column on a phone, text beside preview on a wide screen. */
+.editor {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .editor {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .preview-column {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.block.skipped {
+  opacity: 0.5;
+}
+
+.block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.page-break {
+  text-align: center;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.preview {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The preview is free; the watermark marks it as not the final export. */
+.watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: clamp(1.5rem, 9vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(27, 42, 107, 0.13);
+  transform: rotate(-28deg);
+  user-select: none;
+}
+
+.pager {
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+/* Export dialog and other overlays. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 22, 30, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  z-index: 10;
+}
+
+.dialog {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 1rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+@media (min-width: 600px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .dialog {
+    border-radius: var(--radius);
+  }
+}
+
+.cost {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.summary {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+}
+
+/* Glyph review grid. */
+.glyph-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.5rem;
+}
+
+.glyph-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.4rem;
+  text-align: center;
+  background: #fff;
+}
+
+.glyph-card.weak {
+  border-color: #e0a100;
+}
+
+.glyph-card.missing {
+  border-color: var(--danger);
+  background: #fdf1f1;
+}
+
+.glyph-card svg {
+  width: 100%;
+  height: 46px;
+}
+
+.glyph-card .char {
+  font-weight: 700;
+}
+
+.glyph-card .state {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

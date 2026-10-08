@@ -20,7 +20,9 @@
     "extract:measure": "tsx scripts/measure-extraction.ts",
     "extract:demo": "tsx scripts/extract-demo.ts",
     "benchmark": "tsx scripts/make-benchmark.ts",
-    "worker": "tsx apps/worker/src/main.ts"
+    "worker": "tsx apps/worker/src/main.ts",
+    "web": "pnpm --filter @pentwin/web dev",
+    "web:build": "pnpm --filter @pentwin/web build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
