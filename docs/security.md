@@ -72,6 +72,10 @@ This is a self-review by the people who wrote the code. Nobody independent has t
 - [x] The admin token is compared in constant time, and the admin route pretends not to
       exist without it. _Evidence: `apps/worker/src/api.ts`._
 
+- [x] **Account deletion** removes every row and every file, and a user can get a copy of
+      everything held about them; consent is logged append-only. _Tests:
+      `accounts.db.test.ts` (privacy); details in `docs/privacy.md`._
+
 ## Secrets and dependencies
 
 - [x] No secret is in the repository; `.env` is ignored and `.env.example` holds no
@@ -95,6 +99,5 @@ This is a self-review by the people who wrote the code. Nobody independent has t
 - [ ] Rate limits are counted in the worker's memory: correct for one worker, and reset
       when it restarts. They need shared storage before a second worker is added.
 - [ ] No independent security review or penetration test has been done.
-- [ ] Account deletion and data export (7.6), database backups (7.4) and error
-      monitoring (7.7) are tracked in their own tasks.
+- [ ] Database backups (7.4) and error monitoring (7.7) are tracked in their own tasks.
 - [ ] Secret rotation has no written procedure yet (7.10).

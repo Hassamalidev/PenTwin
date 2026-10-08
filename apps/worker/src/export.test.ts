@@ -389,3 +389,34 @@ describe('worker server rate limits', { timeout: 60_000 }, () => {
     }
   });
 });
+
+describe('what the worker writes to its log', () => {
+  it('never includes document text, even when an export fails', async () => {
+    const { service } = setup({
+      toPdf: () => Promise.reject(new Error('renderer crashed')),
+    });
+    const server = createWorkerServer({ service });
+    const base = await new Promise<string>((resolve) =>
+      server.listen(0, () => resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)),
+    );
+    const logged: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      logged.push(args.map(String).join(' '));
+    });
+    try {
+      const body = JSON.stringify({
+        ...request(),
+        blocks: [{ type: 'paragraph', text: 'Dear diary, a secret nobody should read.' }],
+      });
+      const response = await fetch(`${base}/export`, { method: 'POST', body });
+      expect(response.status).toBe(500);
+      expect(((await response.json()) as { error: string }).error).toContain('Nothing was charged');
+      expect(logged.length).toBeGreaterThan(0);
+      expect(logged.join('\n')).not.toContain('secret');
+      expect(logged.join('\n')).not.toContain('Dear diary');
+    } finally {
+      spy.mockRestore();
+      server.close();
+    }
+  });
+});

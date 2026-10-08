@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { BillingError, call } from '@pentwin/billing';
 import { glyphMetadataSchema } from '@pentwin/engine';
@@ -137,6 +137,47 @@ export function createProfileStore(pool: Pool, options: { directory: string; key
         userId,
       ]);
       await rm(pathOf(row.storage_key), { force: true });
+    },
+
+    /** Deletes stored files by their storage keys, after their rows are already gone. */
+    async removeFiles(storageKeys: readonly string[]): Promise<void> {
+      await Promise.all(
+        storageKeys
+          .filter((storageKey) => /^[0-9a-f-]{36}$/i.test(storageKey))
+          .map((storageKey) => rm(pathOf(storageKey), { force: true })),
+      );
+    },
+
+    /**
+     * Deletes stored files that no profile points to, and returns how many. Such a file
+     * can only be left by a crash between writing it and recording it, or between
+     * deleting an account and deleting its files. Files newer than `graceMs` are left
+     * alone: a profile being saved right now has its file before its row.
+     */
+    async sweepOrphans(graceMs = 60 * 60 * 1000): Promise<number> {
+      let names: string[];
+      try {
+        names = await readdir(options.directory);
+      } catch {
+        return 0;
+      }
+      const keys = names.flatMap((name) => /^([0-9a-f-]{36})\.bin$/i.exec(name)?.[1] ?? []);
+      if (keys.length === 0) return 0;
+      const { rows } = await pool.query<{ storage_key: string }>(
+        `select storage_key from public.handwriting_profiles where storage_key = any($1)`,
+        [keys],
+      );
+      const known = new Set(rows.map((row) => row.storage_key));
+      let removed = 0;
+      for (const storageKey of keys) {
+        if (known.has(storageKey)) continue;
+        const path = pathOf(storageKey);
+        const info = await stat(path).catch(() => undefined);
+        if (!info || Date.now() - info.mtimeMs < graceMs) continue;
+        await rm(path, { force: true });
+        removed++;
+      }
+      return removed;
     },
   };
 }

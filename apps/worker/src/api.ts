@@ -6,10 +6,13 @@ import {
   BillingError,
   completeExport,
   costReport,
+  deleteAccount,
+  exportAccountData,
   failExport,
   getAccount,
   handlePaddleWebhook,
   recentLedger,
+  recordConsent,
   redeemReferral,
   reserveExport,
   verifyAccessToken,
@@ -50,6 +53,11 @@ export interface ApiResponse {
 }
 
 const reply = (status: number, body: unknown): ApiResponse => ({ status, body });
+
+/** What the user must send to delete their account: a slip of the finger is not enough. */
+export const DELETE_CONFIRMATION = 'delete my account';
+/** The version of the "this is my own handwriting" statement users confirm. */
+export const OWN_HANDWRITING_VERSION = '2026-10-08';
 
 /** Compares a bearer token with a secret without leaking, by timing, how much matched. */
 const sameSecret = (header: string | undefined, secret: string): boolean => {
@@ -121,6 +129,51 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
       });
     }
 
+    // Everything we hold about the user, for them to keep: their right to a copy.
+    if (method === 'GET' && path === '/me/data') {
+      const data = await exportAccountData(pool, user);
+      const banks = await Promise.all(
+        data.profiles.map((profile) => config.profiles.load(user, String(profile.id))),
+      );
+      return reply(200, {
+        exportedAt: new Date().toISOString(),
+        ...data,
+        // The handwriting itself, decrypted for its owner.
+        profiles: data.profiles.map((profile, index) => ({ ...profile, bank: banks[index] })),
+        note: 'Documents you exported are not listed with their text because the text was never stored.',
+      });
+    }
+
+    if (method === 'POST' && path === '/me/consents') {
+      const body = await json(request);
+      const consent = await recordConsent(
+        pool,
+        user,
+        {
+          kind: String(body.kind ?? ''),
+          version: String(body.version ?? ''),
+          granted: body.granted === true,
+        },
+        fingerprint(request.address),
+      );
+      return reply(201, { consent });
+    }
+
+    // The right to be forgotten. Rows go first, in one transaction; then the files.
+    if (method === 'DELETE' && path === '/me') {
+      const body = await json(request);
+      if (body.confirm !== DELETE_CONFIRMATION) {
+        return reply(400, {
+          error: `To delete your account, send confirm: "${DELETE_CONFIRMATION}".`,
+          code: 'confirmation_required',
+        });
+      }
+      const files = await deleteAccount(pool, user);
+      await config.profiles.removeFiles(files.profileKeys);
+      await Promise.all(files.exportHashes.map((hash) => exports.forget(hash)));
+      return reply(200, { deleted: true, profilesDeleted: files.profileKeys.length });
+    }
+
     if (method === 'POST' && path === '/me/activate') {
       const body = await json(request);
       // Fingerprints are hashed with a secret salt; the raw values are never stored.
@@ -169,8 +222,18 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
 
     if (path === '/profiles') {
       if (method === 'GET') return reply(200, { profiles: await config.profiles.list(user) });
-      if (method === 'POST')
-        return reply(201, { profile: await config.profiles.save(user, await json(request)) });
+      if (method === 'POST') {
+        const body = await json(request);
+        const profile = await config.profiles.save(user, body);
+        // Saving is only possible with the confirmation, so log that it was given.
+        await recordConsent(
+          pool,
+          user,
+          { kind: 'own_handwriting', version: OWN_HANDWRITING_VERSION, granted: true },
+          fingerprint(request.address),
+        );
+        return reply(201, { profile });
+      }
     }
     if (path.startsWith('/profiles/')) {
       const id = path.slice('/profiles/'.length);

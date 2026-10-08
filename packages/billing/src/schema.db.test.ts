@@ -49,6 +49,7 @@ describe('row-level security', () => {
       b,
       `key-${b}`,
     ]);
+    await pool.query(`select public.record_consent($1, 'terms', '2026-10-08', true, null)`, [b]);
 
     const tables = [
       'accounts',
@@ -56,6 +57,7 @@ describe('row-level security', () => {
       'credit_balances',
       'exports',
       'handwriting_profiles',
+      'consents',
     ];
     for (const table of tables) {
       // B sees their own rows...
@@ -76,7 +78,14 @@ describe('row-level security', () => {
     await createUser(pool);
     const plans = await asUser(pool, null, (q) => q(`select id from public.plans order by id`));
     expect(plans.rows.map((r) => r.id)).toEqual(['free', 'pro', 'student']);
-    for (const table of ['accounts', 'credit_ledger', 'exports', 'handwriting_profiles']) {
+    for (const table of [
+      'accounts',
+      'credit_ledger',
+      'exports',
+      'handwriting_profiles',
+      'consents',
+      'account_deletions',
+    ]) {
       expect(await errorOf(asUser(pool, null, (q) => q(`select * from public.${table}`)))).toMatch(
         /permission denied/,
       );
@@ -97,6 +106,11 @@ describe('row-level security', () => {
       `select * from public.email_outbox`,
       `select * from public.webhook_events`,
       `select * from public.export_costs`,
+      `select * from public.account_deletions`,
+      `insert into public.consents (user_id, kind, version, granted)
+         values ('${user}', 'terms', 'x', true)`,
+      `select public.record_consent('${user}', 'terms', 'x', true, null)`,
+      `select * from public.delete_account('${user}')`,
     ];
     for (const sql of attempts) {
       expect(await errorOf(asUser(pool, user, (q) => q(sql)))).toMatch(/permission denied/);

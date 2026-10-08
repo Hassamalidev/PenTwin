@@ -5,3 +5,4 @@ export * from './emails';
 export * from './entitlements';
 export * from './migrate';
 export * from './paddle';
+export * from './privacy';

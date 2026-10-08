@@ -1,4 +1,13 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,7 +17,9 @@ import { createTestPool, createUser } from '@pentwin/billing/testing';
 import { PDFDocument } from 'pdf-lib';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createExportService } from './export';
+import { createLimiter } from './limiter';
 import { createProfileStore } from './profiles';
+import { createRateLimiter } from './rate-limit';
 import type { ExportRequest } from './schema';
 import { createWorkerServer } from './server';
 
@@ -72,6 +83,13 @@ const profiles = createProfileStore(pool, {
 });
 const server = createWorkerServer({
   service,
+  // These tests send many exports from one address at once; the queue and the rate
+  // limits have their own tests (export.test.ts) and would only get in the way here.
+  limiter: createLimiter(1, 1000),
+  rateLimits: {
+    all: createRateLimiter({ limit: 1_000_000, windowMs: 60_000 }),
+    exports: createRateLimiter({ limit: 1_000_000, windowMs: 60_000 }),
+  },
   accounts: {
     pool,
     jwtSecret: JWT_SECRET,
@@ -473,5 +491,185 @@ describe('referrals and the cost report', () => {
     expect(report.body.plans.length).toBeGreaterThan(0);
     expect(report.body).toHaveProperty('costPerPage');
     expect(JSON.stringify(report.body)).not.toContain('One page of text');
+  });
+});
+
+describe('privacy: consent, a copy of your data, and deletion', { timeout: 120_000 }, () => {
+  const profile = (name: string) => ({ name, bank, ownHandwriting: true });
+  const rowsFor = async (table: string, column: string, user: string): Promise<number> =>
+    Number(
+      (await pool.query(`select count(*) as n from public.${table} where ${column} = $1`, [user]))
+        .rows[0].n,
+    );
+  /** Every handwriting file on disk that no profile row points to. */
+  const orphanFiles = async (): Promise<string[]> => {
+    const keys = readdirSync(profilesDir).flatMap(
+      (name) => /^([0-9a-f-]{36})\.bin$/i.exec(name)?.[1] ?? [],
+    );
+    const { rows } = await pool.query(`select storage_key from public.handwriting_profiles`);
+    const known = new Set(rows.map((row) => row.storage_key));
+    return keys.filter((key) => !known.has(key));
+  };
+
+  it('keeps an append-only consent log that the user can read back', async () => {
+    const user = await createUser(pool);
+    const given = await call('POST', '/me/consents', {
+      user,
+      body: { kind: 'terms', version: '2026-10-08', granted: true },
+    });
+    expect(given.status).toBe(201);
+    expect(given.body.consent).toMatchObject({
+      kind: 'terms',
+      version: '2026-10-08',
+      granted: true,
+    });
+    expect((await call('POST', '/me/consents', { user, body: { kind: 'cookies' } })).status).toBe(
+      400,
+    );
+    // Saving handwriting records the "my own handwriting" confirmation too.
+    expect((await call('POST', '/profiles', { user, body: profile('Mine') })).status).toBe(201);
+
+    // Nobody, not even the server, can quietly change or remove a consent row.
+    await expect(
+      pool.query(`update public.consents set granted = false where user_id = $1`, [user]),
+    ).rejects.toThrow('consents is append-only');
+    await expect(
+      pool.query(`delete from public.consents where user_id = $1`, [user]),
+    ).rejects.toThrow('consents is append-only');
+
+    const copy = await call('GET', '/me/data', { user });
+    expect(copy.status).toBe(200);
+    expect((copy.body.consents as Json[]).map((row) => [row.kind, row.granted])).toEqual([
+      ['terms', true],
+      ['own_handwriting', true],
+    ]);
+  });
+
+  it('gives the user everything held about them, and nothing about anyone else', async () => {
+    const user = await createUser(pool);
+    const other = await createUser(pool);
+    await call('POST', '/profiles', { user, body: profile('Exam hand') });
+    await call('POST', '/export', { user, body: document(1, {}, 'A private letter.') });
+
+    const copy = (await call('GET', '/me/data', { user })).body;
+    expect(copy.account.email).toMatch(/@example\.test$/);
+    expect(copy.account.plan).toBe('free');
+    expect(copy.ledger.length).toBeGreaterThan(0);
+    expect(copy.exports).toHaveLength(1);
+    expect(copy.profiles[0]).toMatchObject({ name: 'Exam hand', bank });
+    expect(copy.referrals).toEqual({ youWereReferred: false, peopleYouReferred: 0 });
+
+    const text = JSON.stringify(copy);
+    // Exported documents are listed without their content: it was never stored.
+    expect(text).not.toContain('A private letter');
+    const otherEmail = (await pool.query(`select email from auth.users where id = $1`, [other]))
+      .rows[0].email;
+    expect(text).not.toContain(otherEmail);
+    expect(text).not.toContain(other);
+  });
+
+  it('deletes an account with every row and file, and leaves nothing orphaned', async () => {
+    const user = await createUser(pool);
+    await paddleEvent('subscription.created', subscription(user));
+    const first = await call('POST', '/profiles', { user, body: profile('First') });
+    const second = await call('POST', '/profiles', { user, body: profile('Second') });
+    expect([first.status, second.status]).toEqual([201, 201]);
+    await call('POST', '/me/consents', {
+      user,
+      body: { kind: 'privacy', version: '2026-10-08', granted: true },
+    });
+    const exported = await call('POST', '/export', {
+      user,
+      body: document(2, {}, 'Please forget this.'),
+    });
+    expect(exported.status).toBe(200);
+
+    const storageKeys = (
+      await pool.query(`select storage_key from public.handwriting_profiles where user_id = $1`, [
+        user,
+      ])
+    ).rows.map((row) => row.storage_key as string);
+    expect(storageKeys).toHaveLength(2);
+    const pdf = join(exportsDir, `${exported.body.id}.pdf`);
+    expect(existsSync(pdf)).toBe(true);
+    for (const key of storageKeys) expect(existsSync(join(profilesDir, `${key}.bin`))).toBe(true);
+    const countDeletions = async (): Promise<number> =>
+      Number((await pool.query(`select count(*) as n from public.account_deletions`)).rows[0].n);
+    const deletionsBefore = await countDeletions();
+
+    // A slip of the finger is not enough, and neither is a subscription still renewing.
+    expect((await call('DELETE', '/me', { user, body: { confirm: 'yes' } })).body.code).toBe(
+      'confirmation_required',
+    );
+    const renewing = await call('DELETE', '/me', { user, body: { confirm: 'delete my account' } });
+    expect(renewing.status).toBe(409);
+    expect(renewing.body.code).toBe('subscription_active');
+    expect(await rowsFor('accounts', 'user_id', user)).toBe(1);
+
+    await paddleEvent(
+      'subscription.updated',
+      subscription(user, { scheduled_change: { action: 'cancel', effective_at: inDays(30) } }),
+    );
+    const deleted = await call('DELETE', '/me', { user, body: { confirm: 'delete my account' } });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ deleted: true, profilesDeleted: 2 });
+
+    // Rows: all gone, in every table that can hold something about the user.
+    for (const [table, column] of [
+      ['accounts', 'user_id'],
+      ['credit_ledger', 'user_id'],
+      ['exports', 'user_id'],
+      ['handwriting_profiles', 'user_id'],
+      ['consents', 'user_id'],
+      ['email_outbox', 'user_id'],
+      ['referral_redemptions', 'referred'],
+      ['referral_rejections', 'user_id'],
+    ] as const) {
+      expect(await rowsFor(table, column, user), table).toBe(0);
+    }
+    expect((await pool.query(`select 1 from auth.users where id = $1`, [user])).rowCount).toBe(0);
+    // The token is still valid, but there is no longer anyone behind it.
+    expect((await call('GET', '/me', { user })).status).toBe(404);
+
+    // Files: the handwriting and the exported PDF are gone, and nothing is orphaned.
+    for (const key of storageKeys) expect(existsSync(join(profilesDir, `${key}.bin`))).toBe(false);
+    expect(existsSync(pdf)).toBe(false);
+    expect(existsSync(`${pdf.slice(0, -4)}.json`)).toBe(false);
+    expect(await orphanFiles()).toEqual([]);
+    expect(await profiles.sweepOrphans(0)).toBe(0);
+
+    // What remains is a count, with nothing that says whose account it was.
+    expect(await countDeletions()).toBe(deletionsBefore + 1);
+    const deletions = await pool.query(
+      `select profiles, exports from public.account_deletions order by id desc limit 1`,
+    );
+    expect(deletions.rows[0]).toEqual({ profiles: 2, exports: 1 });
+    const columns = (
+      await pool.query(
+        `select column_name from information_schema.columns
+          where table_schema = 'public' and table_name = 'account_deletions'`,
+      )
+    ).rows.map((row) => row.column_name);
+    expect(columns).not.toContain('user_id');
+    expect(columns).not.toContain('email');
+  });
+
+  it('sweeps stray handwriting files, but not one that is still being saved', async () => {
+    const user = await createUser(pool);
+    await call('POST', '/profiles', { user, body: profile('Kept') });
+    const old = join(profilesDir, `${randomUUID()}.bin`);
+    const fresh = join(profilesDir, `${randomUUID()}.bin`);
+    writeFileSync(old, 'left behind by a crash');
+    writeFileSync(fresh, 'being written right now');
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    utimesSync(old, twoHoursAgo, twoHoursAgo);
+
+    expect(await profiles.sweepOrphans()).toBe(1);
+    expect(existsSync(old)).toBe(false);
+    expect(existsSync(fresh)).toBe(true);
+    expect((await call('GET', '/profiles', { user })).body.profiles).toHaveLength(1);
+
+    rmSync(fresh);
+    expect(await orphanFiles()).toEqual([]);
   });
 });

@@ -319,6 +319,18 @@ export function createExportService(config: ExportServiceOptions) {
       }
     },
 
+    /**
+     * Deletes the stored files of one request, watermarked or not. `requestHash` is
+     * what the metered export recorded for it. Used when an account is deleted.
+     */
+    async forget(requestHash: string): Promise<void> {
+      if (!/^[0-9a-f]{40}$/.test(requestHash)) return;
+      const ids = [requestHash, hash(`${requestHash}:watermarked`)];
+      await Promise.all(
+        ids.flatMap((id) => [rm(pdfPath(id), { force: true }), rm(metaPath(id), { force: true })]),
+      );
+    },
+
     /** Deletes exports older than the cache period, and any stray temporary files. */
     async cleanUp(): Promise<number> {
       let removed = 0;

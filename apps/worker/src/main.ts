@@ -93,8 +93,12 @@ server.listen(config.port, () =>
   console.log(`export worker (${config.appEnv}) listening on http://localhost:${config.port}`),
 );
 
-// Clear out expired exports now and then every hour.
-const sweep = (): void => void service.cleanUp().catch(() => undefined);
+// Clear out expired exports and orphaned handwriting files now, and then every hour.
+const sweep = (): void => {
+  void service.cleanUp().catch(() => undefined);
+  // Handwriting files that no profile points to any more.
+  void accounts?.profiles.sweepOrphans().catch(() => undefined);
+};
 sweep();
 setInterval(sweep, 60 * 60 * 1000).unref();
 
