@@ -1,5 +1,6 @@
 import type { Block } from '@pentwin/engine';
 import { importDocx, importPdf, textToBlocks } from '@pentwin/importers';
+import { sniffFileKind } from '@pentwin/shared';
 
 export interface ImportedFile {
   blocks: Block[];
@@ -17,9 +18,18 @@ export async function importFile(file: File): Promise<ImportedFile> {
   }
   const name = file.name.toLowerCase();
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // The name says what the file claims to be; its first bytes say what it is. A file is
+  // only handed to a parser when the two agree.
+  const kind = sniffFileKind(bytes);
+  const mismatch = (expected: string): Error =>
+    new Error(`This file is named like ${expected} but is not one. Please check the file.`);
 
-  if (name.endsWith('.docx')) return importDocx(bytes);
+  if (name.endsWith('.docx')) {
+    if (kind !== 'zip') throw mismatch('a Word document');
+    return importDocx(bytes);
+  }
   if (name.endsWith('.pdf')) {
+    if (kind !== 'pdf') throw mismatch('a PDF');
     // pdf.js does its parsing in a web worker, which has to be pointed at its script.
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -30,6 +40,11 @@ export async function importFile(file: File): Promise<ImportedFile> {
     return { blocks, warnings };
   }
   if (name.endsWith('.txt')) {
+    if (kind !== 'text') {
+      throw new Error(
+        'This file is not plain text. If it is a text file, save it as UTF-8 and try again.',
+      );
+    }
     return { blocks: textToBlocks(new TextDecoder().decode(bytes)), warnings: [] };
   }
   if (name.endsWith('.doc')) {

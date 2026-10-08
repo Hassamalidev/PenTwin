@@ -15,6 +15,7 @@ export const WORKER_ENV_KEYS = [
   'EXPORT_STORAGE_DIR',
   'EXPORT_SIGNING_SECRET',
   'WEB_ORIGIN',
+  'CLIENT_IP_HEADER',
   'DATABASE_URL',
   'SUPABASE_JWT_SECRET',
   'PADDLE_ENVIRONMENT',
@@ -41,6 +42,8 @@ export interface WorkerConfig {
   /** Undefined only in development, where a temporary secret is made up at start. */
   signingSecret?: string;
   webOrigin: string;
+  /** The header the host's proxy puts the visitor's address in, if any. Lower case. */
+  clientIpHeader?: string;
   /** Present when the worker runs with accounts, pages and payments. */
   accounts?: {
     databaseUrl: string;
@@ -131,6 +134,16 @@ export function loadConfig(env: Env): WorkerConfig {
     problems.push('WEB_ORIGIN is not a valid address.');
   }
 
+  const clientIpHeader = get('CLIENT_IP_HEADER')?.toLowerCase();
+  if (clientIpHeader && !/^[a-z0-9-]+$/.test(clientIpHeader)) {
+    problems.push('CLIENT_IP_HEADER must be a header name, such as fly-client-ip.');
+  }
+  if (deployed && !clientIpHeader) {
+    warnings.push(
+      'CLIENT_IP_HEADER is not set; behind a proxy every visitor will share one rate limit.',
+    );
+  }
+
   let accounts: WorkerConfig['accounts'];
   const databaseUrl = get('DATABASE_URL');
   if (databaseUrl) {
@@ -181,6 +194,7 @@ export function loadConfig(env: Env): WorkerConfig {
     storageDir: storage ?? join(tmpdir(), 'pentwin-exports'),
     signingSecret,
     webOrigin,
+    clientIpHeader,
     accounts,
     warnings,
   };

@@ -22,6 +22,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # Known vulnerabilities in what ships to users: fail on high or critical.
+      - run: pnpm audit --prod --audit-level high
 
   # The whole local flow in a real browser: sample photo, glyph bank, upload, preview, export.
   e2e:

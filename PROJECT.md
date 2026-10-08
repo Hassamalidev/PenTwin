@@ -392,7 +392,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* the worker survives a 50-page export without OOM.
 - [ ] **7.4 DB migrations in CI.** Supabase CLI applies migrations on deploy; backups enabled.
   *Acceptance:* a restore from backup tested once.
-- [ ] **7.5 Security hardening.** CSP/HSTS headers, upload validation (type, size, magic bytes), sandboxed processing, temp-file cleanup, signed expiring URLs, rate limits, dependency audit.
+- [~] **7.5 Security hardening.** CSP/HSTS headers, upload validation (type, size, magic bytes), sandboxed processing, temp-file cleanup, signed expiring URLs, rate limits, dependency audit.
+  *Note:* IN PROGRESS. Built and tested: Content Security Policy, HSTS and the other browser headers on every page; uploads checked by size, name and first bytes before parsing (documents and photos are parsed only in the visitor's browser, never on the server); pictures sent to the worker validated; per-address rate limits; strict worker headers; constant-time token checks; a dependency audit in CI (no high or critical findings, one moderate with no fix that the app does not reach). Signed expiring links and temp-file cleanup already existed and are tested. **`docs/security.md` is not all ticked:** seven items are open, mainly that nothing has been checked on a real deployment, the policy still allows inline scripts, rate limits live in one worker's memory, and there has been no independent review.
   *Acceptance:* a security checklist in `docs/security.md` all ticked.
 - [ ] **7.6 Privacy implementation.** Data export and delete (account deletion removes glyph banks and exports), consent logs, no document content in logs.
   *Acceptance:* a deletion test leaves no orphaned files.

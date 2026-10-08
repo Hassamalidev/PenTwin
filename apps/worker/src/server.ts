@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { createAccountsApi, type AccountsConfig } from './api';
 import { ExportError, type ExportService } from './export';
 import { BusyError, createLimiter, type Limiter } from './limiter';
+import { clientAddress, createRateLimiter, type RateLimiter } from './rate-limit';
 
 export interface ServerOptions {
   service: ExportService;
@@ -23,6 +24,17 @@ export interface ServerOptions {
   limiter?: Limiter;
   /** Longest a client may take to send its request, in milliseconds. */
   requestTimeoutMs?: number;
+  /**
+   * Requests allowed per network address: `all` counts everything except the health
+   * check and the payment webhook, `exports` counts exports. Defaults to 240 and 20 a
+   * minute.
+   */
+  rateLimits?: { all: RateLimiter; exports: RateLimiter };
+  /**
+   * The header in which the host's proxy passes the visitor's address (for example
+   * `fly-client-ip`). Leave unset when clients connect directly.
+   */
+  clientIpHeader?: string;
 }
 
 const readBody = (request: IncomingMessage, limit: number): Promise<Buffer> =>
@@ -50,6 +62,11 @@ export function createWorkerServer({
   allowOrigin,
   limiter = createLimiter(1, 8),
   requestTimeoutMs = 30_000,
+  rateLimits = {
+    all: createRateLimiter({ limit: 240, windowMs: 60_000 }),
+    exports: createRateLimiter({ limit: 20, windowMs: 60_000 }),
+  },
+  clientIpHeader,
 }: ServerOptions): Server {
   const accountsApi = accounts ? createAccountsApi(accounts, service) : undefined;
   const json = (response: ServerResponse, status: number, body: unknown): void => {
@@ -65,8 +82,15 @@ export function createWorkerServer({
         response.setHeader('access-control-allow-headers', 'content-type, authorization');
         response.setHeader('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS');
       }
+      // The worker only ever answers with JSON or a PDF download: nothing it sends may be
+      // run as a page, framed, cached, or fetched over plain http again.
       response.setHeader('x-content-type-options', 'nosniff');
       response.setHeader('cache-control', 'no-store');
+      response.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+      response.setHeader('x-frame-options', 'DENY');
+      response.setHeader('referrer-policy', 'no-referrer');
+      response.setHeader('strict-transport-security', 'max-age=63072000; includeSubDomains');
+      const address = clientAddress(request.socket.remoteAddress, request.headers, clientIpHeader);
 
       // The body is read once, on demand, whoever asks for it.
       let body: Promise<Buffer> | undefined;
@@ -84,6 +108,24 @@ export function createWorkerServer({
           json(response, 200, { ok: true });
           return;
         }
+
+        // The payment provider is known by its signature, not its address, and sends in
+        // bursts; everyone else gets a fair share per address.
+        if (url.pathname !== '/webhooks/paddle') {
+          const exporting = request.method === 'POST' && url.pathname === '/export';
+          const checks = exporting ? [rateLimits.all, rateLimits.exports] : [rateLimits.all];
+          for (const check of checks) {
+            const { allowed, retryAfterSeconds } = check.take(address);
+            if (!allowed) {
+              response.setHeader('retry-after', String(retryAfterSeconds));
+              json(response, 429, {
+                error: 'Too many requests. Nothing was charged. Please wait a moment.',
+              });
+              return;
+            }
+          }
+        }
+
         if (request.method === 'GET' && url.pathname.startsWith('/download/')) {
           // Downloads need no sign-in: the signed, expiring link is the permission.
           const id = url.pathname.slice('/download/'.length);
@@ -115,7 +157,7 @@ export function createWorkerServer({
               method: request.method ?? 'GET',
               path: url.pathname,
               headers: request.headers as Record<string, string | undefined>,
-              address: request.socket.remoteAddress ?? 'unknown',
+              address,
               text,
             }),
           );

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import {
   activateAccount,
   applyEntitlements,
@@ -51,6 +51,12 @@ export interface ApiResponse {
 
 const reply = (status: number, body: unknown): ApiResponse => ({ status, body });
 
+/** Compares a bearer token with a secret without leaking, by timing, how much matched. */
+const sameSecret = (header: string | undefined, secret: string): boolean => {
+  const digest = (value: string): Buffer => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(header ?? ''), digest(`Bearer ${secret}`));
+};
+
 /**
  * The routes that depend on who the user is: account, pages, profiles, referrals,
  * metered export, and the payment webhook. Returns undefined for paths it does not own.
@@ -98,7 +104,7 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
     }
 
     if (method === 'GET' && path === '/admin/costs') {
-      if (!config.adminToken || request.headers.authorization !== `Bearer ${config.adminToken}`) {
+      if (!config.adminToken || !sameSecret(request.headers.authorization, config.adminToken)) {
         return reply(404, { error: 'Not found.' });
       }
       return reply(200, await costReport(pool));

@@ -8,6 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { createExportService, ExportError, type ExportServiceOptions } from './export';
 import { createLimiter } from './limiter';
+import { createRateLimiter } from './rate-limit';
 import type { ExportRequest } from './schema';
 import { createWorkerServer } from './server';
 
@@ -339,6 +340,51 @@ describe('worker server under load', { timeout: 60_000 }, () => {
       expect(started).toHaveLength(2);
     } finally {
       release();
+      server.close();
+    }
+  });
+});
+
+describe('worker server rate limits', { timeout: 60_000 }, () => {
+  it('limits requests per address, taking the address from the trusted header', async () => {
+    const { service } = setup();
+    const server = createWorkerServer({
+      service,
+      clientIpHeader: 'x-client',
+      rateLimits: {
+        all: createRateLimiter({ limit: 5, windowMs: 60_000 }),
+        exports: createRateLimiter({ limit: 1, windowMs: 60_000 }),
+      },
+    });
+    const base = await new Promise<string>((resolve) =>
+      server.listen(0, () => resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)),
+    );
+    const get = (path: string, client: string): Promise<Response> =>
+      fetch(`${base}${path}`, { headers: { 'x-client': client } });
+    const post = (client: string): Promise<Response> =>
+      fetch(`${base}/export`, {
+        method: 'POST',
+        body: JSON.stringify(request()),
+        headers: { 'x-client': client },
+      });
+
+    try {
+      // One export a minute for this address; the second is refused before any work.
+      expect((await post('a')).status).toBe(200);
+      const refused = await post('a');
+      expect(refused.status).toBe(429);
+      expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect(((await refused.json()) as { error: string }).error).toContain('Too many requests');
+      // Another address is not affected.
+      expect((await post('b')).status).toBe(200);
+
+      // Every other route shares a larger allowance (a has used 2 of 5).
+      for (let i = 0; i < 3; i++) expect((await get('/nope', 'a')).status).toBe(404);
+      expect((await get('/nope', 'a')).status).toBe(429);
+      // The health check and the payment webhook are never limited.
+      for (let i = 0; i < 10; i++) expect((await get('/health', 'a')).status).toBe(200);
+      expect((await get('/webhooks/paddle', 'a')).status).toBe(404);
+    } finally {
       server.close();
     }
   });

@@ -1,4 +1,5 @@
 import { glyphMetadataSchema } from '@pentwin/engine';
+import { sniffFileKind } from '@pentwin/shared';
 import { z } from 'zod';
 
 /** Longest single string accepted anywhere in a request. */
@@ -13,6 +14,20 @@ const run = z.object({
 const content = z.union([text, z.array(run).max(500)]);
 
 const skip = z.boolean().optional();
+
+/** Largest picture accepted inside a document, as base64 text (about 2 MB of image). */
+export const MAX_IMAGE_CHARS = 2_800_000;
+/** Most pictures accepted in one document. */
+export const MAX_IMAGES = 30;
+const PICTURE = /^data:image\/(png|jpe?g);base64,([A-Za-z0-9+/=]+)$/;
+
+/** A picture carried in the request. Its first bytes must be what its label says. */
+const pictureIsWhatItSays = (href: string): boolean => {
+  const match = PICTURE.exec(href);
+  if (!match) return false;
+  const head = Buffer.from(match[2]!.slice(0, 24), 'base64');
+  return sniffFileKind(head) === (match[1] === 'png' ? 'png' : 'jpeg');
+};
 
 const block = z.discriminatedUnion('type', [
   z.object({
@@ -34,7 +49,11 @@ const block = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('image'),
     // Only pictures carried in the request itself: the worker never fetches a URL.
-    href: z.string().regex(/^data:image\/(png|jpe?g);base64,[A-Za-z0-9+/=]+$/),
+    href: z
+      .string()
+      .max(MAX_IMAGE_CHARS, 'The picture is too large.')
+      .regex(PICTURE)
+      .refine(pictureIsWhatItSays, 'The picture is not a valid PNG or JPEG.'),
     width: z.number().positive().max(500),
     height: z.number().positive().max(500),
     skip,
@@ -99,7 +118,14 @@ const options = z.strictObject({
 
 /** Everything needed to produce a document. The same request always gives the same PDF. */
 export const exportRequestSchema = z.strictObject({
-  blocks: z.array(block).min(1).max(5000),
+  blocks: z
+    .array(block)
+    .min(1)
+    .max(5000)
+    .refine(
+      (blocks) => blocks.filter((item) => item.type === 'image').length <= MAX_IMAGES,
+      `A document can hold at most ${MAX_IMAGES} pictures.`,
+    ),
   bank: z.strictObject({
     metadata: glyphMetadataSchema,
     files: z.record(z.string().max(100), z.string().max(200_000)),

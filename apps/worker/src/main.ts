@@ -86,6 +86,7 @@ const server = createWorkerServer({
   service,
   accounts,
   allowOrigin: config.webOrigin,
+  clientIpHeader: config.clientIpHeader,
   limiter,
 });
 server.listen(config.port, () =>
