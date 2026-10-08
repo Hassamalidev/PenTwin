@@ -84,3 +84,57 @@ Dockerfile; only the dashboard differs.
 
 Tag every image that goes to production (`fly deploy --image-label v2026-10-08-1`) so a
 bad release can be rolled back to a known one.
+
+## The database
+
+The schema is the SQL files in `supabase/migrations`, applied in name order. A migration
+that has been pushed is never edited; a change is a new file.
+
+**What runs today.** On every push, CI builds a fresh Postgres from the migrations and
+runs the database tests against it (job `database`), so a migration that does not apply
+cleanly, or breaks a security rule, fails before it can be merged.
+
+**Applying to a real database (prepared, not run).** The workflow
+[`deploy-db.yml`](../.github/workflows/deploy-db.yml) applies new migrations with the
+Supabase CLI. It is started by hand for staging or production and has never run, because
+there is no Supabase project. It is not yet tied to a deploy: until it has been tried on
+staging, migrations should be applied by a person, before the worker that needs them.
+
+Two things are only known from the tests' stand-in for Supabase and must be confirmed on
+a real project: that the migrations apply there unchanged, and that deleting a user from
+`auth.users` (which account deletion does) is allowed for the role the worker connects as.
+
+### Backups
+
+**No backups exist, because no hosted database exists.** When the project is created:
+turn on daily backups (and point-in-time recovery on the paid tier), and note the
+retention period in the privacy policy, since a deleted account lives on in backups until
+they rotate.
+
+**What has been tested** is that a backup of this schema restores and works. Run on
+2026-10-08 on the development laptop, against the test container:
+
+```bash
+pnpm db:up
+pnpm db:restore-check
+```
+
+The script fills a database with accounts, subscriptions, exports, a profile, consents, a
+referral and a deleted account; takes a `pg_dump` backup; restores it into an empty
+database; and checks the result.
+
+| Check                                                               | Result                             |
+| ------------------------------------------------------------------- | ---------------------------------- |
+| Backup taken and restored                                           | 72 KB, 3.3 s for both              |
+| Every table has the same rows; ledger and balances identical        | 11 tables and 2 fingerprints match |
+| Row-level security still on for every table; all policies back      | 7 of 7 policies                    |
+| The ledger is still append-only                                     | pass                               |
+| A signed-in user still sees only their own account                  | pass                               |
+| The restored database works: a new export is charged correctly      | 149 pages before, 147 after        |
+| A payment handled before the backup is still recognised as a repeat | pass                               |
+
+This proves the method on a small database. **It is not a restore of a hosted backup**,
+which is what task 7.4 asks for and can only be done once a Supabase project with backups
+exists. Encrypted handwriting files are not in the database and need their own backup of
+the worker's `/data` volume; a database restored without them has profiles that cannot be
+opened.

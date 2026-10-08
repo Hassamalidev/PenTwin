@@ -35,8 +35,14 @@ export async function resetDatabase(): Promise<void> {
   }
 }
 
-export const createTestPool = (): pg.Pool =>
-  new pg.Pool({ connectionString: TEST_DATABASE_URL, max: 12 });
+/** A pool on the test database, or on another database of the same test server. */
+export const createTestPool = (database?: string): pg.Pool =>
+  new pg.Pool({
+    connectionString: database
+      ? TEST_DATABASE_URL.replace(/\/[^/]+$/, `/${database}`)
+      : TEST_DATABASE_URL,
+    max: 12,
+  });
 
 let counter = 0;
 

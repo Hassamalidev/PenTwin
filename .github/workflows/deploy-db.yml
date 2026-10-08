@@ -1,0 +1,43 @@
+name: Apply database migrations
+
+# NOT YET USED. No Supabase project exists, so this has never run. It is written from the
+# Supabase CLI's documentation and must be tried on staging before production relies on it.
+# See docs/deployment.md ("The database").
+#
+# Started by hand, for one environment at a time. Each environment (Settings >
+# Environments in GitHub) holds its own DATABASE_URL secret; production should also
+# require an approval there.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which database to migrate
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: migrate-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # The CLI records which migrations a database already has and applies only new ones.
+      - name: Show what would be applied
+        run: supabase db push --dry-run --db-url "$DATABASE_URL"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Apply the new migrations
+        run: supabase db push --db-url "$DATABASE_URL"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
