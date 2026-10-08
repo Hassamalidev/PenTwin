@@ -323,8 +323,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **5.10 Transactional email.** Welcome, receipt, low-credits warning, payment failed, export ready (Resend).
   *Note:* each of the five emails is queued by the right event, in the same transaction as that event (welcome on signup, receipt on payment, low-pages once per period, payment failed, export ready for 20+ pages), and sent once with retries on failure. **No email has actually been sent**: the Resend sender is written from their API documentation and untested.
   *Acceptance:* each email triggers on the right event.
-- [~] **5.11 Cost tracking.** Log per-export compute time/cost (no document content!) to a dashboard. Alert if cost per page exceeds $0.01.
-  *Note:* IN PROGRESS. Every export records compute time and output size (never content). `GET /admin/costs` returns cost per page and margin per plan, and the worker logs an alert above $0.01 a page. **It is JSON, not a dashboard**, and the cost rates are estimates until there are hosting bills.
+- [x] **5.11 Cost tracking.** Log per-export compute time/cost (no document content!) to a dashboard. Alert if cost per page exceeds $0.01.
+  *Note:* every export records compute time and output size, never content. The dashboard is the `/admin/costs` page of the web app (admin token needed): cost per page overall and per plan, margin per plan at full use, and alerts above $0.01 a page; the worker also logs those alerts hourly. The cost rates are estimates until there are real hosting bills. The page is tested against a stood-in report, the numbers behind it against a real database.
   *Acceptance:* a dashboard shows cost per page and margin per plan.
 
 **Gate:** test-mode payment -> credits granted -> export -> deducted -> cancellation -> downgrade, all verified.

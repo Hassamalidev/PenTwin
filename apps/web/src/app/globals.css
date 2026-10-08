@@ -407,3 +407,26 @@ label {
   overflow: auto;
   z-index: 2;
 }
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+tr.over-limit td {
+  color: var(--danger);
+  font-weight: 600;
+}
