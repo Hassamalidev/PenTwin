@@ -283,7 +283,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **4.9 Mobile UX pass.** Most users are on phones: test editor, upload, and download at 380px width.
   *Note:* the whole flow passes end to end at a 380px wide touch viewport, and I checked screenshots of every screen at that width. This is browser emulation, **not real phones**; real-device testing is task 7.9.
   *Acceptance:* the whole flow is usable on a phone.
-- [ ] **4.10 Full local E2E test.** Playwright: sample photo -> bank -> upload DOCX -> preview -> export.
+- [x] **4.10 Full local E2E test.** Playwright: sample photo -> bank -> upload DOCX -> preview -> export.
+  *Note:* `pnpm e2e` (Playwright, in `e2e/`) runs sample photo -> bank -> review -> Word upload -> preview -> export -> downloaded PDF, at desktop and 380px phone width, and passes in the CI `e2e` job. The "photo" is a synthetic page written by the engine, not a real photograph. Also covered: PDF upload, a rejected photo, a rejected file type.
   *Acceptance:* **Gate:** test passes in CI.
 
 ---
