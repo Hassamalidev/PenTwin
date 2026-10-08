@@ -22,7 +22,9 @@ if (!secret) {
 }
 
 const service = createExportService({ storageDir, secret });
-const server = createWorkerServer({ service, allowOrigin: process.env.WEB_ORIGIN });
+// The web app runs on port 3000 in local development.
+const allowOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
+const server = createWorkerServer({ service, allowOrigin });
 server.listen(port, () => console.log(`export worker listening on http://localhost:${port}`));
 
 // Clear out expired exports now and then every hour.
