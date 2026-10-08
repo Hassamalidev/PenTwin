@@ -233,7 +233,7 @@ export default function EditorPage() {
 
   return (
     <div className="editor">
-      <section className="panel" aria-label="Your text">
+      <section className="panel text-panel" aria-label="Your text">
         <h1>Editor</h1>
         {loaded.isDemo && (
           <p className="notice" data-testid="demo-notice">
@@ -295,7 +295,7 @@ export default function EditorPage() {
       </section>
 
       <section className="preview-column" aria-label="Preview and settings">
-        <div className="panel">
+        <div className="panel preview-panel">
           <div className="preview" data-testid="preview">
             {previewUrl ? (
               <img
@@ -366,7 +366,7 @@ export default function EditorPage() {
           </div>
         </div>
 
-        <div className="panel" style={{ marginTop: '1rem' }}>
+        <div className="panel settings-panel">
           <h2>Settings</h2>
           <Select
             label="Writing style"

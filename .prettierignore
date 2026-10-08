@@ -11,3 +11,5 @@ scripts/data
 next-env.d.ts
 apps/web/public
 .kilo
+test-results
+playwright-report

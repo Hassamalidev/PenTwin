@@ -22,13 +22,17 @@
     "benchmark": "tsx scripts/make-benchmark.ts",
     "worker": "tsx apps/worker/src/main.ts",
     "web": "pnpm --filter @pentwin/web dev",
-    "web:build": "pnpm --filter @pentwin/web build"
+    "web:build": "pnpm --filter @pentwin/web build",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.4",
+    "docx": "^9.9.0",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
+    "pdf-lib": "^1.17.1",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

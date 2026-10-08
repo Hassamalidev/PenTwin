@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   size: 0.35,
   unevenness: 1,
   fatigue: 0,
-  corrections: 0.01,
+  corrections: 0,
   pageNumbers: false,
   seed: 1,
 };

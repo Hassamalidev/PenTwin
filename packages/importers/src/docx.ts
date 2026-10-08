@@ -7,16 +7,16 @@ import { htmlToBlocks, type ImportResult } from './html';
  * the text is going to be handwritten, so only its structure matters.
  */
 export async function importDocx(data: Uint8Array): Promise<ImportResult> {
-  // mammoth takes a Node Buffer on the server and an ArrayBuffer in the browser.
-  const input =
-    typeof Buffer !== 'undefined'
-      ? { buffer: Buffer.from(data) }
-      : {
-          arrayBuffer: data.buffer.slice(
-            data.byteOffset,
-            data.byteOffset + data.byteLength,
-          ) as ArrayBuffer,
-        };
+  // mammoth reads `buffer` on the server and `arrayBuffer` in the browser, and ignores
+  // the other. Both are given, because a bundler may provide a Buffer in the browser too.
+  const arrayBuffer = data.buffer.slice(
+    data.byteOffset,
+    data.byteOffset + data.byteLength,
+  ) as ArrayBuffer;
+  const input = {
+    arrayBuffer,
+    ...(typeof Buffer !== 'undefined' ? { buffer: Buffer.from(data) } : {}),
+  };
   const { value, messages } = await mammoth.convertToHtml(input);
   const result = htmlToBlocks(value);
   return {

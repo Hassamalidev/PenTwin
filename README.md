@@ -13,6 +13,20 @@ pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
+Run the app locally (two terminals):
+
+```bash
+pnpm worker   # export worker on http://localhost:8787
+pnpm web      # web app on http://localhost:3000
+```
+
+End-to-end tests (build the app and drive it in a real browser):
+
+```bash
+pnpm exec playwright install chromium   # once
+pnpm e2e
+```
+
 Engine tools:
 
 ```bash

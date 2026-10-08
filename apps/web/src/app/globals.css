@@ -178,11 +178,28 @@ label {
   color: var(--danger);
 }
 
-/* Editor: one column on a phone, text beside preview on a wide screen. */
+/* Editor: one column on a phone, with the preview first so it stays in reach;
+   text beside preview on a wide screen. */
 .editor {
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr);
+}
+
+.preview-column {
+  display: contents;
+}
+
+.preview-panel {
+  order: 1;
+}
+
+.text-panel {
+  order: 2;
+}
+
+.settings-panel {
+  order: 3;
 }
 
 @media (min-width: 900px) {
@@ -192,8 +209,27 @@ label {
   }
 
   .preview-column {
+    display: block;
     position: sticky;
     top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+  }
+
+  .text-panel {
+    order: 0;
+  }
+
+  .settings-panel {
+    margin-top: 1rem;
+  }
+
+  /* Tall pages should not push the buttons off screen. */
+  .preview img {
+    max-height: 62vh;
+    width: auto;
+    max-width: 100%;
+    margin: 0 auto;
   }
 }
 
@@ -236,22 +272,6 @@ label {
   display: block;
   width: 100%;
   height: auto;
-}
-
-/* The preview is free; the watermark marks it as not the final export. */
-.watermark {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  font-size: clamp(1.5rem, 9vw, 4rem);
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  color: rgba(27, 42, 107, 0.13);
-  transform: rotate(-28deg);
-  user-select: none;
 }
 
 .pager {
@@ -327,7 +347,7 @@ label {
   background: #fdf1f1;
 }
 
-.glyph-card svg {
+.glyph-card svg.unused {
   width: 100%;
   height: 46px;
 }
@@ -346,4 +366,44 @@ label {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+
+.glyph-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 0;
+}
+
+.glyph-card img {
+  height: 46px;
+  width: auto;
+  max-width: 100%;
+}
+
+.glyph-card.derived {
+  border-style: dashed;
+}
+
+.glyph-card.selected {
+  outline: 2px solid var(--ink);
+}
+
+.thumb-empty {
+  height: 46px;
+  line-height: 46px;
+  color: var(--danger);
+}
+
+/* Stays at the bottom of the screen, so the samples of the letter just tapped are in
+   reach without scrolling past the whole grid. */
+.glyph-detail {
+  position: sticky;
+  bottom: 0.5rem;
+  margin-top: 0.75rem;
+  box-shadow: 0 -4px 18px rgba(20, 22, 30, 0.18);
+  max-height: 45vh;
+  overflow: auto;
+  z-index: 2;
 }

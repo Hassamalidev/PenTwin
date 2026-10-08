@@ -27,3 +27,7 @@ next-env.d.ts
 
 # worktrees made by other tools
 .kilo/
+
+# end-to-end test output
+test-results/
+playwright-report/

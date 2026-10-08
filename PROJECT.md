@@ -191,12 +191,14 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **2.12 Top-up flow.** Generate a small "write these N characters" sheet and merge the results into the existing bank.
   *Note:* each top-up line starts with the word "none" so letter size and baseline can be measured. Handwritten glyphs are never overwritten; derived stand-ins are dropped when a handwritten one arrives. **"%" cannot be topped up yet**: it is three separate marks and the cutter only joins two.
   *Acceptance:* merging improves coverage without overwriting good glyphs.
-- [ ] **2.13 Review screen UI.** Grid of every extracted glyph with quality indicator, "replace this letter" and "retake" options, and a live test sentence rendered with the bank.
+- [x] **2.13 Review screen UI.** Grid of every extracted glyph with quality indicator, "replace this letter" and "retake" options, and a live test sentence rendered with the bank.
+  *Note:* built as the "My handwriting" page of the web app: a grid of every character marked good / few samples / made up / missing, tap a letter to see its samples and remove bad ones (gaps refill automatically), retake, top-up sheet, and a live test sentence. Removing a bad "g" is two taps. Exercised in the end-to-end test on a synthetic photo only.
   *Acceptance:* a user can fix a bad "g" in under 30 seconds.
 - [x] **2.14 Style features.** Compute slant, stroke width, x-height ratio, roundness, letter width and store with the profile (used later for the optional donor library and for auto-tuning jitter to the user's own style).
   *Note:* between two samples from the same synthetic writer: slant identical, stroke width within 5%, letter width within 1.3%, the rest identical. Slant is recovered to about 1 degree. Returned as `style` from the extractor; saving it to a profile comes with storage in Phase 5.
   *Acceptance:* features stable across two samples from the same writer (record variance).
-- [ ] **2.15 End-to-end timing.** Measure photo -> usable bank on a mid-range phone browser.
+- [~] **2.15 End-to-end timing.** Measure photo -> usable bank on a mid-range phone browser.
+  *Note:* IN PROGRESS. Photo to usable bank takes about 1.6 seconds in desktop Chrome (shown on the review screen as "Read in N seconds"). **Not measured on a real mid-range phone**, which is what the gate asks for; expect several times slower there.
   *Acceptance:* **Gate: under 60 seconds** with no server compute.
 
 **Risks:**
@@ -266,18 +268,20 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **4.4 Normalization & unsupported characters.** Smart quotes, dashes, ligatures, and special symbols mapped sensibly. Anything unsupported is **listed in a pre-export warning**, never silently dropped.
   *Note:* typographic characters become plain ones; accented letters the bank lacks are written without the accent and reported as lossy; emoji, math symbols and other alphabets stay in place and are listed with a plain-language warning (`describeProblems`). Also adds italic (extra lean) to the engine for the importers to use.
   *Acceptance:* a document with emoji and math symbols produces a clear warning list.
-- [ ] **4.5 Editor UI.** Left: text blocks (editable). Right: live preview (client-side, free, low-res, watermarked). Controls for preset, ink, paper, realism sliders, font size, seed ("reroll look").
+- [x] **4.5 Editor UI.** Left: text blocks (editable). Right: live preview (client-side, free, low-res, watermarked). Controls for preset, ink, paper, realism sliders, font size, seed ("reroll look").
+  *Note:* Next.js app in `apps/web` (`pnpm web`). Text blocks with the preview beside them on a wide screen; preview first on a phone. The preview is drawn in the browser at 640px wide with a watermark baked into the image. Because the engine itself runs in the browser, a determined user could render without the watermark: the preview is a convenience, not a paywall. That has to be settled in Phase 5.
   *Acceptance:* preview updates within ~1 second for a typical page.
-- [~] **4.6 Per-block overrides.** Different style for headings, ability to skip blocks, ability to add a page break.
-  *Note:* IN PROGRESS. The engine and worker side is done and tested: any block can be skipped, a heading can be resized or (un)underlined, page breaks are blocks, and all of it reaches the exported PDF. **The editor controls for it are not built yet.**
+- [x] **4.6 Per-block overrides.** Different style for headings, ability to skip blocks, ability to add a page break.
+  *Note:* each block has "Leave out" and "Break after"; headings have an underline switch and a size choice. All of it reaches the exported PDF (worker tests and the end-to-end test). Bold and italic are edited as `**bold**` and `*italic*` in the text box.
   *Acceptance:* overrides persist in export.
-- [~] **4.7 Export dialog.** Shows exact page count and credit cost **before** export, with a settings summary.
-  *Note:* IN PROGRESS. `quoteExport` gives the exact page count, cost (1 credit per page) and a plain-words settings summary; tests confirm it equals what the worker then exports for five kinds of document. **The dialog itself is not built yet.**
+- [x] **4.7 Export dialog.** Shows exact page count and credit cost **before** export, with a settings summary.
+  *Note:* the dialog shows pages, credits and a settings summary before anything is exported, computed with the same layout code the worker uses. The end-to-end test checks the downloaded PDF has exactly the quoted page count, and that a repeat export is free.
   *Acceptance:* the displayed cost equals the real cost on export.
 - [x] **4.8 Export worker (local).** Final render on the worker (not client), returns signed download. Idempotent: same document + settings + seed within 24h returns the cached result for free.
   *Note:* plain Node HTTP server, no framework. Same request within 24 hours is served from the cache with `billablePages: 0`; a failed export leaves no file behind (covered by tests). Requests are validated strictly and pictures must be embedded, so the worker never fetches a URL. Start with `pnpm worker`; settings are in `.env.example`. Credits are not deducted here: that is Phase 5.
   *Acceptance:* repeated export hits cache; failed export leaves no side effects.
-- [ ] **4.9 Mobile UX pass.** Most users are on phones: test editor, upload, and download at 380px width.
+- [x] **4.9 Mobile UX pass.** Most users are on phones: test editor, upload, and download at 380px width.
+  *Note:* the whole flow passes end to end at a 380px wide touch viewport, and I checked screenshots of every screen at that width. This is browser emulation, **not real phones**; real-device testing is task 7.9.
   *Acceptance:* the whole flow is usable on a phone.
 - [ ] **4.10 Full local E2E test.** Playwright: sample photo -> bank -> upload DOCX -> preview -> export.
   *Acceptance:* **Gate:** test passes in CI.
