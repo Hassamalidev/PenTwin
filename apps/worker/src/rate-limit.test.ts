@@ -16,6 +16,20 @@ describe('the rate limiter', () => {
     expect(limiter.take('a').allowed).toBe(true);
   });
 
+  it('gives a request back when it was counted but not served', () => {
+    const limiter = createRateLimiter({ limit: 2, windowMs: 60_000 });
+    limiter.take('a');
+    limiter.take('a');
+    limiter.refund('a');
+    expect(limiter.take('a').allowed).toBe(true);
+    expect(limiter.take('a').allowed).toBe(false);
+    // Refunding more than was taken, or an unknown address, does nothing.
+    for (let i = 0; i < 5; i++) limiter.refund('b');
+    expect(limiter.take('b').allowed).toBe(true);
+    expect(limiter.take('b').allowed).toBe(true);
+    expect(limiter.take('b').allowed).toBe(false);
+  });
+
   it('counts each address separately', () => {
     const limiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
     expect(limiter.take('a').allowed).toBe(true);

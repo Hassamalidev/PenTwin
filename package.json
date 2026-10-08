@@ -27,7 +27,8 @@
     "db:up": "docker compose -f docker-compose.test.yml up -d --wait",
     "db:down": "docker compose -f docker-compose.test.yml down",
     "test:db": "vitest run --config vitest.db.config.ts",
-    "worker:build": "esbuild apps/worker/src/main.ts --bundle --platform=node --target=node22 --format=cjs --legal-comments=none --external:pg-native --outfile=dist/worker/main.cjs"
+    "worker:build": "esbuild apps/worker/src/main.ts --bundle --platform=node --target=node22 --format=cjs --legal-comments=none --external:pg-native --outfile=dist/worker/main.cjs",
+    "load:test": "tsx scripts/load-test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

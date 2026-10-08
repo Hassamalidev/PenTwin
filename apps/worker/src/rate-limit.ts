@@ -1,6 +1,8 @@
 export interface RateLimiter {
   /** Counts one request for `key`. Says whether it is allowed and, if not, when to retry. */
   take(key: string): { allowed: boolean; retryAfterSeconds: number };
+  /** Gives back one request for `key`: it was counted but then not served. */
+  refund(key: string): void;
 }
 
 export interface RateLimitOptions {
@@ -45,6 +47,10 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
         allowed: window.count <= options.limit,
         retryAfterSeconds: Math.max(1, Math.ceil((window.resetAt - time) / 1000)),
       };
+    },
+    refund(key) {
+      const window = windows.get(key);
+      if (window && window.resetAt > now() && window.count > 0) window.count--;
     },
   };
 }

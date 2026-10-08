@@ -312,7 +312,15 @@ describe('worker server under load', { timeout: 60_000 }, () => {
       },
     });
     // One export at a time and one waiting.
-    const server = createWorkerServer({ service, limiter: createLimiter(1, 1) });
+    const server = createWorkerServer({
+      service,
+      limiter: createLimiter(1, 1),
+      // Three exports a minute: exactly enough for the three that are served below.
+      rateLimits: {
+        all: createRateLimiter({ limit: 1000, windowMs: 60_000 }),
+        exports: createRateLimiter({ limit: 3, windowMs: 60_000 }),
+      },
+    });
     const base = await new Promise<string>((resolve) =>
       server.listen(0, () => resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)),
     );
@@ -329,7 +337,7 @@ describe('worker server under load', { timeout: 60_000 }, () => {
 
       const third = await post('three');
       expect(third.status).toBe(503);
-      expect(third.headers.get('retry-after')).toBe('10');
+      expect(third.headers.get('retry-after')).toBe('5');
       expect(((await third.json()) as { error: string }).error).toContain('Nothing was charged');
       // Other routes are not held up by the queue.
       expect((await fetch(`${base}/health`)).status).toBe(200);
@@ -338,6 +346,10 @@ describe('worker server under load', { timeout: 60_000 }, () => {
       expect((await first).status).toBe(200);
       expect((await second).status).toBe(200);
       expect(started).toHaveLength(2);
+      // Being turned away did not use up the allowance: a third export is still served,
+      // and only the one after it is over the limit.
+      expect((await post('four')).status).toBe(200);
+      expect((await post('five')).status).toBe(429);
     } finally {
       release();
       server.close();

@@ -19,7 +19,7 @@ docker run --rm -p 8787:8787 --memory=512m --env-file .env pentwin-worker
 | Request timeouts | A client has 30 seconds to send its request (15 for the headers) or is cut off.                                                                   |
 | Request size     | 8 MB at most.                                                                                                                                     |
 | Document size    | 100 pages per export at most.                                                                                                                     |
-| Load             | One export renders at a time and eight wait. Beyond that the answer is `503` with `Retry-After: 10`, and nothing is charged.                      |
+| Load             | One export renders at a time and eight wait. Beyond that the answer is `503` with `Retry-After: 5`, and nothing is charged.                       |
 | Memory           | Built for a 512 MB machine; the JavaScript heap is capped at 384 MB.                                                                              |
 | Stopping         | On `SIGTERM` it stops taking requests, finishes the export in progress (up to 25 seconds), closes the database connections and exits with code 0. |
 | Storage          | `/data/exports` (finished PDFs, removed after 24 hours) and `/data/profiles` (encrypted handwriting). Mount a persistent volume at `/data`.       |

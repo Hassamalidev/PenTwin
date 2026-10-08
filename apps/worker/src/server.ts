@@ -178,7 +178,10 @@ export function createWorkerServer({
         json(response, 404, { error: 'Not found.' });
       } catch (error) {
         if (error instanceof BusyError) {
-          response.setHeader('retry-after', '10');
+          // Being turned away does not use up the visitor's allowance: otherwise the
+          // people who wait and retry, as asked, would be the ones locked out.
+          rateLimits.exports.refund(address);
+          response.setHeader('retry-after', '5');
           json(response, 503, {
             error: 'We are busy right now. Nothing was charged. Please try again in a moment.',
           });

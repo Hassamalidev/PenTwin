@@ -400,7 +400,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* a deletion test leaves no orphaned files.
 - [ ] **7.7 Monitoring.** Sentry (web + worker), uptime checks, alert to email/Telegram, cost alerts.
   *Acceptance:* a deliberate error shows up in Sentry.
-- [ ] **7.8 Load & abuse testing.** 50 concurrent exports; attempt credit-bypass, webhook replay, oversized uploads, parallel-spend races.
+- [~] **7.8 Load & abuse testing.** 50 concurrent exports; attempt credit-bypass, webhook replay, oversized uploads, parallel-spend races.
+  *Note:* IN PROGRESS. `pnpm load:test` runs the worker as it ships against a real Postgres and attacks it: 50 exports at once, races to spend the same pages twice, attempts to get pages without paying, replayed and forged payment notifications, oversized requests, and one address flooding. **Result on the development laptop: no overspend, no crash, every check passes; p95 export time with 50 simultaneous three-page exports is 30 to 40 seconds** (about 1 second of rendering, the rest waiting in line). The first run failed and found a real fault, now fixed: retries after a "busy" answer used up the visitor's rate allowance and locked patient users out. **The gate is not ticked** because this was one laptop, not the deployed worker, and the payment notifications were built by the test, not sent by Paddle; repeat it after 7.3 is deployed. The web app does not yet retry by itself when told the worker is busy. Report in `docs/load-test.md`.
   *Acceptance:* **Gate:** no overspend, no crashes, p95 export time recorded.
 - [ ] **7.9 Cross-browser/device QA.** Android Chrome, iOS Safari, desktop Chrome/Firefox/Edge, especially the photo-capture flow.
   *Acceptance:* a checklist with results.
