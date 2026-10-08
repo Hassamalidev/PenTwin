@@ -1,18 +1,49 @@
+/*
+ * Design system. One accent colour, system fonts for text, a handwriting-style face for
+ * display headings only (.display). Light and dark follow the device setting.
+ * The components are shown together on the /style page.
+ */
 :root {
-  --ink: #1b2a6b;
+  --accent: #1b2a6b;
+  --accent-contrast: #ffffff;
   --text: #1c1d22;
   --muted: #5d6170;
   --line: #d9dce6;
   --surface: #ffffff;
   --page: #f4f5f9;
-  --warn: #8a4b00;
+  --warn: #7a4300;
   --warn-bg: #fff4dc;
   --danger: #a11a1a;
+  --danger-bg: #fdf1f1;
   --radius: 10px;
+  --shadow: 0 1px 2px rgba(20, 22, 30, 0.06), 0 6px 20px rgba(20, 22, 30, 0.06);
+  --font-display: var(--font-hand), 'Segoe Print', 'Bradley Hand', cursive;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #9db0ff;
+    --accent-contrast: #10131f;
+    --text: #e8e9ef;
+    --muted: #a3a7b7;
+    --line: #2e3242;
+    --surface: #1a1d29;
+    --page: #10131c;
+    --warn: #ffd591;
+    --warn-bg: #3a2c10;
+    --danger: #ff9b9b;
+    --danger-bg: #3a1717;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -24,13 +55,13 @@ body {
     Roboto,
     sans-serif;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text);
   background: var(--page);
 }
 
 a {
-  color: var(--ink);
+  color: var(--accent);
 }
 
 h1 {
@@ -40,28 +71,68 @@ h1 {
 }
 
 h2 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
   margin: 0 0 0.5rem;
 }
 
+h3 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+
+/* Display headings: the only place the handwriting-style face is used. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+
+h1.display {
+  font-size: clamp(2.1rem, 6.2vw, 3.4rem);
+  line-height: 1.08;
+}
+
+h2.display {
+  font-size: clamp(1.6rem, 4.2vw, 2.2rem);
+  line-height: 1.15;
+}
+
+.display em {
+  font-style: normal;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+
+/* --- Page frame --- */
 .site-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
 
 .site-header nav {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+}
+
+.site-header nav a {
+  padding: 0.35rem 0;
+  text-decoration: none;
 }
 
 .brand {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   text-decoration: none;
 }
 
@@ -71,6 +142,29 @@ main {
   margin: 0 auto;
 }
 
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: 1.5rem 1rem 2rem;
+  margin-top: 2rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.site-footer .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+}
+
+/* --- Layout helpers --- */
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -79,24 +173,67 @@ main {
 }
 
 .narrow {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
+}
+
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.section > h2 {
+  margin-bottom: 1rem;
+}
+
+.lead {
+  font-size: 1.12rem;
+  color: var(--muted);
+  max-width: 44rem;
 }
 
 .muted {
   color: var(--muted);
 }
 
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
 .steps li {
   margin-bottom: 0.5rem;
 }
 
-/* Controls: large enough to tap comfortably on a phone. */
+.prose {
+  max-width: 44rem;
+}
+
+.prose h2 {
+  margin-top: 1.75rem;
+}
+
+.prose li {
+  margin-bottom: 0.35rem;
+}
+
+/* --- Controls: large enough to tap comfortably on a phone --- */
 button,
 select,
 input[type='text'],
+input[type='password'],
 textarea,
-.file-button {
+.file-button,
+.button {
   font: inherit;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -107,18 +244,21 @@ textarea,
 }
 
 button,
-.file-button {
+.file-button,
+.button {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  text-decoration: none;
 }
 
-button.primary {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
+button.primary,
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
   font-weight: 600;
 }
 
@@ -131,6 +271,11 @@ button.small {
   min-height: 36px;
   padding: 0.25rem 0.6rem;
   font-size: 0.9rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 textarea {
@@ -154,13 +299,7 @@ label {
   width: 100%;
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
+/* --- Messages --- */
 .notice {
   background: var(--warn-bg);
   color: var(--warn);
@@ -178,8 +317,168 @@ label {
   color: var(--danger);
 }
 
-/* Editor: one column on a phone, with the preview first so it stays in reach;
-   text beside preview on a wide screen. */
+.badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* --- Cards --- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.card.featured {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+.price {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.price small {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.checks {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.checks li {
+  padding-left: 1.4rem;
+  position: relative;
+  margin-bottom: 0.3rem;
+}
+
+.checks li::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 0.45em;
+  width: 0.55rem;
+  height: 0.3rem;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+
+/* --- Hero --- */
+.hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 0 1rem;
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    padding-top: 2.5rem;
+  }
+}
+
+/* Typed text underneath, handwriting on top, revealed by the slider. */
+.compare {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #ffffff;
+  color: #1c1d22;
+  aspect-ratio: 1100 / 383;
+}
+
+.compare .typed {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 4% 6%;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: clamp(0.8rem, 2.4vw, 1.15rem);
+  line-height: 1.55;
+}
+
+.compare .written {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border-right: 2px solid #1b2a6b;
+}
+
+.compare .written img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+}
+
+.compare-control {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* --- Gallery --- */
+.gallery {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.gallery figure {
+  margin: 0;
+}
+
+.gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.gallery figcaption {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+
+/* --- Questions --- */
+.faq details {
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 0;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.faq p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+/* --- Editor: one column on a phone, with the preview first so it stays in reach;
+   text beside preview on a wide screen. --- */
 .editor {
   display: grid;
   gap: 1rem;
@@ -225,7 +524,7 @@ label {
   }
 
   /* Tall pages should not push the buttons off screen. */
-  .preview img {
+  .preview-panel .preview img {
     max-height: 62vh;
     width: auto;
     max-width: 100%;
@@ -260,12 +559,13 @@ label {
   color: var(--muted);
 }
 
+/* Handwriting is shown on white paper in both themes. */
 .preview {
   position: relative;
   border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
-  background: #fff;
+  background: #ffffff;
 }
 
 .preview img {
@@ -279,11 +579,11 @@ label {
   margin-top: 0.5rem;
 }
 
-/* Export dialog and other overlays. */
+/* --- Dialogs --- */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 22, 30, 0.5);
+  background: rgba(10, 12, 20, 0.6);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -323,7 +623,7 @@ label {
   color: var(--muted);
 }
 
-/* Glyph review grid. */
+/* --- Glyph review grid --- */
 .glyph-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
@@ -335,7 +635,13 @@ label {
   border-radius: 8px;
   padding: 0.4rem;
   text-align: center;
-  background: #fff;
+  background: #ffffff;
+  color: #1c1d22;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 0;
 }
 
 .glyph-card.weak {
@@ -343,37 +649,16 @@ label {
 }
 
 .glyph-card.missing {
-  border-color: var(--danger);
+  border-color: #a11a1a;
   background: #fdf1f1;
 }
 
-.glyph-card svg.unused {
-  width: 100%;
-  height: 46px;
+.glyph-card.derived {
+  border-style: dashed;
 }
 
-.glyph-card .char {
-  font-weight: 700;
-}
-
-.glyph-card .state {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.photo-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.glyph-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  min-height: 0;
+.glyph-card.selected {
+  outline: 2px solid var(--accent);
 }
 
 .glyph-card img {
@@ -382,18 +667,19 @@ label {
   max-width: 100%;
 }
 
-.glyph-card.derived {
-  border-style: dashed;
+.glyph-card .char {
+  font-weight: 700;
 }
 
-.glyph-card.selected {
-  outline: 2px solid var(--ink);
+.glyph-card .state {
+  font-size: 0.75rem;
+  color: #5d6170;
 }
 
 .thumb-empty {
   height: 46px;
   line-height: 46px;
-  color: var(--danger);
+  color: #a11a1a;
 }
 
 /* Stays at the bottom of the screen, so the samples of the letter just tapped are in
@@ -408,6 +694,15 @@ label {
   z-index: 2;
 }
 
+/* A file input hidden behind its label, which acts as the button. */
+.photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* --- Tables --- */
 .table-scroll {
   overflow-x: auto;
 }
@@ -429,4 +724,29 @@ td {
 tr.over-limit td {
   color: var(--danger);
   font-weight: 600;
+}
+
+/* --- Design system page --- */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.swatch {
+  width: 6.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.78rem;
+}
+
+.swatch span {
+  display: block;
+  height: 2.6rem;
+}
+
+.swatch code {
+  display: block;
+  padding: 0.25rem 0.4rem;
 }

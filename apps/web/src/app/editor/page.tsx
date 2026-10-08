@@ -19,6 +19,7 @@ import {
 } from '@pentwin/importers';
 import { BRAND, type PageSizeName } from '@pentwin/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { pageRange, track, trackOnce } from '../../lib/analytics';
 import { loadBank, type LoadedBank } from '../../lib/bank';
 import { ACCEPTED_FILES, importFile } from '../../lib/import-file';
 import { rasterizePreview } from '../../lib/preview';
@@ -213,6 +214,9 @@ export default function EditorPage() {
       if (!response.ok || !body.downloadPath) {
         throw new Error(body.error ?? 'The export failed. Nothing was charged.');
       }
+      const pages = pageRange(body.pageCount ?? 1);
+      trackOnce('first_export', { source: 'editor', pages });
+      track('export_completed', { source: 'editor', pages, style: settings.preset });
       setExportState({
         status: 'done',
         downloadUrl: `${WORKER_URL}${body.downloadPath}`,

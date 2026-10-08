@@ -42,6 +42,13 @@ export async function loadBank(): Promise<LoadedBank> {
   return build((await response.json()) as StoredBank, true);
 }
 
+/** The built-in demo handwriting, whatever the user has saved. */
+export async function loadDemoBank(): Promise<LoadedBank> {
+  const response = await fetch('/demo-bank.json');
+  if (!response.ok) throw new Error('The demo handwriting could not be loaded.');
+  return build((await response.json()) as StoredBank, true);
+}
+
 /** Saves the bank on this device. Throws if it is not a valid bank. */
 export function saveBank(stored: StoredBank): LoadedBank {
   const loaded = build(stored, false);

@@ -16,6 +16,7 @@ import {
 } from '@pentwin/extractor';
 import { BRAND } from '@pentwin/shared';
 import { useEffect, useMemo, useState } from 'react';
+import { track } from '../../lib/analytics';
 import { clearBank, saveBank } from '../../lib/bank';
 import { downloadBytes, readPhoto } from '../../lib/photo';
 import { rasterizePreview } from '../../lib/preview';
@@ -118,6 +119,7 @@ export default function SamplePage() {
         return;
       }
       setOwn(result.bank);
+      track('sample_uploaded', { source: 'sample' });
       setSeconds((performance.now() - started) / 1000);
       const joined = result.flagged.filter((f) => f.reason === 'letters-joined').length;
       if (joined > 40) {

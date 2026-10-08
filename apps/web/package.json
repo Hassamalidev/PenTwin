@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "tsx ../../scripts/make-demo-bank.ts",
+    "predev": "tsx ../../scripts/make-demo-bank.ts && tsx ../../scripts/make-site-assets.ts",
     "dev": "next dev",
-    "prebuild": "tsx ../../scripts/make-demo-bank.ts",
+    "prebuild": "tsx ../../scripts/make-demo-bank.ts && tsx ../../scripts/make-site-assets.ts",
     "build": "next build",
     "start": "next start"
   },

@@ -29,6 +29,8 @@ export default defineConfig({
       url: `http://localhost:${WEB_PORT}`,
       timeout: 300_000,
       reuseExistingServer: !process.env.CI,
+      // Baked into the build: canonical addresses, the sitemap and social cards use it.
+      env: { NEXT_PUBLIC_SITE_URL: 'https://example.test' },
     },
     {
       command: 'pnpm worker',

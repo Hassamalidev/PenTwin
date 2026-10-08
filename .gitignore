@@ -31,3 +31,5 @@ next-env.d.ts
 # end-to-end test output
 test-results/
 playwright-report/
+apps/web/public/gallery/
+apps/web/public/og.png

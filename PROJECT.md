@@ -337,29 +337,41 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** a site that converts a student searching "text to handwriting" into a free signup in under 60 seconds.
 
-- [ ] **6.1 Design system.** One accent color, clean typography, handwriting-style font for headings **only**, dark/light support, mobile-first.
+- [x] **6.1 Design system.** One accent color, clean typography, handwriting-style font for headings **only**, dark/light support, mobile-first.
+  *Note:* one accent colour with light and dark themes, system fonts for text and the Caveat face for display headings only. Every component is shown on `/style` (kept out of search results).
   *Acceptance:* components documented in a simple style page.
-- [ ] **6.2 Hero + live demo.** Headline "Turn any document into *your own* handwriting." Typed-vs-handwritten slider. A **no-signup live demo** (textbox -> instant preview using a demo profile): this is your best conversion tool.
+- [~] **6.2 Hero + live demo.** Headline "Turn any document into *your own* handwriting." Typed-vs-handwritten slider. A **no-signup live demo** (textbox -> instant preview using a demo profile): this is your best conversion tool.
+  *Note:* IN PROGRESS. The headline, the typed-versus-handwritten slider and the no-signup demo are built and tested in a browser at desktop and phone width; the demo starts from a picture rendered at build time and loads the engine only when touched. **LCP under 2.0 s is shown only on desktop (0.8 s); the simulated-mobile figure is 3.1 s on a slow laptop and needs re-measuring on the deployed site** (`docs/site-performance.md`).
   *Acceptance:* demo works without login; LCP < 2.0s.
-- [ ] **6.3 Before/after gallery.** Multiple styles, phone-photo look, accessible alt text.
+- [x] **6.3 Before/after gallery.** Multiple styles, phone-photo look, accessible alt text.
+  *Note:* six real engine outputs with alt text (neat, exam, lecture notes, fountain pen, dotted paper, formatted notes). They are written with the synthetic demo glyph set, since no real handwriting sample exists yet. **No phone-photo picture:** the app does not offer the scan/photo effect to users yet, so showing one would advertise something they cannot get.
   *Acceptance:* at least 6 real outputs shown.
-- [ ] **6.4 How it works + why it looks real.** 3 steps; short visuals on variation, drift, ink, scan effect.
+- [x] **6.4 How it works + why it looks real.** 3 steps; short visuals on variation, drift, ink, scan effect.
+  *Note:* three steps, then four short reasons (letter variation, wandering lines, pens, paper), followed by the gallery of real output. The scan effect is left out for the same reason as in 6.3. "Under 30 seconds of scrolling" is my own judgement of the page length; nobody has been timed.
   *Acceptance:* page tells the story in under 30 seconds of scrolling.
-- [ ] **6.5 Pricing page.** Free / Student / Pro cards, annual toggle, FAQ about credits ("1 credit = 1 page, previews are free"), student badge. Remember these prices are placeholders: update after Phase 0.6 interviews.
+- [x] **6.5 Pricing page.** Free / Student / Pro cards, annual toggle, FAQ about credits ("1 credit = 1 page, previews are free"), student badge. Remember these prices are placeholders: update after Phase 0.6 interviews.
+  *Note:* Free / Student / Pro cards with a monthly/yearly toggle, a student badge and the credits FAQ. Every price and page count is read from `PLANS` in `packages/shared`; a browser test compares the page with that config. The prices are still placeholders.
   *Acceptance:* prices read from one config so they change in one place.
-- [ ] **6.6 FAQ & trust.** Privacy ("never shared unless you opt in"), 7-day refund, supported files, detectability honesty, ethical use note.
+- [x] **6.6 FAQ & trust.** Privacy ("never shared unless you opt in"), 7-day refund, supported files, detectability honesty, ethical use note.
+  *Note:* the FAQ covers privacy, the 7-day refund, supported files, detectability (stated plainly: it can be told apart, and no claim otherwise) and ethical use. The privacy answer says what really happens (letter shapes are sent on export, the PDF is kept up to 24 hours) rather than the wording in this task, because there is no opt-in sharing feature. The FAQPage data is checked by the tests to be well formed and word-for-word what the page shows; Google's own validator is part of 6.8. **The support address is a placeholder (`support@example.com`).**
   *Acceptance:* FAQPage JSON-LD validates.
-- [ ] **6.7 Legal pages.** Terms, Privacy Policy, Refund Policy, Acceptable Use (forbid forging others' handwriting and fraudulent documents). Flag for the user to get a legal review, especially around the donor library.
+- [x] **6.7 Legal pages.** Terms, Privacy Policy, Refund Policy, Acceptable Use (forbid forging others' handwriting and fraudulent documents). Flag for the user to get a legal review, especially around the donor library.
+  *Note:* Terms, Privacy, Refunds and Acceptable Use are written, linked from every page's footer, and each carries a visible "draft, not reviewed by a lawyer" notice. **They need a legal review before launch**, and they contain the placeholder support address and no company name or address. Nothing is written about a donor library because none exists. "Live" means in the built site; nothing is deployed yet.
   *Acceptance:* pages live and linked in the footer.
-- [ ] **6.8 Technical SEO.** Unique titles (<= 60 chars) and meta descriptions (<= 155), one H1 per page, canonicals, `sitemap.xml`, `robots.txt`, OG/Twitter images, JSON-LD (SoftwareApplication, Offer, FAQPage, Organization, BreadcrumbList).
+- [~] **6.8 Technical SEO.** Unique titles (<= 60 chars) and meta descriptions (<= 155), one H1 per page, canonicals, `sitemap.xml`, `robots.txt`, OG/Twitter images, JSON-LD (SoftwareApplication, Offer, FAQPage, Organization, BreadcrumbList).
+  *Note:* IN PROGRESS. Built and enforced by a browser test over every public page: unique titles (60 or fewer) and descriptions (155 or fewer), one H1, canonicals, `sitemap.xml`, `robots.txt`, Open Graph/Twitter images, and JSON-LD for SoftwareApplication, Offer, FAQPage, Organization, BreadcrumbList (plus Article and Product). Lighthouse SEO is 100. **Not done: Google's Rich Results Test and Search Console, which need the deployed site and the owner's Google account.**
   *Acceptance:* Rich Results Test passes; Search Console connected.
-- [ ] **6.9 Performance.** LCP < 2.0s, CLS < 0.1, INP < 200ms; AVIF/WebP, lazy loading, font subsetting.
+- [~] **6.9 Performance.** LCP < 2.0s, CLS < 0.1, INP < 200ms; AVIF/WebP, lazy loading, font subsetting.
+  *Note:* IN PROGRESS. Lighthouse on this laptop: mobile 85 on both landing and pricing with default settings (LCP 3.1 s and 2.7 s), 94 and 92 with the CPU slowdown calibrated for a slow machine, desktop 99 and 98; CLS 0; accessibility, best practices and SEO 100. **The target of 90 on mobile and LCP under 2.0 s is not demonstrated, and INP is not measured.** Images are WebP (not AVIF), lazy-loaded and sized; the one web font is subsetted. Details and how to repeat in `docs/site-performance.md`; re-measure on the deployed site.
   *Acceptance:* Lighthouse mobile >= 90 on landing and pricing.
-- [ ] **6.10 SEO landing pages.** `/tools/text-to-handwriting` (free tool, the main magnet), `/tools/pdf-to-handwriting`, `/tools/word-to-handwriting`, `/for/university-students`, `/for/school-projects`.
+- [x] **6.10 SEO landing pages.** `/tools/text-to-handwriting` (free tool, the main magnet), `/tools/pdf-to-handwriting`, `/tools/word-to-handwriting`, `/for/university-students`, `/for/school-projects`.
+  *Note:* five pages, each written separately with its own sections, questions and call to action; the text-to-handwriting page carries the live demo. The test checks every title and description is unique.
   *Acceptance:* each page has unique content, not templated duplicates.
-- [ ] **6.11 Blog (first 4 posts).** "How to make text look handwritten", "Handwriting generator vs fonts", "Best paper styles for assignments", "How PenTwin makes handwriting look real".
+- [x] **6.11 Blog (first 4 posts).** "How to make text look handwritten", "Handwriting generator vs fonts", "Best paper styles for assignments", "How PenTwin makes handwriting look real".
+  *Note:* four posts at `/blog`, each with Article data and links to the tool pages. "Published" means in the built site.
   *Acceptance:* posts published with internal links to the tools.
-- [ ] **6.12 Analytics & funnel events.** Plausible/PostHog: visit -> demo used -> signup -> sample uploaded -> first export -> paid. No document content in events.
+- [~] **6.12 Analytics & funnel events.** Plausible/PostHog: visit -> demo used -> signup -> sample uploaded -> first export -> paid. No document content in events.
+  *Note:* IN PROGRESS. A small event layer sends only allow-listed properties (never text, file names or content; unit-tested) and loads no script unless `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` is set. Wired: visit, demo used, sample uploaded, first export, export completed. **Not done: no analytics account exists (Plausible is a paid service and has not been approved), so no dashboard shows the funnel; `signup` and `paid` are not sent because sign-in and checkout are not built (5.2, 5.6).**
   *Acceptance:* the funnel is visible in the dashboard.
 
 **SEO rules:** no keyword stuffing, no fake reviews or testimonials, no hidden text. Don't claim "undetectable" anywhere.
