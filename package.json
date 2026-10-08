@@ -23,7 +23,10 @@
     "worker": "tsx apps/worker/src/main.ts",
     "web": "pnpm --filter @pentwin/web dev",
     "web:build": "pnpm --filter @pentwin/web build",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "db:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "db:down": "docker compose -f docker-compose.test.yml down",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

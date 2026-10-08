@@ -1,0 +1,18 @@
+# A throwaway Postgres for the database tests (pnpm db:up, pnpm test:db).
+# Data lives in memory and is gone when the container stops.
+services:
+  pentwin-test-db:
+    image: postgres:16-alpine
+    container_name: pentwin-test-db
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pentwin_test
+    ports:
+      - '54329:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d pentwin_test']
+      interval: 1s
+      timeout: 3s
+      retries: 30

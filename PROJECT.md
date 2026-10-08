@@ -293,7 +293,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** a business, not a demo. Credits can't be bypassed, and money flows correctly.
 
-- [ ] **5.1 Supabase schema & migrations.** Tables per CLAUDE.md section 7. **RLS on every table.**
+- [x] **5.1 Supabase schema & migrations.** Tables per CLAUDE.md section 7. **RLS on every table.**
+  *Note:* CLAUDE.md section 7 was empty, so the tables are my own design: plans, accounts, credit_ledger, exports, handwriting_profiles, referrals, webhook_events, email_outbox. RLS is on for every table; users can read only their own rows and change nothing directly; all changes go through server-only SQL functions. Tested on a real Postgres in Docker with a small stand-in for Supabase's auth schema (`pnpm db:up && pnpm test:db`, also a CI job). **Not yet applied to a real Supabase project.**
   *Acceptance:* an RLS test proves user A can't read user B's data.
 - [ ] **5.2 Auth.** Email + Google sign-in, email verification, password reset. Rate limit signups to deter free-tier farming.
   *Acceptance:* full signup/login/reset works.
