@@ -28,7 +28,8 @@
     "db:down": "docker compose -f docker-compose.test.yml down",
     "test:db": "vitest run --config vitest.db.config.ts",
     "worker:build": "esbuild apps/worker/src/main.ts --bundle --platform=node --target=node22 --format=cjs --legal-comments=none --external:pg-native --outfile=dist/worker/main.cjs",
-    "load:test": "tsx scripts/load-test.ts"
+    "load:test": "tsx scripts/load-test.ts",
+    "e2e:browsers": "playwright test --project=firefox --project=webkit --project=iphone-emulated --project=android-emulated"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

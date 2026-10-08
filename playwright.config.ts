@@ -22,6 +22,17 @@ export default defineConfig({
       name: 'phone',
       use: { ...devices['Desktop Chrome'], viewport: { width: 380, height: 760 }, hasTouch: true },
     },
+    // Other browser engines (Phase 7.9). Not part of `pnpm e2e`, which stays quick;
+    // run them with `pnpm e2e:browsers`. These are the engines on a desktop computer,
+    // and an emulated iPhone is not a real one: see docs/qa-checklist.md.
+    ...(process.env.ALL_BROWSERS
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+          { name: 'iphone-emulated', use: { ...devices['iPhone 13'] } },
+          { name: 'android-emulated', use: { ...devices['Pixel 7'] } },
+        ]
+      : []),
   ],
   webServer: [
     {

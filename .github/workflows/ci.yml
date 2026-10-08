@@ -89,3 +89,25 @@ jobs:
       - name: It refuses to start in production without its settings
         run: |
           ! docker run --rm -e APP_ENV=production pentwin-worker
+
+  # The same browser flows on Firefox, on WebKit (Safari's engine) and on emulated phones.
+  browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm e2e:browsers
+        env:
+          ALL_BROWSERS: '1'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browsers-results
+          path: test-results
+          retention-days: 7
