@@ -387,7 +387,7 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Acceptance:* a fresh clone runs with only `.env` filled in.
 - [ ] **7.2 Web deployment.** Vercel from GitHub, preview deploy per PR, custom domain, HTTPS.
   *Acceptance:* production URL live behind the correct domain.
-- [x] **7.3 Worker deployment.** Dockerfile -> Railway/Fly.io, health endpoint, autoscale, request timeouts, memory limits.
+- [~] **7.3 Worker deployment.** Dockerfile -> Railway/Fly.io, health endpoint, autoscale, request timeouts, memory limits.
   *Note:* IN PROGRESS. Built and tested locally: a Dockerfile (one bundled file, unprivileged user, health check), request timeouts, one export at a time with eight waiting and a `503` beyond that, and a clean stop on SIGTERM. **Acceptance met locally:** a container held to 512 MB completed 50-page exports alone and six at once without being killed (peak 356 to 454 MB); the first design, two at once, did not fit and was changed. CI builds and starts the image. **Not done: nothing is deployed (no Railway/Fly account; `fly.toml` is unverified), and there is no autoscaling**, because exports and profiles are files on the worker's own disk, so it must stay one machine until they move to shared storage. Measurements in `docs/deployment.md`.
   *Acceptance:* the worker survives a 50-page export without OOM.
 - [ ] **7.4 DB migrations in CI.** Supabase CLI applies migrations on deploy; backups enabled.

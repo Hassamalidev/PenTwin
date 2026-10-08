@@ -124,7 +124,9 @@ export function loadConfig(env: Env): WorkerConfig {
     if (url.origin !== webOrigin) {
       problems.push('WEB_ORIGIN must be an origin only, such as https://example.com.');
     }
-    if (deployed && url.protocol !== 'https:') problems.push('WEB_ORIGIN must use https.');
+    if (deployed && get('WEB_ORIGIN') && url.protocol !== 'https:') {
+      problems.push('WEB_ORIGIN must use https.');
+    }
   } catch {
     problems.push('WEB_ORIGIN is not a valid address.');
   }
