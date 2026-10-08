@@ -35,6 +35,20 @@ pnpm db:up && pnpm test:db   # migrations, security, ledger, payments
 
 Accounts and payments are described in [docs/billing.md](docs/billing.md).
 
+Deployment and operations (nothing is deployed yet):
+
+```bash
+docker build -t pentwin-worker .   # the export worker as a container
+pnpm load:test                     # load and abuse test (needs pnpm db:up)
+pnpm db:restore-check              # back up and restore the test database
+pnpm e2e:browsers                  # Firefox, WebKit and emulated phones (ALL_BROWSERS=1)
+```
+
+See [environments](docs/environments.md), [deployment](docs/deployment.md),
+[security](docs/security.md), [privacy](docs/privacy.md), [monitoring](docs/monitoring.md),
+[load test](docs/load-test.md), [browser checklist](docs/qa-checklist.md) and the
+[runbook](docs/runbook.md).
+
 Engine tools:
 
 ```bash

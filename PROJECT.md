@@ -413,6 +413,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Note:* `docs/runbook.md` covers the first five minutes, stopping exports, rolling back the site (Vercel), the worker (labelled images) and a database migration (roll forward; write migrations the old code can live with), what changing each secret breaks, and a table of likely failures. **It was written before anything was deployed and no step has been rehearsed**; it should be tried on staging and corrected.
   *Acceptance:* `docs/runbook.md` written.
 
+> **Gate NOT passed, and nothing is deployed.** There is no hosting, database, payment, monitoring or domain account, so 7.2 is blocked and 7.3, 7.4, 7.5, 7.7, 7.8 and 7.9 are in progress. What exists is everything that could be built and tested without them: a container image that survives 50-page exports in 512 MB, a load and abuse test that passes on a laptop against a real Postgres (no overspend, no crash, p95 30 to 40 s with 50 at once), security headers, upload checks and rate limits, account deletion, a backup restore check, and the same browser flows passing in four engines in CI. The gate (7.8) must be repeated on the deployed worker. No real phone has been used. See `docs/deployment.md`, `docs/security.md`, `docs/load-test.md` and `docs/qa-checklist.md`.
+
 ---
 
 ## Phase 8: Private Beta & Launch
