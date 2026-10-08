@@ -18,6 +18,7 @@ import {
   type EmailSender,
 } from '@pentwin/billing';
 import pg from 'pg';
+import { createAlerter } from './alerts';
 import type { AccountsConfig } from './api';
 import { ConfigError, loadConfig, type WorkerConfig } from './config';
 import { createExportService } from './export';
@@ -37,6 +38,11 @@ try {
   process.exit(1);
 }
 config.warnings.forEach((warning) => console.warn(warning));
+
+const alerter = createAlerter({
+  url: config.alertWebhookUrl,
+  source: `worker ${config.appEnv}`,
+});
 
 // Fine for local development: links simply stop working when the worker restarts.
 const secret = config.signingSecret ?? randomBytes(32).toString('hex');
@@ -73,7 +79,7 @@ if (config.accounts) {
   setInterval(
     () =>
       void costReport(database)
-        .then((report) => report.alerts.forEach((alert) => console.warn(`COST ALERT: ${alert}`)))
+        .then((report) => report.alerts.forEach((alert) => void alerter.send(`Cost: ${alert}`)))
         .catch(() => undefined),
     60 * 60 * 1000,
   ).unref();
@@ -87,6 +93,12 @@ const server = createWorkerServer({
   accounts,
   allowOrigin: config.webOrigin,
   clientIpHeader: config.clientIpHeader,
+  onError: ({ method, route, name }) =>
+    void alerter.send(`Unexpected error ${name} on ${method} ${route}`),
+  ready: async () => {
+    if (pool) await pool.query('select 1');
+    return true;
+  },
   limiter,
 });
 server.listen(config.port, () =>
@@ -119,3 +131,14 @@ const shutDown = (signal: string): void => {
 };
 process.on('SIGTERM', () => shutDown('SIGTERM'));
 process.on('SIGINT', () => shutDown('SIGINT'));
+
+// Something nobody caught. The process may be in an unknown state, so say so and stop;
+// the host starts a fresh one.
+const crash = (kind: string, error: unknown): void => {
+  const name = error instanceof Error ? error.name : 'unknown error';
+  console.error(`${kind}:`, name);
+  void alerter.send(`Worker stopped after an ${kind} (${name})`).finally(() => process.exit(1));
+  setTimeout(() => process.exit(1), 6000).unref();
+};
+process.on('uncaughtException', (error) => crash('uncaught exception', error));
+process.on('unhandledRejection', (error) => crash('unhandled rejection', error));

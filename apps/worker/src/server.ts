@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createAccountsApi, type AccountsConfig } from './api';
 import { ExportError, type ExportService } from './export';
+import { routeOf } from './alerts';
 import { BusyError, createLimiter, type Limiter } from './limiter';
 import { clientAddress, createRateLimiter, type RateLimiter } from './rate-limit';
 
@@ -35,6 +36,14 @@ export interface ServerOptions {
    * `fly-client-ip`). Leave unset when clients connect directly.
    */
   clientIpHeader?: string;
+  /**
+   * Called for an error nobody planned for (the user gets a 500). Given the method, the
+   * route with identifiers removed, and the error's name: never its message, which could
+   * quote something from the request.
+   */
+  onError?: (problem: { method: string; route: string; name: string }) => void;
+  /** Answers whether the things the worker depends on (the database) are reachable. */
+  ready?: () => Promise<boolean>;
 }
 
 const readBody = (request: IncomingMessage, limit: number): Promise<Buffer> =>
@@ -67,6 +76,8 @@ export function createWorkerServer({
     exports: createRateLimiter({ limit: 20, windowMs: 60_000 }),
   },
   clientIpHeader,
+  onError,
+  ready,
 }: ServerOptions): Server {
   const accountsApi = accounts ? createAccountsApi(accounts, service) : undefined;
   const json = (response: ServerResponse, status: number, body: unknown): void => {
@@ -106,6 +117,12 @@ export function createWorkerServer({
         }
         if (request.method === 'GET' && url.pathname === '/health') {
           json(response, 200, { ok: true });
+          return;
+        }
+        // For uptime monitors: "up" is not enough if the database cannot be reached.
+        if (request.method === 'GET' && url.pathname === '/health/ready') {
+          const ok = ready ? await ready().catch(() => false) : true;
+          json(response, ok ? 200 : 503, { ok });
           return;
         }
 
@@ -189,7 +206,9 @@ export function createWorkerServer({
           json(response, error.status, { error: error.message });
         } else {
           // Never echo internals, and never log document content.
-          console.error('request failed:', error instanceof Error ? error.name : 'unknown error');
+          const name = error instanceof Error ? error.name : 'unknown error';
+          console.error('request failed:', name);
+          onError?.({ method: request.method ?? 'GET', route: routeOf(url.pathname), name });
           json(response, 500, {
             error: 'Something went wrong on our side. Nothing was charged. Please try again.',
           });

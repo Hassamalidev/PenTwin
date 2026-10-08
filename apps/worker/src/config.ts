@@ -16,6 +16,7 @@ export const WORKER_ENV_KEYS = [
   'EXPORT_SIGNING_SECRET',
   'WEB_ORIGIN',
   'CLIENT_IP_HEADER',
+  'ALERT_WEBHOOK_URL',
   'DATABASE_URL',
   'SUPABASE_JWT_SECRET',
   'PADDLE_ENVIRONMENT',
@@ -44,6 +45,8 @@ export interface WorkerConfig {
   webOrigin: string;
   /** The header the host's proxy puts the visitor's address in, if any. Lower case. */
   clientIpHeader?: string;
+  /** Where alerts for a person are posted, if anywhere. */
+  alertWebhookUrl?: string;
   /** Present when the worker runs with accounts, pages and payments. */
   accounts?: {
     databaseUrl: string;
@@ -144,6 +147,14 @@ export function loadConfig(env: Env): WorkerConfig {
     );
   }
 
+  const alertWebhookUrl = get('ALERT_WEBHOOK_URL');
+  if (alertWebhookUrl && !/^https:\/\/\S+$/.test(alertWebhookUrl)) {
+    problems.push('ALERT_WEBHOOK_URL must be an https address.');
+  }
+  if (deployed && !alertWebhookUrl) {
+    warnings.push('ALERT_WEBHOOK_URL is not set; errors and cost alerts only reach the log.');
+  }
+
   let accounts: WorkerConfig['accounts'];
   const databaseUrl = get('DATABASE_URL');
   if (databaseUrl) {
@@ -195,6 +206,7 @@ export function loadConfig(env: Env): WorkerConfig {
     signingSecret,
     webOrigin,
     clientIpHeader,
+    alertWebhookUrl,
     accounts,
     warnings,
   };
