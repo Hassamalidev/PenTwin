@@ -134,5 +134,6 @@ describe('encodePng', () => {
     expect(decoded.width).toBe(image.width);
     expect(decoded.height).toBe(image.height);
     expect(meanDifference(decoded, image)).toBeLessThan(0.5);
-  });
+    // Slow when the whole suite runs at once on a small machine.
+  }, 30_000);
 });

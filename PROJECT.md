@@ -382,7 +382,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 **Goal:** easy to deploy, hard to break.
 
-- [ ] **7.1 Environment config.** `.env.example` documenting every variable; separate dev/staging/production; payment provider in test mode on staging.
+- [x] **7.1 Environment config.** `.env.example` documenting every variable; separate dev/staging/production; payment provider in test mode on staging.
+  *Note:* the worker reads its settings in one place and, in staging or production, refuses to start (listing every problem, never a value) without secrets, real storage, https, a database and a matching payment environment; staging cannot use live payments. One root `.env` serves the worker and the web app, and a test keeps `.env.example` and the code in step. Checked by copying `.env.example` to `.env` and starting the worker. See `docs/environments.md`. **No staging or production environment exists yet**, so the separation is rules and checks, not deployed systems.
   *Acceptance:* a fresh clone runs with only `.env` filled in.
 - [ ] **7.2 Web deployment.** Vercel from GitHub, preview deploy per PR, custom domain, HTTPS.
   *Acceptance:* production URL live behind the correct domain.
