@@ -1,0 +1,51 @@
+# Fly.io configuration for the export worker. NOT YET USED: no Fly account exists and this
+# file has not been run through `fly deploy`. See docs/deployment.md before relying on it.
+#
+# Secrets are never written here. Set them with `fly secrets set NAME=value`.
+
+app = "pentwin-worker" # placeholder: the real name is chosen at `fly launch`
+primary_region = "fra"
+kill_signal = "SIGTERM"
+# The worker finishes the export it is rendering before it stops (up to 25 seconds).
+kill_timeout = "30s"
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+APP_ENV = "production"
+WORKER_PORT = "8787"
+EXPORT_STORAGE_DIR = "/data/exports"
+PROFILE_STORAGE_DIR = "/data/profiles"
+
+[http_service]
+internal_port = 8787
+force_https = true
+# Exports and handwriting profiles live on this machine's own disk, so there must be
+# exactly one machine, always running. Do not turn on automatic scaling until storage
+# has moved off the machine (docs/deployment.md, "Why only one machine").
+auto_stop_machines = "off"
+auto_start_machines = false
+min_machines_running = 1
+
+[http_service.concurrency]
+type = "requests"
+# One export renders at a time and eight wait; beyond that the worker answers 503 itself.
+soft_limit = 8
+hard_limit = 20
+
+[[http_service.checks]]
+method = "GET"
+path = "/health"
+interval = "30s"
+timeout = "5s"
+grace_period = "10s"
+
+[[vm]]
+memory = "512mb"
+cpu_kind = "shared"
+cpus = 1
+
+[mounts]
+source = "pentwin_data"
+destination = "/data"

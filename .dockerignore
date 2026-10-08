@@ -1,0 +1,21 @@
+# Keep the build context small and keep anything private out of the image.
+**/node_modules
+**/.next
+.git
+.github
+.kilo
+dist
+docs
+e2e
+test-results
+playwright-report
+fixtures-private
+supabase
+tests
+scripts
+.env
+.env.*
+!.env.example
+**/*.test.ts
+apps/web/public
+apps/web/src

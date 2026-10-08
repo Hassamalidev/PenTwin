@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createAccountsApi, type AccountsConfig } from './api';
 import { ExportError, type ExportService } from './export';
+import { BusyError, createLimiter, type Limiter } from './limiter';
 
 export interface ServerOptions {
   service: ExportService;
@@ -13,6 +14,15 @@ export interface ServerOptions {
   maxBodyBytes?: number;
   /** Origin allowed to call the worker from a browser (the web app). */
   allowOrigin?: string;
+  /**
+   * How many exports may render at once and how many may wait. Defaults to one at a
+   * time with eight waiting. Rendering uses a single processor core, so a second export
+   * at once would finish no sooner, and two 50-page documents together do not fit in a
+   * 512 MB worker (measured; see docs/deployment.md).
+   */
+  limiter?: Limiter;
+  /** Longest a client may take to send its request, in milliseconds. */
+  requestTimeoutMs?: number;
 }
 
 const readBody = (request: IncomingMessage, limit: number): Promise<Buffer> =>
@@ -38,6 +48,8 @@ export function createWorkerServer({
   accounts,
   maxBodyBytes = 8 * 1024 * 1024,
   allowOrigin,
+  limiter = createLimiter(1, 8),
+  requestTimeoutMs = 30_000,
 }: ServerOptions): Server {
   const accountsApi = accounts ? createAccountsApi(accounts, service) : undefined;
   const json = (response: ServerResponse, status: number, body: unknown): void => {
@@ -45,7 +57,7 @@ export function createWorkerServer({
     response.end(JSON.stringify(body));
   };
 
-  return createServer((request, response) => {
+  const server = createServer((request, response) => {
     void (async () => {
       const url = new URL(request.url ?? '/', 'http://worker.local');
       if (allowOrigin) {
@@ -89,14 +101,24 @@ export function createWorkerServer({
           return;
         }
 
+        // Exports are the heavy work: only a few at a time, the rest wait their turn.
+        const exporting = request.method === 'POST' && url.pathname === '/export';
+        const limited = <T>(task: () => Promise<T>): Promise<T> =>
+          exporting ? limiter.run(task) : task();
+
         if (accountsApi) {
-          const answer = await accountsApi({
-            method: request.method ?? 'GET',
-            path: url.pathname,
-            headers: request.headers as Record<string, string | undefined>,
-            address: request.socket.remoteAddress ?? 'unknown',
-            text,
-          });
+          const api = accountsApi;
+          // The body is read before taking a slot, so a slow upload cannot hold one.
+          if (exporting) await text();
+          const answer = await limited(() =>
+            api({
+              method: request.method ?? 'GET',
+              path: url.pathname,
+              headers: request.headers as Record<string, string | undefined>,
+              address: request.socket.remoteAddress ?? 'unknown',
+              text,
+            }),
+          );
           if (answer) {
             json(response, answer.status, answer.body);
             return;
@@ -108,12 +130,17 @@ export function createWorkerServer({
           } catch {
             throw new ExportError('The request is not valid JSON.', 400);
           }
-          json(response, 200, await service.exportDocument(input));
+          json(response, 200, await limited(() => service.exportDocument(input)));
           return;
         }
         json(response, 404, { error: 'Not found.' });
       } catch (error) {
-        if (error instanceof ExportError) {
+        if (error instanceof BusyError) {
+          response.setHeader('retry-after', '10');
+          json(response, 503, {
+            error: 'We are busy right now. Nothing was charged. Please try again in a moment.',
+          });
+        } else if (error instanceof ExportError) {
           json(response, error.status, { error: error.message });
         } else {
           // Never echo internals, and never log document content.
@@ -125,4 +152,10 @@ export function createWorkerServer({
       }
     })();
   });
+
+  // A client that stalls while sending is cut off instead of holding a connection open.
+  server.requestTimeout = requestTimeoutMs;
+  server.headersTimeout = Math.min(requestTimeoutMs, 15_000);
+  server.keepAliveTimeout = 5_000;
+  return server;
 }

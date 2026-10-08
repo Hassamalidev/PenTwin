@@ -68,3 +68,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:db
+
+  # The worker's container image builds, starts and answers its health check.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t pentwin-worker .
+      - name: Start the container and wait for it to report healthy
+        run: |
+          docker run -d --name worker --memory=512m -p 8787:8787 pentwin-worker
+          for i in $(seq 1 30); do
+            [ "$(docker inspect worker --format '{{.State.Health.Status}}')" = "healthy" ] && exit 0
+            sleep 2
+          done
+          docker logs worker
+          exit 1
+      - name: It refuses to start in production without its settings
+        run: |
+          ! docker run --rm -e APP_ENV=production pentwin-worker

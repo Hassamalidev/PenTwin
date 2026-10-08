@@ -7,6 +7,7 @@ import { scenesToPdf, type PageScene } from '@pentwin/engine';
 import { PDFDocument } from 'pdf-lib';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { createExportService, ExportError, type ExportServiceOptions } from './export';
+import { createLimiter } from './limiter';
 import type { ExportRequest } from './schema';
 import { createWorkerServer } from './server';
 
@@ -294,5 +295,51 @@ describe('worker server', { timeout: 60_000 }, () => {
       () => 'connection closed',
     );
     expect([413, 'connection closed']).toContain(outcome);
+  });
+});
+
+describe('worker server under load', { timeout: 60_000 }, () => {
+  it('makes exports wait their turn and turns the overflow away with 503', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const started: string[] = [];
+    const { service } = setup({
+      toPdf: async (scenes) => {
+        started.push('render');
+        await held;
+        return scenesToPdf(scenes);
+      },
+    });
+    // One export at a time and one waiting.
+    const server = createWorkerServer({ service, limiter: createLimiter(1, 1) });
+    const base = await new Promise<string>((resolve) =>
+      server.listen(0, () => resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)),
+    );
+    const post = (seed: string): Promise<Response> =>
+      fetch(`${base}/export`, { method: 'POST', body: JSON.stringify(request({ seed })) });
+
+    try {
+      const first = post('one');
+      await vi.waitFor(() => expect(started).toHaveLength(1));
+      const second = post('two');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      // The second is waiting, not rendering.
+      expect(started).toHaveLength(1);
+
+      const third = await post('three');
+      expect(third.status).toBe(503);
+      expect(third.headers.get('retry-after')).toBe('10');
+      expect(((await third.json()) as { error: string }).error).toContain('Nothing was charged');
+      // Other routes are not held up by the queue.
+      expect((await fetch(`${base}/health`)).status).toBe(200);
+
+      release();
+      expect((await first).status).toBe(200);
+      expect((await second).status).toBe(200);
+      expect(started).toHaveLength(2);
+    } finally {
+      release();
+      server.close();
+    }
   });
 });

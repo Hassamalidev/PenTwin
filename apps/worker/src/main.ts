@@ -21,6 +21,7 @@ import pg from 'pg';
 import type { AccountsConfig } from './api';
 import { ConfigError, loadConfig, type WorkerConfig } from './config';
 import { createExportService } from './export';
+import { createLimiter } from './limiter';
 import { createProfileStore } from './profiles';
 import { createWorkerServer } from './server';
 
@@ -41,14 +42,16 @@ config.warnings.forEach((warning) => console.warn(warning));
 const secret = config.signingSecret ?? randomBytes(32).toString('hex');
 
 let accounts: AccountsConfig | undefined;
+let pool: pg.Pool | undefined;
 if (config.accounts) {
   const settings = config.accounts;
-  const pool = new pg.Pool({ connectionString: settings.databaseUrl, max: 10 });
+  const database = new pg.Pool({ connectionString: settings.databaseUrl, max: 10 });
+  pool = database;
   accounts = {
-    pool,
+    pool: database,
     jwtSecret: settings.jwtSecret,
     paddle: { webhookSecret: settings.paddleWebhookSecret, prices: pricesFromEnv(process.env) },
-    profiles: createProfileStore(pool, {
+    profiles: createProfileStore(database, {
       directory: settings.profileDir,
       key: settings.profileKey,
     }),
@@ -63,13 +66,13 @@ if (config.accounts) {
       : undefined;
   setInterval(() => {
     if (send)
-      void sendPendingEmails(pool, send).catch(() => console.error('sending emails failed'));
+      void sendPendingEmails(database, send).catch(() => console.error('sending emails failed'));
   }, 30_000).unref();
 
   // Say so in the log when a page costs more to produce than it should.
   setInterval(
     () =>
-      void costReport(pool)
+      void costReport(database)
         .then((report) => report.alerts.forEach((alert) => console.warn(`COST ALERT: ${alert}`)))
         .catch(() => undefined),
     60 * 60 * 1000,
@@ -77,7 +80,14 @@ if (config.accounts) {
 }
 
 const service = createExportService({ storageDir: config.storageDir, secret });
-const server = createWorkerServer({ service, accounts, allowOrigin: config.webOrigin });
+// One export at a time, eight waiting; docs/deployment.md has the measurements behind this.
+const limiter = createLimiter(1, 8);
+const server = createWorkerServer({
+  service,
+  accounts,
+  allowOrigin: config.webOrigin,
+  limiter,
+});
 server.listen(config.port, () =>
   console.log(`export worker (${config.appEnv}) listening on http://localhost:${config.port}`),
 );
@@ -86,3 +96,21 @@ server.listen(config.port, () =>
 const sweep = (): void => void service.cleanUp().catch(() => undefined);
 sweep();
 setInterval(sweep, 60 * 60 * 1000).unref();
+
+// Hosts stop a worker by sending SIGTERM, then kill it some seconds later. Stop taking
+// requests, let the exports already running finish, then leave.
+let stopping = false;
+const shutDown = (signal: string): void => {
+  if (stopping) return;
+  stopping = true;
+  console.log(`${signal} received; finishing ${limiter.load.running} export(s) and stopping`);
+  server.close();
+  server.closeIdleConnections();
+  const giveUp = new Promise<void>((resolve) => setTimeout(resolve, 25_000).unref());
+  void Promise.race([limiter.idle(), giveUp])
+    .then(() => pool?.end())
+    .catch(() => undefined)
+    .finally(() => process.exit(0));
+};
+process.on('SIGTERM', () => shutDown('SIGTERM'));
+process.on('SIGINT', () => shutDown('SIGINT'));

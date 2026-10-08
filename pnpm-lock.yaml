@@ -20,6 +20,9 @@ importers:
       docx:
         specifier: ^9.9.0
         version: 9.9.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^10.12.0
         version: 10.12.0
