@@ -27,6 +27,14 @@ pnpm exec playwright install chromium   # once
 pnpm e2e
 ```
 
+Database tests (need Docker):
+
+```bash
+pnpm db:up && pnpm test:db   # migrations, security, ledger, payments
+```
+
+Accounts and payments are described in [docs/billing.md](docs/billing.md).
+
 Engine tools:
 
 ```bash

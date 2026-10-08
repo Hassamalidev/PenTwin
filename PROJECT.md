@@ -296,28 +296,40 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **5.1 Supabase schema & migrations.** Tables per CLAUDE.md section 7. **RLS on every table.**
   *Note:* CLAUDE.md section 7 was empty, so the tables are my own design: plans, accounts, credit_ledger, exports, handwriting_profiles, referrals, webhook_events, email_outbox. RLS is on for every table; users can read only their own rows and change nothing directly; all changes go through server-only SQL functions. Tested on a real Postgres in Docker with a small stand-in for Supabase's auth schema (`pnpm db:up && pnpm test:db`, also a CI job). **Not yet applied to a real Supabase project.**
   *Acceptance:* an RLS test proves user A can't read user B's data.
-- [ ] **5.2 Auth.** Email + Google sign-in, email verification, password reset. Rate limit signups to deter free-tier farming.
+- [~] **5.2 Auth.** Email + Google sign-in, email verification, password reset. Rate limit signups to deter free-tier farming.
+  *Note:* IN PROGRESS. Server side only: the worker checks Supabase access tokens (expired, forged and "alg: none" tokens are refused), and free pages are granted on a rate-limited activation rather than on signup. **The app has no sign-up, sign-in or password-reset pages yet**, and email verification and Google sign-in are settings in a Supabase project that does not exist yet.
   *Acceptance:* full signup/login/reset works.
-- [ ] **5.3 Profile storage.** Upload the glyph bank to R2/Supabase Storage with encryption at rest; signed URLs; per-plan profile limits.
+- [x] **5.3 Profile storage.** Upload the glyph bank to R2/Supabase Storage with encryption at rest; signed URLs; per-plan profile limits.
+  *Note:* profiles are saved, reloaded and deleted through the worker, encrypted with AES-256-GCM, private to their owner, within the plan's limit, and only with the own-handwriting confirmation. Deviation: files are on the worker's disk, not R2 or Supabase Storage, and are served through the signed-in API instead of signed URLs. The web app does not use this yet; it still keeps handwriting in the browser. Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
   *Acceptance:* a profile is saved, reloaded, and deleted correctly.
-- [ ] **5.4 Credit ledger.** Append-only ledger, balance view, server-side deduction **only after successful export**, refund on failure. Concurrency-safe (two simultaneous exports can't overspend).
+- [x] **5.4 Credit ledger.** Append-only ledger, balance view, server-side deduction **only after successful export**, refund on failure. Concurrency-safe (two simultaneous exports can't overspend).
+  *Note:* append-only ledger with reasons, balance view, monthly and non-lapsing buckets. Pages are set aside before rendering (under a lock on the account) and returned if the export fails, so the net effect is "charged only on success". Concurrency tests on a real Postgres: 20 simultaneous exports against 150 pages, exactly 7 succeed, balance never negative; the same over HTTP. Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
   *Acceptance:* concurrency test passes; balance never goes negative.
-- [ ] **5.5 Free tier enforcement.** 5 watermarked pages/month, 1 profile, basic options. Server decides, never the client.
+- [x] **5.5 Free tier enforcement.** 5 watermarked pages/month, 1 profile, basic options. Server decides, never the client.
+  *Note:* the plan is read from the database on every export. A request carrying a plan, price or watermark setting is refused; paid options requested on the free plan are replaced with basic ones (same file as the basic request); free exports are watermarked by the worker. "Basic options" is my definition: ballpoint pens only, no custom ink colour, header, corrections or fatigue. Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
   *Acceptance:* tampering with client values doesn't change entitlements.
-- [ ] **5.6 Payment provider integration.** Hosted checkout for Student/Pro (monthly + annual) using the provider from task 0.5. Test mode first.
+- [!] **5.6 Payment provider integration.** Hosted checkout for Student/Pro (monthly + annual) using the provider from task 0.5. Test mode first.
+  *Note:* BLOCKED: needs a Paddle account. Nothing built on the checkout side. The price-id settings and the `custom_data: { user_id }` contract the webhook relies on are in `.env.example` and `docs/billing.md`.
   *Acceptance:* test purchase completes.
-- [ ] **5.7 Webhooks.** Verify signatures; handle created/updated/cancelled/payment-failed/renewal; **idempotent** (store event IDs); grant monthly credits through the ledger.
+- [x] **5.7 Webhooks.** Verify signatures; handle created/updated/cancelled/payment-failed/renewal; **idempotent** (store event IDs); grant monthly credits through the ledger.
+  *Note:* signatures follow Paddle's documented scheme (checked against a value computed with OpenSSL), with a 30-second replay window. Events are recorded by id, so a replay, even three at once, grants nothing twice. Handles created, updated (renewal, scheduled cancellation), cancelled, payment failed, and top-up purchases, each in one transaction. **Never run against the real Paddle sandbox**: notifications in the tests are built from the documentation. Refunds and chargebacks are not handled.
   *Acceptance:* replaying the same webhook twice doesn't double-grant.
-- [ ] **5.8 Billing UX.** Plan page, usage meter ("37/150 pages"), upgrade/downgrade, link to the customer portal, cancel (access until period end), and a clear "credits reset on [date]".
+- [~] **5.8 Billing UX.** Plan page, usage meter ("37/150 pages"), upgrade/downgrade, link to the customer portal, cancel (access until period end), and a clear "credits reset on [date]".
+  *Note:* IN PROGRESS. `GET /me` returns the plan, the "37 / 150 pages" figures, the reset date, the renewal date, the cancellation state and the ledger. **The page itself, upgrade/downgrade and the customer portal link are not built.**
   *Acceptance:* users can always see what they have and when it renews.
-- [ ] **5.9 Top-ups & referrals.** 100-page top-up pack; referral bonus (+20 each) with abuse checks (same-device/IP heuristics).
+- [x] **5.9 Top-ups & referrals.** 100-page top-up pack; referral bonus (+20 each) with abuse checks (same-device/IP heuristics).
+  *Note:* top-ups add 100 non-lapsing pages; referrals give 20 pages to both people. Both appear in the ledger with reasons. Referral refusals (own code, already referred, same device or network as the inviter, inviter over 10 a month) are logged with the reason. Buying a top-up needs the checkout (5.6). Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
   *Acceptance:* bonuses appear in the ledger with reasons.
-- [ ] **5.10 Transactional email.** Welcome, receipt, low-credits warning, payment failed, export ready (Resend).
+- [x] **5.10 Transactional email.** Welcome, receipt, low-credits warning, payment failed, export ready (Resend).
+  *Note:* each of the five emails is queued by the right event, in the same transaction as that event (welcome on signup, receipt on payment, low-pages once per period, payment failed, export ready for 20+ pages), and sent once with retries on failure. **No email has actually been sent**: the Resend sender is written from their API documentation and untested.
   *Acceptance:* each email triggers on the right event.
-- [ ] **5.11 Cost tracking.** Log per-export compute time/cost (no document content!) to a dashboard. Alert if cost per page exceeds $0.01.
+- [~] **5.11 Cost tracking.** Log per-export compute time/cost (no document content!) to a dashboard. Alert if cost per page exceeds $0.01.
+  *Note:* IN PROGRESS. Every export records compute time and output size (never content). `GET /admin/costs` returns cost per page and margin per plan, and the worker logs an alert above $0.01 a page. **It is JSON, not a dashboard**, and the cost rates are estimates until there are hosting bills.
   *Acceptance:* a dashboard shows cost per page and margin per plan.
 
 **Gate:** test-mode payment -> credits granted -> export -> deducted -> cancellation -> downgrade, all verified.
+
+> **Gate NOT passed.** It needs a real test-mode payment, and no Supabase, Paddle or Resend account exists yet. The same sequence passes with simulated notifications over HTTP against a real database (`pnpm test:db`). Sign-in screens, checkout and the billing page are still to build. See `docs/billing.md`.
 
 ---
 

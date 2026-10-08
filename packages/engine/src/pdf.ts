@@ -1,5 +1,5 @@
 import { MM_TO_PT } from '@pentwin/shared';
-import { PDFDocument } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { parsePath, type PathCommand } from './path';
 import type { PageScene } from './render';
 import { groupInk } from './svg';
@@ -87,6 +87,11 @@ async function deflate(text: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(compressed).arrayBuffer());
 }
 
+export interface PdfOptions {
+  /** Text printed across every page, e.g. to mark free-plan output. */
+  watermark?: string;
+}
+
 /**
  * Writes the pages to a PDF. Everything stays vector: the ink and the paper pattern are
  * drawn as paths, so the file is small and sharp at any zoom.
@@ -94,8 +99,14 @@ async function deflate(text: string): Promise<Uint8Array> {
  * The content streams are written and compressed here rather than through pdf-lib's
  * drawing helpers: its JavaScript deflate alone took about half a second per page.
  */
-export async function scenesToPdf(scenes: readonly PageScene[]): Promise<Uint8Array> {
+export async function scenesToPdf(
+  scenes: readonly PageScene[],
+  options: PdfOptions = {},
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
+  const watermarkFont = options.watermark
+    ? await doc.embedFont(StandardFonts.Helvetica)
+    : undefined;
   for (const scene of scenes) {
     const page = doc.addPage([scene.width * MM_TO_PT, scene.height * MM_TO_PT]);
     const states = new Map<number, string>();
@@ -125,6 +136,22 @@ export async function scenesToPdf(scenes: readonly PageScene[]): Promise<Uint8Ar
     page.node.addContentStream(
       doc.context.register(doc.context.stream(content, { Filter: 'FlateDecode' })),
     );
+
+    if (options.watermark && watermarkFont) {
+      // Drawn over the writing, repeated down the page, light enough to read through.
+      const size = page.getWidth() / 14;
+      for (let y = page.getHeight() * 0.12; y < page.getHeight(); y += page.getHeight() * 0.28) {
+        page.drawText(options.watermark, {
+          x: page.getWidth() * 0.14,
+          y,
+          size,
+          font: watermarkFont,
+          color: rgb(0.45, 0.47, 0.55),
+          opacity: 0.22,
+          rotate: degrees(28),
+        });
+      }
+    }
   }
   return doc.save();
 }

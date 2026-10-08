@@ -1,7 +1,14 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { buildGlyphBank, renderDocument, scenesToPdf, type PageScene } from '@pentwin/engine';
+import {
+  buildGlyphBank,
+  renderDocument,
+  scenesToPdf,
+  type PageScene,
+  type PdfOptions,
+} from '@pentwin/engine';
+import { BRAND } from '@pentwin/shared';
 import { exportRequestSchema, type ExportRequest } from './schema';
 
 export interface ExportServiceOptions {
@@ -18,7 +25,7 @@ export interface ExportServiceOptions {
   /** The clock, replaceable in tests. */
   now?: () => number;
   /** Turns page scenes into PDF bytes, replaceable in tests. */
-  toPdf?: (scenes: readonly PageScene[]) => Promise<Uint8Array>;
+  toPdf?: (scenes: readonly PageScene[], options?: PdfOptions) => Promise<Uint8Array>;
 }
 
 export interface ExportResult {
@@ -27,13 +34,37 @@ export interface ExportResult {
   pageCount: number;
   /** True when an identical export from the last 24 hours was reused. Reuse is free. */
   cached: boolean;
-  /** Pages to charge for: the page count, or 0 when served from the cache. */
+  /** Pages charged for: the page count, or 0 when the export was free. */
   billablePages: number;
+  /** True when the pages carry the free plan's watermark. */
+  watermarked: boolean;
   /** Path and query of the signed download link. */
   downloadPath: string;
   expiresAt: number;
   /** Characters that could not be written, with how often each occurred. */
   unknownChars: Record<string, number>;
+}
+
+/** How one export turned out, reported back so pages can be kept or returned. */
+export type ExportOutcome = { ok: true; computeMs: number; outputBytes: number } | { ok: false };
+
+/** Connects an export to a user's plan and pages. Supplied by the billing layer. */
+export interface Metering {
+  /** Adjusts the request before anything is rendered, e.g. to what the plan allows. */
+  prepare?: (request: ExportRequest) => ExportRequest;
+  /**
+   * Called once the exact page count is known and before the PDF is made. Sets the pages
+   * aside, or throws to refuse the export. `settle` is then called exactly once with
+   * how it went.
+   */
+  reserve: (
+    pageCount: number,
+    requestHash: string,
+  ) => Promise<{
+    chargedPages: number;
+    watermarked: boolean;
+    settle: (outcome: ExportOutcome) => Promise<void>;
+  }>;
 }
 
 /** The request was understood but cannot be carried out; safe to show to the user. */
@@ -67,12 +98,13 @@ function canonical(value: unknown): string {
 
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
+const WATERMARK = `${BRAND.name} free plan`;
 
 /**
  * Renders documents to PDF on the server and hands out signed, expiring download links.
  *
  * - Identical requests (same content, same bank, same settings, same seed) within the
- *   cache period return the stored file and are free.
+ *   cache period return the stored file.
  * - A failed export leaves nothing behind: the file is written under a temporary name
  *   and only moved into place, together with its record, once everything succeeded.
  */
@@ -82,13 +114,16 @@ export function createExportService(config: ExportServiceOptions) {
   const linkMs = config.linkMs ?? HOUR;
   const maxPages = config.maxPages ?? 100;
   const toPdf = config.toPdf ?? scenesToPdf;
-  if (config.secret.length < 16)
+  if (config.secret.length < 16) {
     throw new Error('The signing secret must be at least 16 characters');
+  }
 
   const pdfPath = (id: string): string => join(config.storageDir, `${id}.pdf`);
   const metaPath = (id: string): string => join(config.storageDir, `${id}.json`);
   const sign = (id: string, expiresAt: number): string =>
     createHmac('sha256', config.secret).update(`${id}:${expiresAt}`).digest('hex');
+  const hash = (text: string): string =>
+    createHash('sha256').update(text).digest('hex').slice(0, 40);
 
   const link = (id: string): { downloadPath: string; expiresAt: number } => {
     const expiresAt = now() + linkMs;
@@ -98,18 +133,30 @@ export function createExportService(config: ExportServiceOptions) {
     };
   };
 
-  const readMeta = async (id: string): Promise<Meta | undefined> => {
+  const parse = (input: unknown): ExportRequest => {
+    const parsed = exportRequestSchema.safeParse(input);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new ExportError(
+        `The export request is not valid: ${issue?.path.join('.') || 'request'}: ${issue?.message}`,
+        400,
+      );
+    }
+    return parsed.data;
+  };
+
+  /** A stored export that is still within the cache period, if there is one. */
+  const cachedMeta = async (id: string): Promise<Meta | undefined> => {
     try {
-      return JSON.parse(await readFile(metaPath(id), 'utf8')) as Meta;
+      const meta = JSON.parse(await readFile(metaPath(id), 'utf8')) as Meta;
+      return now() - meta.createdAt < cacheMs ? meta : undefined;
     } catch {
       return undefined;
     }
   };
 
-  /** Requests being rendered right now, so two identical ones share the work. */
-  const inFlight = new Map<string, Promise<Meta>>();
-
-  const render = async (id: string, request: ExportRequest): Promise<Meta> => {
+  /** Lays the document out: cheap, and tells us the exact page count. */
+  const layOut = (request: ExportRequest) => {
     let bank;
     try {
       bank = buildGlyphBank(request.bank.metadata, (file) => {
@@ -123,7 +170,6 @@ export function createExportService(config: ExportServiceOptions) {
         400,
       );
     }
-
     const { pages, report } = renderDocument(request.blocks, bank, request.options);
     if (pages.length > maxPages) {
       throw new ExportError(
@@ -131,12 +177,18 @@ export function createExportService(config: ExportServiceOptions) {
         413,
       );
     }
-    const bytes = await toPdf(pages);
-    const meta: Meta = {
-      createdAt: now(),
-      pageCount: pages.length,
-      unknownChars: report.unknownChars,
-    };
+    return { pages, unknownChars: report.unknownChars };
+  };
+
+  /** Makes the PDF and stores it. Returns its size in bytes. */
+  const produce = async (
+    id: string,
+    pages: readonly PageScene[],
+    unknownChars: Record<string, number>,
+    watermarked: boolean,
+  ): Promise<number> => {
+    const bytes = await toPdf(pages, watermarked ? { watermark: WATERMARK } : undefined);
+    const meta: Meta = { createdAt: now(), pageCount: pages.length, unknownChars };
 
     await mkdir(config.storageDir, { recursive: true });
     const temporary = join(config.storageDir, `.tmp-${randomUUID()}`);
@@ -152,30 +204,30 @@ export function createExportService(config: ExportServiceOptions) {
       );
       throw error;
     }
-    return meta;
+    return bytes.length;
   };
 
-  return {
-    /** Validates, renders (or reuses) and returns a signed download link. */
-    async exportDocument(input: unknown): Promise<ExportResult> {
-      const parsed = exportRequestSchema.safeParse(input);
-      if (!parsed.success) {
-        const issue = parsed.error.issues[0];
-        throw new ExportError(
-          `The export request is not valid: ${issue?.path.join('.') || 'request'}: ${issue?.message}`,
-          400,
-        );
-      }
-      const request = parsed.data;
-      const id = createHash('sha256').update(canonical(request)).digest('hex').slice(0, 40);
+  /** Requests being rendered right now, so two identical ones share the work. */
+  const inFlight = new Map<string, Promise<Meta>>();
 
-      const existing = await readMeta(id);
-      if (existing && now() - existing.createdAt < cacheMs) {
+  return {
+    /**
+     * Validates, renders (or reuses) and returns a signed download link. This form has
+     * no notion of users or plans: a repeat within the cache period simply reports
+     * zero billable pages.
+     */
+    async exportDocument(input: unknown): Promise<ExportResult> {
+      const request = parse(input);
+      const id = hash(canonical(request));
+
+      const existing = await cachedMeta(id);
+      if (existing) {
         return {
           id,
           pageCount: existing.pageCount,
           cached: true,
           billablePages: 0,
+          watermarked: false,
           unknownChars: existing.unknownChars,
           ...link(id),
         };
@@ -184,7 +236,11 @@ export function createExportService(config: ExportServiceOptions) {
       let job = inFlight.get(id);
       const shared = job !== undefined;
       if (!job) {
-        job = render(id, request).finally(() => inFlight.delete(id));
+        job = (async (): Promise<Meta> => {
+          const { pages, unknownChars } = layOut(request);
+          await produce(id, pages, unknownChars, false);
+          return { createdAt: now(), pageCount: pages.length, unknownChars };
+        })().finally(() => inFlight.delete(id));
         inFlight.set(id, job);
       }
       const meta = await job;
@@ -194,9 +250,50 @@ export function createExportService(config: ExportServiceOptions) {
         // Someone else's identical request did the work: nothing new to pay for.
         cached: shared,
         billablePages: shared ? 0 : meta.pageCount,
+        watermarked: false,
         unknownChars: meta.unknownChars,
         ...link(id),
       };
+    },
+
+    /**
+     * The same, for a signed-in user: what the plan allows is applied first, pages are
+     * set aside once the page count is known, and they are kept only if the export
+     * succeeds. Who pays what is decided entirely by `metering`, never by the request.
+     */
+    async exportMetered(input: unknown, metering: Metering): Promise<ExportResult> {
+      const parsed = parse(input);
+      const request = metering.prepare ? parse(metering.prepare(parsed)) : parsed;
+      const requestHash = hash(canonical(request));
+      const { pages, unknownChars } = layOut(request);
+
+      const reservation = await metering.reserve(pages.length, requestHash);
+      // Watermarked and clean copies of the same document are different files.
+      const id = reservation.watermarked ? hash(`${requestHash}:watermarked`) : requestHash;
+      const started = performance.now();
+      try {
+        const reused = await cachedMeta(id);
+        const outputBytes = reused
+          ? (await stat(pdfPath(id))).size
+          : await produce(id, pages, unknownChars, reservation.watermarked);
+        await reservation.settle({
+          ok: true,
+          computeMs: reused ? 0 : performance.now() - started,
+          outputBytes,
+        });
+        return {
+          id,
+          pageCount: pages.length,
+          cached: reused !== undefined,
+          billablePages: reservation.chargedPages,
+          watermarked: reservation.watermarked,
+          unknownChars,
+          ...link(id),
+        };
+      } catch (error) {
+        await reservation.settle({ ok: false });
+        throw error;
+      }
     },
 
     /** Checks a download link and returns the file, or throws an `ExportError`. */
@@ -235,8 +332,7 @@ export function createExportService(config: ExportServiceOptions) {
         const path = join(config.storageDir, name);
         const id = /^([0-9a-f]{40})\.json$/.exec(name)?.[1];
         if (id) {
-          const meta = await readMeta(id);
-          if (!meta || now() - meta.createdAt >= cacheMs) {
+          if (!(await cachedMeta(id))) {
             await Promise.all([rm(path, { force: true }), rm(pdfPath(id), { force: true })]);
             removed++;
           }
