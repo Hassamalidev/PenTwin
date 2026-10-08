@@ -138,3 +138,37 @@ which is what task 7.4 asks for and can only be done once a Supabase project wit
 exists. Encrypted handwriting files are not in the database and need their own backup of
 the worker's `/data` volume; a database restored without them has profiles that cannot be
 opened.
+
+## The web app (Vercel: not set up)
+
+**Blocked on two things only the owner can provide: a Vercel account connected to the
+GitHub repository, and a domain.** The product name is still a placeholder
+(`docs/branding.md`), so there is no domain to point anywhere yet.
+
+What is known to work: CI builds the production site from a clean checkout on Linux on
+every push and drives it in four browser engines. Nothing about Vercel itself has been
+tried, so the steps below are a plan, not a record.
+
+1. In Vercel, import the GitHub repository and set **Root Directory** to `apps/web`.
+   Leave "include files outside the root directory" on: the build reads the shared
+   packages and runs two scripts from the repository root that draw the gallery pictures.
+2. Framework: Next.js. Install and build commands: the defaults (`pnpm install`, then
+   `pnpm build`, which runs those scripts first). Node 22.
+3. Environment variables, set separately for Production and Preview:
+   `NEXT_PUBLIC_SITE_URL` (the real address, no trailing slash),
+   `NEXT_PUBLIC_WORKER_URL` (the production worker for Production, the staging worker for
+   Preview). These are read when the site is **built**; changing one needs a redeploy.
+4. Every pull request then gets its own preview address automatically. Preview builds
+   must point at the staging worker, never production, and the staging worker's
+   `WEB_ORIGIN` only allows one origin, so previews can show pages but cannot export
+   until that is widened. Decide then whether previews need exporting.
+5. Add the domain in Vercel and point DNS at it; HTTPS is issued automatically. Set the
+   worker's `WEB_ORIGIN` to exactly that origin, or the browser will refuse its answers.
+6. After the first deploy, check: the security headers are present
+   (`docs/security.md`), `/sitemap.xml` and canonical links show the real domain, and
+   run PageSpeed Insights for the numbers `docs/site-performance.md` could not confirm.
+
+**Things to watch on the first build.** The picture scripts use a native image library
+that must install on Vercel's build machine (it installs on GitHub's Linux runners). If
+the build cannot reach files outside `apps/web`, the scripts fail with a missing-file
+error: that is step 1's setting.
