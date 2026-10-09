@@ -9,21 +9,27 @@ import { HERO_TEXT } from '../lib/gallery';
  * The typed side is real text; the handwritten side is a picture made by the engine.
  */
 export function CompareSlider() {
-  const [share, setShare] = useState(55);
+  const [share, setShare] = useState(62);
   return (
     <div>
-      <div className="compare" data-testid="compare">
-        <p className="typed">{HERO_TEXT}</p>
-        <div className="written" style={{ width: `${share}%` }}>
-          <Image
-            src="/gallery/hero-handwritten.png"
-            alt={`Handwritten: ${HERO_TEXT}`}
-            width={1100}
-            height={383}
-            priority
-            sizes="(min-width: 900px) 520px, 92vw"
-          />
+      <div className="sheet">
+        <div className="compare" data-testid="compare">
+          <p className="typed">{HERO_TEXT}</p>
+          <div className="written" style={{ width: `${share}%` }}>
+            <Image
+              src="/gallery/hero-handwritten.png"
+              alt={`Handwritten: ${HERO_TEXT}`}
+              width={1100}
+              height={383}
+              priority
+              sizes="(min-width: 900px) 520px, 92vw"
+            />
+          </div>
         </div>
+      </div>
+      <div className="compare-labels" aria-hidden="true">
+        <span>Handwritten</span>
+        <span>Typed</span>
       </div>
       <input
         className="compare-control"

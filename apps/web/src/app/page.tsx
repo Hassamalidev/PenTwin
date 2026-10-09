@@ -52,6 +52,21 @@ const REASONS = [
   },
 ];
 
+const STEPS = [
+  {
+    title: 'Write one page',
+    text: 'Copy a short text by hand on plain paper, in your normal writing, and take a photo with your phone.',
+  },
+  {
+    title: 'Upload your document',
+    text: 'A Word file, a PDF, or pasted text. From Word files, headings, lists and tables are kept.',
+  },
+  {
+    title: 'Check and export',
+    text: 'The preview is free and updates as you change things. Export a PDF when it looks right.',
+  },
+];
+
 export default function Home() {
   return (
     <>
@@ -65,54 +80,63 @@ export default function Home() {
             your Word and PDF documents the way you would.
           </p>
           <div className="row">
-            <a className="button primary" href="#demo">
+            <a className="button primary large" href="#demo">
               Try it now, no sign-up
             </a>
-            <a className="button" href="/sample">
+            <a className="button large" href="/sample">
               Add my handwriting
             </a>
           </div>
+          <ul className="ticks">
+            <li>Free to try</li>
+            <li>Your photo stays on your device</li>
+            <li>Word, PDF or pasted text</li>
+          </ul>
         </div>
         <CompareSlider />
       </section>
 
       <section className="section" id="demo">
-        <h2 className="display">Try it</h2>
+        <div className="section-head">
+          <span className="eyebrow">Live demo</span>
+          <h2 className="display">Try it</h2>
+          <p className="muted">Type anything. It is written out as you go.</p>
+        </div>
         <LiveDemo source="home" />
       </section>
 
       <section className="section">
-        <h2 className="display">How it works</h2>
+        <div className="section-head">
+          <span className="eyebrow">Three steps</span>
+          <h2 className="display">How it works</h2>
+        </div>
         <div className="grid">
-          <div className="card">
-            <h3>1. Write one page</h3>
-            <p className="muted">
-              Copy a short text by hand on plain paper, in your normal writing, and take a photo
-              with your phone.
-            </p>
-          </div>
-          <div className="card">
-            <h3>2. Upload your document</h3>
-            <p className="muted">
-              A Word file, a PDF, or pasted text. From Word files, headings, lists and tables are
-              kept.
-            </p>
-          </div>
-          <div className="card">
-            <h3>3. Check and export</h3>
-            <p className="muted">
-              The preview is free and updates as you change things. Export a PDF when it looks
-              right.
-            </p>
-          </div>
+          {STEPS.map((step, index) => (
+            <div className="card feature" key={step.title}>
+              <span className="feature-mark" aria-hidden="true">
+                {index + 1}
+              </span>
+              <h3>
+                {index + 1}. {step.title}
+              </h3>
+              <p className="muted">{step.text}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="section">
-        <h2 className="display">Why it looks handwritten</h2>
+        <div className="section-head">
+          <span className="eyebrow">Not a font</span>
+          <h2 className="display">Why it looks handwritten</h2>
+          <p className="muted">
+            A handwriting font repeats one shape for every letter on a ruler-straight line. Real
+            writing does neither.
+          </p>
+        </div>
         <div className="grid">
           {REASONS.map((reason) => (
-            <div className="card" key={reason.title}>
+            <div className="card feature" key={reason.title}>
               <h3>{reason.title}</h3>
               <p className="muted">{reason.text}</p>
             </div>
@@ -121,19 +145,41 @@ export default function Home() {
       </section>
 
       <section className="section">
-        <h2 className="display">Examples</h2>
-        <p className="muted">
-          Unedited output, written with our sample handwriting. Yours will look like you.
-        </p>
+        <div className="section-head">
+          <span className="eyebrow">Gallery</span>
+          <h2 className="display">Examples</h2>
+          <p className="muted">
+            Unedited output, written with our sample handwriting. Yours will look like you.
+          </p>
+        </div>
         <Gallery />
       </section>
 
       <section className="section narrow">
-        <h2 className="display">Questions</h2>
+        <div className="section-head">
+          <span className="eyebrow">Good to know</span>
+          <h2 className="display">Questions</h2>
+        </div>
         <Faq items={GENERAL_FAQ.slice(0, 5)} />
         <p>
           <a href="/faq">All questions</a> · <a href="/pricing">Pricing</a>
         </p>
+      </section>
+
+      <section className="cta-band">
+        <h2 className="display">See a page in your own handwriting.</h2>
+        <p>
+          It takes one handwritten page and a photo. The preview is free, and you only use pages
+          when you export.
+        </p>
+        <div className="row">
+          <a className="button large" href="/sample">
+            Add my handwriting
+          </a>
+          <a className="button ghost large" href="/editor">
+            Open the editor
+          </a>
+        </div>
       </section>
 
       <JsonLd data={application} />

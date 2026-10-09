@@ -73,66 +73,70 @@ export function LiveDemo({ source }: { source: keyof typeof DEMO_TEXTS }) {
   }, [edited, text, style, source]);
 
   return (
-    <div className="card" data-testid="live-demo" onPointerEnter={warmUp}>
-      <div className="field">
-        <label>
-          Your text
-          <textarea
-            rows={3}
-            maxLength={MAX_LENGTH}
-            value={text}
-            data-testid="demo-text"
-            onFocus={warmUp}
-            onChange={(event) => {
-              setEdited(true);
-              setText(event.target.value);
-            }}
-          />
-        </label>
-      </div>
-      <div className="row" style={{ marginBottom: '0.75rem' }}>
-        <label style={{ margin: 0 }}>
-          Style{' '}
-          <select
-            value={style}
-            data-testid="demo-style"
-            onFocus={warmUp}
-            onChange={(event) => {
-              setEdited(true);
-              setStyle(event.target.value as PresetName);
-            }}
-          >
-            {Object.entries(STYLES).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+    <div className="card demo" data-testid="live-demo" onPointerEnter={warmUp}>
+      <div className="demo-controls">
+        <div className="field">
+          <label>
+            Your text
+            <textarea
+              rows={4}
+              maxLength={MAX_LENGTH}
+              value={text}
+              data-testid="demo-text"
+              onFocus={warmUp}
+              onChange={(event) => {
+                setEdited(true);
+                setText(event.target.value);
+              }}
+            />
+          </label>
+        </div>
+        <div className="field">
+          <label>
+            Writing style
+            <select
+              value={style}
+              data-testid="demo-style"
+              onFocus={warmUp}
+              onChange={(event) => {
+                setEdited(true);
+                setStyle(event.target.value as PresetName);
+              }}
+            >
+              {Object.entries(STYLES).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <a className="button primary" href="/sample">
           Use my own handwriting
         </a>
-      </div>
-      <div className="preview">
-        {/* Either a small picture made at build time or a data URL made in the browser:
-            nothing for the image optimiser to do. */}
-        <img
-          src={image}
-          width={DEMO_VIEW.pixels}
-          height={Math.round((DEMO_VIEW.pixels * DEMO_VIEW.height) / DEMO_VIEW.width)}
-          loading="lazy"
-          alt="Your text in the demo handwriting"
-          data-testid="demo-image"
-        />
-      </div>
-      {failed && (
-        <p className="error" role="alert">
-          The demo could not be loaded. Please reload the page.
+        {failed && (
+          <p className="error" role="alert">
+            The demo could not be loaded. Please reload the page.
+          </p>
+        )}
+        <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
+          This demo uses a sample handwriting. No sign-up, and nothing you type leaves your browser.
         </p>
-      )}
-      <p className="muted" style={{ margin: '0.5rem 0 0', fontSize: '0.9rem' }}>
-        This demo uses a sample handwriting. No sign-up, and nothing you type leaves your browser.
-      </p>
+      </div>
+      <div className="demo-paper">
+        <div className="preview">
+          {/* Either a small picture made at build time or a data URL made in the browser:
+              nothing for the image optimiser to do. */}
+          <img
+            src={image}
+            width={DEMO_VIEW.pixels}
+            height={Math.round((DEMO_VIEW.pixels * DEMO_VIEW.height) / DEMO_VIEW.width)}
+            loading="lazy"
+            alt="Your text in the demo handwriting"
+            data-testid="demo-image"
+          />
+        </div>
+      </div>
     </div>
   );
 }

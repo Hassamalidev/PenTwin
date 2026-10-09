@@ -287,7 +287,7 @@ export default function EditorPage() {
         )}
 
         <div className="row">
-          <label className="file-button">
+          <label className="file-button primary">
             {busy ? 'Reading...' : 'Upload Word or PDF'}
             <input
               className="photo-input"

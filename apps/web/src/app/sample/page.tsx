@@ -186,7 +186,7 @@ export default function SamplePage() {
   };
 
   const photoButton = (label: string, testId: string, onPick: (file?: File) => Promise<void>) => (
-    <label className="file-button">
+    <label className="file-button primary">
       {label}
       <input
         className="photo-input"
@@ -214,7 +214,7 @@ export default function SamplePage() {
 
       {!own && (
         <section>
-          <p>
+          <p className="lead">
             Write one short text by hand, take a photo, and {BRAND.name} learns your letters from
             it. The photo is processed on this device and is not uploaded.
           </p>

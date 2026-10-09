@@ -1,12 +1,13 @@
 /**
  * Renders the pictures the public site uses: the hero, the gallery and the social
- * preview image. Every one is real engine output, written with the synthetic demo
- * glyph set. Runs automatically before `dev` and `build` of the web app.
+ * preview image. Every one is real engine output, written with the demo
+ * handwriting (scripts/demo-hand.ts). Runs automatically before `dev` and `build` of the web app.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  buildGlyphBank,
   encodePng,
   presetOptions,
   renderDocument,
@@ -15,7 +16,8 @@ import {
   type PageScene,
   type RenderOptions,
 } from '../packages/engine/src/index';
-import { loadGlyphBank, sceneToPixels, svgToPixels } from '../packages/engine/src/node/index';
+import { sceneToPixels, svgToPixels } from '../packages/engine/src/node/index';
+import { buildDemoHand } from './demo-hand';
 import {
   DEMO_TEXTS,
   DEMO_VIEW,
@@ -28,7 +30,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'apps/web/public/gallery');
 mkdirSync(out, { recursive: true });
 
-const { bank } = loadGlyphBank(join(root, 'tests/fixtures/glyphs/sample-user'));
+const hand = buildDemoHand();
+const bank = buildGlyphBank(hand.metadata, (file) => hand.files[file]!);
 const sample = readFileSync(join(root, 'tests/sample.txt'), 'utf8');
 const base: RenderOptions = { seed: 'site', pageSize: 'A5' };
 
