@@ -41,7 +41,14 @@ export default defineConfig({
       timeout: 300_000,
       reuseExistingServer: !process.env.CI,
       // Baked into the build: canonical addresses, the sitemap and social cards use it.
-      env: { NEXT_PUBLIC_SITE_URL: 'https://example.test' },
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://example.test',
+        // Stand-ins: nothing listens at this address and the token is made up. The
+        // account tests answer for Supabase and Paddle themselves (e2e/account.spec.ts).
+        NEXT_PUBLIC_SUPABASE_URL: 'http://localhost:54399',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: 'test_client_token',
+      },
     },
     {
       command: 'pnpm worker',

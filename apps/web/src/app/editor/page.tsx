@@ -19,7 +19,9 @@ import {
 } from '@pentwin/importers';
 import { BRAND, type PageSizeName } from '@pentwin/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { FeedbackForm } from '../../components/FeedbackForm';
 import { pageRange, track, trackOnce } from '../../lib/analytics';
+import { currentSession } from '../../lib/auth';
 import { loadBank, type LoadedBank } from '../../lib/bank';
 import { ACCEPTED_FILES, importFile } from '../../lib/import-file';
 import { rasterizePreview } from '../../lib/preview';
@@ -32,8 +34,7 @@ import {
   toRenderOptions,
   type Settings,
 } from '../../lib/settings';
-
-const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL ?? 'http://localhost:8787';
+import { callWorker, WORKER_URL, WorkerProblem, workerHasAccounts } from '../../lib/worker';
 
 type EditorBlock = Block & { id: number };
 
@@ -95,6 +96,21 @@ interface ExportState {
   downloadUrl?: string;
   pageCount?: number;
   billablePages?: number;
+  /** The worker is busy and the export is waiting its turn. */
+  waiting?: boolean;
+  /** Pages the signed-in user has left after this export. */
+  pagesLeft?: number;
+  /** The export was refused because the user has too few pages. */
+  needPages?: boolean;
+}
+
+/** What the worker answers to an export. */
+interface ExportAnswer {
+  downloadPath: string;
+  pageCount: number;
+  billablePages: number;
+  watermarked?: boolean;
+  account?: { totalPages: number };
 }
 
 export default function EditorPage() {
@@ -118,6 +134,22 @@ export default function EditorPage() {
 
   const [quote, setQuote] = useState<ExportQuote>();
   const [exportState, setExportState] = useState<ExportState>({ status: 'idle' });
+  // With accounts on, exporting needs a signed-in user and uses their pages. Without
+  // (the local demo), anyone can export.
+  const [accounts, setAccounts] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [balance, setBalance] = useState<{ totalPages: number; watermark: boolean }>();
+  const [reporting, setReporting] = useState(false);
+
+  useEffect(() => {
+    void workerHasAccounts().then(setAccounts);
+    // Signing in happens in another tab, so the document here is not lost; notice it
+    // when this tab is looked at again.
+    const check = (): void => setSignedIn(currentSession() !== undefined);
+    check();
+    window.addEventListener('focus', check);
+    return () => window.removeEventListener('focus', check);
+  }, []);
 
   useEffect(() => {
     loadBank().then(setLoaded, (error: Error) => setLoadError(error.message));
@@ -194,26 +226,29 @@ export default function EditorPage() {
     if (!loaded || !prepared) return;
     setQuote(quoteExport(prepared.blocks, loaded.bank, options));
     setExportState({ status: 'idle' });
+    setReporting(false);
+    setBalance(undefined);
+    if (accounts && currentSession()) {
+      void callWorker<{ account: { totalPages: number; watermark: boolean } }>('/me', {
+        auth: true,
+      }).then(
+        (me) => setBalance(me.account),
+        () => undefined,
+      );
+    }
   };
 
   const runExport = async (): Promise<void> => {
     if (!loaded || !prepared) return;
     setExportState({ status: 'working' });
     try {
-      const response = await fetch(`${WORKER_URL}/export`, {
+      const body = await callWorker<ExportAnswer>('/export', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ blocks: prepared.blocks, bank: loaded.stored, options }),
+        auth: accounts,
+        body: { blocks: prepared.blocks, bank: loaded.stored, options },
+        // The worker renders one export at a time; when it is busy, wait for a turn.
+        onWaiting: () => setExportState({ status: 'working', waiting: true }),
       });
-      const body = (await response.json()) as {
-        error?: string;
-        downloadPath?: string;
-        pageCount?: number;
-        billablePages?: number;
-      };
-      if (!response.ok || !body.downloadPath) {
-        throw new Error(body.error ?? 'The export failed. Nothing was charged.');
-      }
       const pages = pageRange(body.pageCount ?? 1);
       trackOnce('first_export', { source: 'editor', pages });
       track('export_completed', { source: 'editor', pages, style: settings.preset });
@@ -222,13 +257,18 @@ export default function EditorPage() {
         downloadUrl: `${WORKER_URL}${body.downloadPath}`,
         pageCount: body.pageCount,
         billablePages: body.billablePages,
+        pagesLeft: body.account?.totalPages,
       });
     } catch (error) {
-      const message =
-        error instanceof TypeError
-          ? 'The export service could not be reached. Nothing was charged. Please try again.'
-          : (error as Error).message;
-      setExportState({ status: 'failed', message });
+      if (error instanceof WorkerProblem && error.code === 'signed_out') setSignedIn(false);
+      setExportState({
+        status: 'failed',
+        message:
+          error instanceof WorkerProblem
+            ? error.message
+            : 'The export failed. Nothing was charged. Please try again.',
+        needPages: error instanceof WorkerProblem && error.status === 402,
+      });
     }
   };
 
@@ -472,6 +512,12 @@ export default function EditorPage() {
               {quote.credits === 1 ? 'credit' : 'credits'}
             </p>
             <p className="muted">1 credit = 1 page. Previews are free.</p>
+            {balance && (
+              <p data-testid="balance">
+                You have {balance.totalPages} {balance.totalPages === 1 ? 'page' : 'pages'} left.
+                {balance.watermark && ' On the free plan, exported pages carry a watermark.'}
+              </p>
+            )}
             <ul className="summary">
               {quote.settings.map((line) => (
                 <li key={line}>{line}</li>
@@ -489,7 +535,18 @@ export default function EditorPage() {
 
             {exportState.status === 'failed' && (
               <p className="error" role="alert" data-testid="export-error">
-                {exportState.message}
+                {exportState.message}{' '}
+                {exportState.needPages && (
+                  <a href="/account" target="_blank" rel="noreferrer" data-testid="get-pages">
+                    Get more pages
+                  </a>
+                )}
+              </p>
+            )}
+            {exportState.status === 'working' && exportState.waiting && (
+              <p role="status" data-testid="export-waiting">
+                A lot of people are exporting right now. Yours is waiting its turn; you do not need
+                to do anything.
               </p>
             )}
             {exportState.status === 'done' && (
@@ -497,6 +554,19 @@ export default function EditorPage() {
                 Your PDF is ready: {exportState.pageCount}{' '}
                 {exportState.pageCount === 1 ? 'page' : 'pages'}
                 {exportState.billablePages === 0 ? ' (same as a recent export, so free)' : ''}.
+                {exportState.pagesLeft !== undefined && (
+                  <span data-testid="pages-left">
+                    {' '}
+                    You have {exportState.pagesLeft}{' '}
+                    {exportState.pagesLeft === 1 ? 'page' : 'pages'} left.
+                  </span>
+                )}
+              </p>
+            )}
+            {accounts && !signedIn && exportState.status !== 'done' && (
+              <p data-testid="sign-in-needed">
+                Exporting needs an account, so your pages can be counted. Sign in or create one in a
+                new tab; this document stays here.
               </p>
             )}
 
@@ -504,6 +574,16 @@ export default function EditorPage() {
               {exportState.status === 'done' ? (
                 <a className="file-button" href={exportState.downloadUrl} data-testid="download">
                   Download PDF
+                </a>
+              ) : accounts && !signedIn ? (
+                <a
+                  className="button primary"
+                  href="/signin"
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="sign-in-link"
+                >
+                  Sign in to export
                 </a>
               ) : (
                 <button
@@ -520,6 +600,32 @@ export default function EditorPage() {
                 Close
               </button>
             </div>
+            {accounts && signedIn && exportState.status === 'done' && (
+              <div style={{ marginTop: '0.75rem' }}>
+                {reporting ? (
+                  <FeedbackForm
+                    heading="What looks wrong?"
+                    initialKind="bad_output"
+                    context={{
+                      screen: 'editor',
+                      pages: exportState.pageCount,
+                      style: settings.preset,
+                      ink: settings.ink,
+                      paper: settings.paper,
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => setReporting(true)}
+                    data-testid="report-open"
+                  >
+                    Something looks wrong with this result?
+                  </button>
+                )}
+              </div>
+            )}
             <p className="muted" style={{ marginTop: '0.75rem' }}>
               {BRAND.name} writes in your own handwriting. Please do not use it to copy someone
               else&apos;s.

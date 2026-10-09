@@ -9,6 +9,15 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const workerOrigin = new URL(process.env.NEXT_PUBLIC_WORKER_URL ?? 'http://localhost:8787').origin;
 const analytics = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ? ' https://plausible.io' : '';
+// Sign-in talks to the Supabase project; nothing else does.
+const signIn = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? ` ${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin}`
+  : '';
+// The checkout is the payment provider's own script and frame. These hosts are taken from
+// Paddle's documentation and have not been checked against a real checkout.
+const paddle = Boolean(process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN);
+const paddleScript = paddle ? ' https://cdn.paddle.com' : '';
+const paddleFrames = paddle ? ' https://buy.paddle.com https://sandbox-buy.paddle.com' : '';
 
 /**
  * What a page may load and where it may send data. Scripts and styles written into the
@@ -19,12 +28,13 @@ const analytics = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ? ' https://plausible
  */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${analytics}`,
-  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${analytics}${paddleScript}`,
+  `style-src 'self' 'unsafe-inline'${paddleScript}`,
+  `frame-src 'self'${paddleFrames}`,
   // Previews are drawn from data and blob addresses made in the browser.
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src 'self' ${workerOrigin}${analytics}`,
+  `connect-src 'self' ${workerOrigin}${signIn}${analytics}`,
   // The PDF reader parses files in a background worker.
   "worker-src 'self' blob:",
   "object-src 'none'",

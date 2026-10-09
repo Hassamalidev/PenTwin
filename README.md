@@ -44,6 +44,8 @@ pnpm db:restore-check              # back up and restore the test database
 pnpm e2e:browsers                  # Firefox, WebKit and emulated phones (ALL_BROWSERS=1)
 ```
 
+**What is still needed from the owner** (accounts, keys, decisions): [docs/owner-setup.md](docs/owner-setup.md).
+
 See [environments](docs/environments.md), [deployment](docs/deployment.md),
 [security](docs/security.md), [privacy](docs/privacy.md), [monitoring](docs/monitoring.md),
 [load test](docs/load-test.md), [browser checklist](docs/qa-checklist.md) and the

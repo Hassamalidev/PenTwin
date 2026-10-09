@@ -48,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <a href="/faq">FAQ</a>
             <a href="/sample">My handwriting</a>
             <a href="/editor">Editor</a>
+            <a href="/account">Account</a>
           </nav>
         </header>
         <main>{children}</main>

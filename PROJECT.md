@@ -297,7 +297,7 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
   *Note:* CLAUDE.md section 7 was empty, so the tables are my own design: plans, accounts, credit_ledger, exports, handwriting_profiles, referrals, webhook_events, email_outbox. RLS is on for every table; users can read only their own rows and change nothing directly; all changes go through server-only SQL functions. Tested on a real Postgres in Docker with a small stand-in for Supabase's auth schema (`pnpm db:up && pnpm test:db`, also a CI job). **Not yet applied to a real Supabase project.**
   *Acceptance:* an RLS test proves user A can't read user B's data.
 - [~] **5.2 Auth.** Email + Google sign-in, email verification, password reset. Rate limit signups to deter free-tier farming.
-  *Note:* IN PROGRESS. Server side only: the worker checks Supabase access tokens (expired, forged and "alg: none" tokens are refused), and free pages are granted on a rate-limited activation rather than on signup. **The app has no sign-up, sign-in or password-reset pages yet**, and email verification and Google sign-in are settings in a Supabase project that does not exist yet.
+  *Note:* IN PROGRESS. Built: a sign-in page with email and password sign-up (with the agreement tick-box, recorded in the consent log), sign-in, password reset and the return from email links; the worker checks the tokens (expired, forged and "alg: none" are refused); free pages are granted on a rate-limited activation, not on signup. **None of it has met a real Supabase project.** The pages talk to Supabase Auth over plain HTTP, written from its documentation, and the browser tests answer for it with a stand-in (`e2e/account.spec.ts`). "Continue with Google" exists but stays hidden until `NEXT_PUBLIC_GOOGLE_SIGN_IN=on`, because Google must first be set up in the project. Signup rate limiting itself is left to Supabase's own limits.
   *Acceptance:* full signup/login/reset works.
 - [x] **5.3 Profile storage.** Upload the glyph bank to R2/Supabase Storage with encryption at rest; signed URLs; per-plan profile limits.
   *Note:* profiles are saved, reloaded and deleted through the worker, encrypted with AES-256-GCM, private to their owner, within the plan's limit, and only with the own-handwriting confirmation. Deviation: files are on the worker's disk, not R2 or Supabase Storage, and are served through the signed-in API instead of signed URLs. The web app does not use this yet; it still keeps handwriting in the browser. Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
@@ -308,14 +308,14 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 - [x] **5.5 Free tier enforcement.** 5 watermarked pages/month, 1 profile, basic options. Server decides, never the client.
   *Note:* the plan is read from the database on every export. A request carrying a plan, price or watermark setting is refused; paid options requested on the free plan are replaced with basic ones (same file as the basic request); free exports are watermarked by the worker. "Basic options" is my definition: ballpoint pens only, no custom ink colour, header, corrections or fatigue. Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
   *Acceptance:* tampering with client values doesn't change entitlements.
-- [!] **5.6 Payment provider integration.** Hosted checkout for Student/Pro (monthly + annual) using the provider from task 0.5. Test mode first.
-  *Note:* BLOCKED: needs a Paddle account. Nothing built on the checkout side. The price-id settings and the `custom_data: { user_id }` contract the webhook relies on are in `.env.example` and `docs/billing.md`.
+- [~] **5.6 Payment provider integration.** Hosted checkout for Student/Pro (monthly + annual) using the provider from task 0.5. Test mode first.
+  *Note:* IN PROGRESS, and still blocked for its acceptance: needs a Paddle account. Built: the account page opens Paddle's checkout for Student, Pro (monthly and yearly) and the top-up, passing the user's id so the payment notification finds the account; the price ids come from the worker (`GET /plans`). **Written from Paddle's documentation; no purchase, test or real, has ever gone through it.** The browser test replaces Paddle's script with a stand-in and checks what the page asks it to open.
   *Acceptance:* test purchase completes.
 - [x] **5.7 Webhooks.** Verify signatures; handle created/updated/cancelled/payment-failed/renewal; **idempotent** (store event IDs); grant monthly credits through the ledger.
   *Note:* signatures follow Paddle's documented scheme (checked against a value computed with OpenSSL), with a 30-second replay window. Events are recorded by id, so a replay, even three at once, grants nothing twice. Handles created, updated (renewal, scheduled cancellation), cancelled, payment failed, and top-up purchases, each in one transaction. **Never run against the real Paddle sandbox**: notifications in the tests are built from the documentation. Refunds and chargebacks are not handled.
   *Acceptance:* replaying the same webhook twice doesn't double-grant.
 - [~] **5.8 Billing UX.** Plan page, usage meter ("37/150 pages"), upgrade/downgrade, link to the customer portal, cancel (access until period end), and a clear "credits reset on [date]".
-  *Note:* IN PROGRESS. `GET /me` returns the plan, the "37 / 150 pages" figures, the reset date, the renewal date, the cancellation state and the ledger. **The page itself, upgrade/downgrade and the customer portal link are not built.**
+  *Note:* IN PROGRESS. Built: an account page showing the plan, the "37 / 150 pages" meter, pages left, "Your pages reset on [date]", the renewal date or "cancelled, you keep it until [date]", upgrade and top-up buttons, a link to the payment provider's portal (change card, invoices, cancel), referral code, saved handwriting, recent activity, a copy of your data and account deletion. The editor shows pages left before and after an export, and waits and retries by itself when the worker is busy. **Tested with stand-in answers for the worker's account routes in the browser, and those routes against a real Postgres; the two have not been run together, and the portal link (from Paddle's documentation) has only met a stand-in.** Downgrading is done in the portal, not on our page.
   *Acceptance:* users can always see what they have and when it renews.
 - [x] **5.9 Top-ups & referrals.** 100-page top-up pack; referral bonus (+20 each) with abuse checks (same-device/IP heuristics).
   *Note:* top-ups add 100 non-lapsing pages; referrals give 20 pages to both people. Both appear in the ledger with reasons. Referral refusals (own code, already referred, same device or network as the inviter, inviter over 10 a month) are logged with the reason. Buying a top-up needs the checkout (5.6). Tested on a local Postgres with simulated accounts only; see `docs/billing.md`.
@@ -419,18 +419,28 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 ## Phase 8: Private Beta & Launch
 
-- [ ] **8.1 Private beta (20-50 students).** Feedback form, in-app "report a bad glyph/bad output" button, and a session recording tool only if privacy-safe.
+- [~] **8.1 Private beta (20-50 students).** Feedback form, in-app "report a bad glyph/bad output" button, and a session recording tool only if privacy-safe.
+  *Note:* IN PROGRESS. Built: a feedback form on the account page and a "Something looks wrong with this result?" button after an export, both for signed-in users. They store the user's words and a few settings (page count, style, pen, paper, the one letter) and never the document or the handwriting; 20 a day per person; an admin report (`GET /admin/feedback`) lists them by kind without saying who wrote what. **No beta has been run: there are no testers and nothing is deployed, so the gate is untouched.** No session recording tool was added (it would need the owner's go-ahead and a privacy review). The plan is in `docs/beta-plan.md`.
   *Acceptance:* **Gate:** beta users complete signup -> sample -> export unaided.
-- [ ] **8.2 Feedback triage.** Categorize issues (extraction failures, realism complaints, UX, pricing). Fix the top 5.
+- [!] **8.2 Feedback triage.** Categorize issues (extraction failures, realism complaints, UX, pricing). Fix the top 5.
+  *Note:* BLOCKED: needs the beta (8.1) to have happened. The categories and the method are in `docs/beta-plan.md`; `docs/beta-findings.md` is deliberately not written, because there are no findings.
   *Acceptance:* `docs/beta-findings.md` with decisions.
-- [ ] **8.3 Pricing validation.** Compare conversion at the placeholder prices; adjust. Verify real margin >= $2 per paying user from the cost dashboard (5.11).
+- [!] **8.3 Pricing validation.** Compare conversion at the placeholder prices; adjust. Verify real margin >= $2 per paying user from the cost dashboard (5.11).
+  *Note:* BLOCKED: needs paying users and real hosting bills. The cost dashboard (5.11) is ready to answer it; today its figures are estimates from a laptop.
   *Acceptance:* margins documented per plan.
-- [ ] **8.4 Launch assets.** Demo video (30-60s), screenshots, Product Hunt page, honest Reddit/community posts (follow each community's rules), student-ambassador or referral push.
+- [~] **8.4 Launch assets.** Demo video (30-60s), screenshots, Product Hunt page, honest Reddit/community posts (follow each community's rules), student-ambassador or referral push.
+  *Note:* IN PROGRESS. Written: a launch checklist and first-draft text for Product Hunt and community posts, with the rules for honest wording (`docs/launch.md`). The referral code is built. **Not made: the demo video and screenshots** (they should show real handwriting, and none exists), the Product Hunt page itself, and any ambassador programme. The checklist is not done; nothing on it can be until the product is deployed.
   *Acceptance:* assets ready; launch checklist done.
-- [ ] **8.5 Public launch.** Announce, monitor errors and costs hourly for the first 48 hours, respond to every support message.
+- [!] **8.5 Public launch.** Announce, monitor errors and costs hourly for the first 48 hours, respond to every support message.
+  *Note:* BLOCKED: needs a deployed product, a passed beta and the owner. What to watch hour by hour is in `docs/launch.md`.
   *Acceptance:* **Gate: first 10 paying users.**
-- [ ] **8.6 Post-launch metrics review (week 2 and 4).** Activation rate (signup -> first export), free -> paid conversion, churn, cost per page, support volume.
+- [!] **8.6 Post-launch metrics review (week 2 and 4).** Activation rate (signup -> first export), free -> paid conversion, churn, cost per page, support volume.
+  *Note:* BLOCKED: needs a launch and four weeks of real use. Where each number comes from is in `docs/launch.md`.
   *Acceptance:* decisions on what to build next, based on data.
+
+---
+
+> **Where the build stands (2026-10-09).** Everything that could be built and tested without outside accounts, real handwriting or people has been. No gate that needs them has passed: Phase 1 (blind test), Phase 3 (comparison), Phase 5 (a real test payment), Phase 7 (load test on the deployed worker) and Phase 8 (beta, first paying users) are all open. Nothing is deployed. `docs/owner-setup.md` lists every account, key, decision and person-only task that is needed, in order.
 
 ---
 

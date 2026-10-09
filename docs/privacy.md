@@ -62,10 +62,11 @@ than an hour, which may be a save in progress) and PDFs older than 24 hours.
 
 ## Not done
 
-- **There is no page for any of this.** Deletion, the data copy and consent are worker
-  routes only, because sign-in pages (5.2) and the account page (5.8) are not built. The
-  privacy policy's promise that users can delete their handwriting is true of the system
-  but not yet something a user can do without help.
+- **The pages for this exist but have not met the real services.** The account page has
+  "Download everything we hold about you" and "Delete my account", and sign-up records the
+  agreement to the terms and privacy policy. In the browser tests the worker's answers are
+  stand-ins; the worker routes themselves are tested against a real database. The two have
+  not been run together, and sign-in has never met a real Supabase project.
 - Supabase Auth keeps its own audit log of sign-ins; deleting the user removes the user,
   but Supabase's retention of its auth logs is Supabase's, not ours. Check it when the
   project exists.

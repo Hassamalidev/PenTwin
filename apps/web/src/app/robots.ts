@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         // The app itself and internal pages have nothing for a search engine.
-        disallow: ['/editor', '/sample', '/admin', '/style'],
+        disallow: ['/editor', '/sample', '/admin', '/style', '/signin', '/account'],
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),
