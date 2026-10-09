@@ -21,6 +21,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     warp: 0.03,
     tracking: 0,
     fatigue: 0,
+    wordBounce: 0.05,
+    lineRide: 0.05,
+    pressure: 0.1,
   },
 
   normal: DEFAULT_JITTER,
@@ -40,6 +43,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     warp: 0.1,
     tracking: 0.05,
     fatigue: 0,
+    wordBounce: 0.2,
+    lineRide: 0.22,
+    pressure: 0.22,
   },
 
   /**
@@ -60,6 +66,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     warp: 0.065,
     tracking: 0.02,
     fatigue: 0.7,
+    wordBounce: 0.14,
+    lineRide: 0.15,
+    pressure: 0.18,
   },
 
   /**
@@ -80,6 +89,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     warp: 0.06,
     tracking: -0.02,
     fatigue: 0.3,
+    wordBounce: 0.12,
+    lineRide: 0.13,
+    pressure: 0.16,
   },
 };
 

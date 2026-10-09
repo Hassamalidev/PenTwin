@@ -20,6 +20,16 @@ export interface GlyphStyle {
   strokeScale: number;
   /** Shape distortion applied in glyph units before anything else. */
   warp?: PointFn;
+  /** How much the pen's weight varies between the strokes of this glyph. */
+  pressure?: number;
+}
+
+/** How one word lands on the line, relative to where the line says it should be. */
+export interface WordStyle {
+  /** mm, positive is lower on the page. */
+  shift: number;
+  /** Multiplier on the size of the word's letters. */
+  scale: number;
 }
 
 /**
@@ -29,6 +39,8 @@ export interface GlyphStyle {
 export interface Styler {
   line(lineIndex: number): LineStyle;
   glyph(char: string): GlyphStyle;
+  /** Called once at the start of each word. Left out, words follow the line exactly. */
+  word?(): WordStyle;
   /** Multiplier on the space between two words. */
   wordGap(): number;
   /** Extra space (mm) between two adjacent letters of a word. */

@@ -1,3 +1,4 @@
+import { wholeLetters } from './writer';
 import { describe, expect, it } from 'vitest';
 import { applyEffects } from './effects';
 import { INKS } from './ink';
@@ -49,7 +50,7 @@ describe('presets v2', { timeout: 120_000 }, () => {
     }
     const scene = render('exam').pages[0]!;
     expect(scene.inkColor).toBe(INKS['ballpoint-black'].color);
-    for (const stroke of scene.strokes.slice(0, 50)) {
+    for (const stroke of wholeLetters(scene.strokes).slice(0, 50)) {
       expect(pathBounds(stroke.path).minX).toBeGreaterThan(30); // right of the margin line
     }
   });
@@ -91,7 +92,7 @@ describe('realism features combined', { timeout: 120_000 }, () => {
     // Everything that is not a correction, header or page number spells the text.
     const body = pages.flatMap((page, i) => {
       const top = page.baselines[0]! - 4;
-      return page.strokes
+      return wholeLetters(page.strokes)
         .filter((s) => s.char !== '' && !s.struck && !s.retrace)
         .filter((s) => pathBounds(s.path).maxY > top)
         .slice(0, -String(i + 1).length);

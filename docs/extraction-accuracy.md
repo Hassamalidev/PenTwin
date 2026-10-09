@@ -22,9 +22,28 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 | skewed photo     | 17/17 | 99.0%             | 0.0%            | 1.0%     | 583        | 0     | 2      | 3             |
 | shadowed photo   | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
 | blurry photo     | 17/17 | 98.6%             | 0.0%            | 1.4%     | 577        | 4     | 2      | 4             |
-| neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 589        | 0     | 2      | 0             |
-| rushed writing   | 17/17 | 99.8%             | 0.2%            | 0.0%     | 570        | 4     | 17     | 0             |
-| touching letters | 17/17 | 95.4%             | 0.2%            | 4.4%     | 560        | 0     | 5      | 13            |
+| neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 587        | 2     | 2      | 0             |
+| rushed writing   | 17/17 | 96.1%             | 0.8%            | 3.0%     | 549        | 4     | 19     | 2             |
+| touching letters | 17/17 | 94.1%             | 0.2%            | 5.8%     | 544        | 8     | 5      | 17            |
+
+**The last three rows changed on 2026-10-09, and not because the extractor did.** Those
+pages are written in the engine's neat, rushed and normal styles, and on that day the
+styles gained three habits of real handwriting: words landing at slightly different
+heights, lines riding off their ruling, and pen pressure varying from stroke to stroke.
+The pages became harder to read, and the same extractor did worse on them:
+
+| Case             | Labeled correctly, before | After  | Left out, before | After |
+| ---------------- | ------------------------- | ------ | ---------------- | ----- |
+| neat writing     | 100.0%                    | 100.0% | 0.0%             | 0.0%  |
+| rushed writing   | 99.8%                     | 96.1%  | 0.0%             | 3.0%  |
+| touching letters | 95.4%                     | 94.1%  | 4.4%             | 5.8%  |
+
+Most of the loss is letters left out, which is the intended behaviour when a cut is
+doubtful, but wrong labels on rushed writing also rose from 0.2% to 0.8%. That is the more
+honest picture: **uneven writing is harder to cut up, and real handwriting is uneven.**
+The first five rows use a fixed hand without the new habits (`SAMPLE_HAND` in
+`packages/extractor/src/testing.ts`) so that photo conditions can still be compared like
+for like. Improving the extractor on bouncing, uneven writing is open work.
 
 How to read the columns:
 

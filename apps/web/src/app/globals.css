@@ -1487,3 +1487,25 @@ button.primary:hover:not(:disabled),
   border-color: var(--ink-contrast);
   color: var(--ink-contrast);
 }
+
+/* --- Where you are, and a closer look at the page --- */
+.site-header nav a[aria-current='page']:not(.nav-cta) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+/* Zoomed in: the page is wider than its frame and scrolls inside it. */
+.preview-panel .preview.zoomed {
+  display: block;
+  overflow: auto;
+  max-height: 70vh;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.preview-panel .preview.zoomed img {
+  width: 200%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+}

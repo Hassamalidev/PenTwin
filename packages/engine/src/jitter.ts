@@ -34,6 +34,24 @@ export interface JitterParams {
    * a little worse, and overdone it looks fake.
    */
   fatigue: number;
+  /**
+   * Fraction of the x-height. How far each word lands above or below the one before it.
+   * A hand lifts between words and never comes down at quite the same height, so real
+   * writing steps up and down word by word instead of gliding along one smooth curve.
+   * Off when left out.
+   */
+  wordBounce?: number;
+  /**
+   * Fraction of the x-height. How far a whole line rides above or below where it should
+   * sit: some lines float over the ruled line, others dip under it. Off when left out.
+   */
+  lineRide?: number;
+  /**
+   * Fraction. How much the weight of the pen differs from one stroke to the next inside
+   * a letter, heaviest where the pen lands at the start of a word. Evenly weighted ink is
+   * one of the clearest signs of writing that was not done by hand. Off when left out.
+   */
+  pressure?: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -66,6 +84,9 @@ export const DEFAULT_JITTER: JitterParams = {
   warp: 0.05,
   tracking: 0,
   fatigue: 0,
+  wordBounce: 0.1,
+  lineRide: 0.1,
+  pressure: 0.14,
 };
 
 const DEG = Math.PI / 180;
@@ -109,13 +130,18 @@ export interface StyleMetrics {
   glyphXHeight: number;
   /** Lines of writing on the page, so fatigue knows how far down a line is. */
   lineCount?: number;
+  /**
+   * A separate source of chance for word bounce and line ride, so switching them on
+   * never changes anything the other settings already decided.
+   */
+  habits?: Rng;
 }
 
 /** Builds the styler for one page. */
 export function createJitterStyler(
   params: JitterParams,
   rng: Rng,
-  { xHeight, glyphXHeight, lineCount = 1 }: StyleMetrics,
+  { xHeight, glyphXHeight, lineCount = 1, habits }: StyleMetrics,
 ): Styler {
   // How tired the hand is on the line being written: 0 at the top of the page, rising
   // to `fatigue` at the bottom, slowly at first.
@@ -139,6 +165,13 @@ export function createJitterStyler(
   let glyphIndex = 0;
   let wordIndex = 0;
 
+  const wordBounce = habits ? (params.wordBounce ?? 0) : 0;
+  const lineRide = habits ? (params.lineRide ?? 0) : 0;
+  const bounce = habits ? createNoise(habits) : () => 0;
+  const ride = habits ? createNoise(habits) : () => 0;
+  const jump = (): number => (habits ? habits.next() + habits.next() - 1 : 0);
+  let landing = 0;
+
   return {
     line: (lineIndex) => {
       const t = tiredAt(lineIndex);
@@ -146,11 +179,23 @@ export function createJitterStyler(
       return {
         offsetX: params.marginDrift * margin(lineIndex / 5),
         slope: params.lineSlope * (1 + 0.8 * t) * DEG * slope(lineIndex / 4),
-        // A slow wander across the page plus a much smaller, quicker ripple.
+        // A slow wander across the page plus a much smaller, quicker ripple, and the
+        // height this whole line happens to ride at.
         baselineShift: (x) =>
           params.baselineDrift *
-          (1 + t) *
-          (0.8 * baseline(x / 50 + lineIndex * 7.31) + 0.2 * ripple(x / 8 + lineIndex * 3.17)),
+            (1 + t) *
+            (0.8 * baseline(x / 50 + lineIndex * 7.31) + 0.2 * ripple(x / 8 + lineIndex * 3.17)) +
+          lineRide * xHeight * (1 + 2 * t) * ride(lineIndex * 1.37),
+      };
+    },
+
+    word: () => {
+      if (wordBounce === 0) return { shift: 0, scale: 1 };
+      // Partly a drift over several words, partly a fresh landing each time.
+      const i = landing++;
+      return {
+        shift: wordBounce * xHeight * (1 + 2 * tired) * (0.4 * bounce(i / 3) + 0.6 * jump()),
+        scale: 1 + wordBounce * 0.45 * jump(),
       };
     },
 
@@ -165,6 +210,7 @@ export function createJitterStyler(
             params.slantVariation * (0.7 * slant(t / 30) + 0.3 * wobble())) *
           DEG,
         strokeScale: 1 + params.strokeWidth * (0.6 * stroke(t / 12) + 0.4 * wobble()),
+        pressure: params.pressure,
         warp:
           params.warp > 0
             ? createWarp(rng, params.warp * (1 + 0.5 * tired), glyphXHeight)

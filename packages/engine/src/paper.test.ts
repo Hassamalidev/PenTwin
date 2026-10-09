@@ -1,3 +1,4 @@
+import { wholeLetters } from './writer';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_JITTER } from './jitter';
 import { createPaper, RULING_SPACING, type PaperSpec } from './paper';
@@ -64,7 +65,7 @@ describe('writing on ruled paper', () => {
   });
 
   it('keeps the actual ink tracking the ruling, imperfectly', () => {
-    const offsets = page.strokes.map((stroke) => {
+    const offsets = wholeLetters(page.strokes).map((stroke) => {
       const bottom = pathBounds(stroke.path).maxY;
       const nearest = rules.reduce((a, b) => (Math.abs(b - bottom) < Math.abs(a - bottom) ? b : a));
       return bottom - nearest;
@@ -89,7 +90,7 @@ describe('writing on ruled paper', () => {
         paper,
         lineHeight: 7.1,
       }).pages[0]!;
-      const errors = scene.strokes.map((stroke) => {
+      const errors = wholeLetters(scene.strokes).map((stroke) => {
         const bottom = pathBounds(stroke.path).maxY;
         return Math.min(...scene.baselines.map((b) => Math.abs(b - bottom)));
       });

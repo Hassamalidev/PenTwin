@@ -1,3 +1,4 @@
+import { wholeLetters } from '@pentwin/engine';
 import {
   buildGlyphBank,
   pathBounds,
@@ -54,7 +55,7 @@ describe('tuneJitter', { timeout: 240_000 }, () => {
       'marginDrift',
       'warp',
     ];
-    for (const key of steady) expect(neatJitter[key]).toBeLessThan(rushedJitter[key]);
+    for (const key of steady) expect(neatJitter[key]!).toBeLessThan(rushedJitter[key]!);
     expect(rushedJitter.baselineDrift).toBeGreaterThan(neatJitter.baselineDrift * 1.8);
   });
 
@@ -69,7 +70,7 @@ describe('tuneJitter', { timeout: 240_000 }, () => {
     const wander = (jitter: JitterParams): number => {
       const scene = renderText(text, neat.bank, { seed: 'tune', xHeight: X_HEIGHT, jitter })
         .pages[0]!;
-      const errors = scene.strokes.map((stroke) => {
+      const errors = wholeLetters(scene.strokes).map((stroke) => {
         const bottom = pathBounds(stroke.path).maxY;
         return Math.min(...scene.baselines.map((b) => Math.abs(b - bottom)));
       });

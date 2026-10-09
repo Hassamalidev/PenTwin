@@ -96,6 +96,9 @@ export function resolvePage(bank: GlyphBank, options: RenderOptions) {
     ...options.jitter,
     baselineDrift: options.jitter.baselineDrift * paper.driftScale,
     lineSlope: options.jitter.lineSlope * paper.driftScale,
+    // Printed lines pull the writing back to them, word by word and line by line.
+    wordBounce: (options.jitter.wordBounce ?? 0) * paper.driftScale,
+    lineRide: (options.jitter.lineRide ?? 0) * paper.driftScale,
   };
   const xHeight = options.xHeight ?? lineHeight * 0.35;
   const ink = typeof options.ink === 'string' ? INKS[options.ink] : options.ink;

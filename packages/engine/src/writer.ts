@@ -23,6 +23,26 @@ export interface InkStroke {
   struck?: true;
   /** A second pass over a letter already written. Not part of the text. */
   retrace?: true;
+  /**
+   * Set on the second and later pen strokes of a letter when stroke pressure has split
+   * it into its strokes, each with its own weight. The first stroke has no `part`.
+   * Use `wholeLetters` to get one entry per letter again.
+   */
+  part?: number;
+}
+
+/**
+ * One entry per written letter or drawn line: the pen strokes that pressure split apart
+ * are joined back together. For anything that reads the page letter by letter.
+ */
+export function wholeLetters(strokes: readonly InkStroke[]): InkStroke[] {
+  const letters: InkStroke[] = [];
+  for (const stroke of strokes) {
+    const last = letters.at(-1);
+    if (stroke.part && last) last.path = [...last.path, ...stroke.path];
+    else letters.push({ ...stroke });
+  }
+  return letters;
 }
 
 export interface RenderReport {
@@ -142,6 +162,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         xHeight,
         glyphXHeight: bank.xHeight,
         lineCount: setup.lineCount,
+        habits: createRng(`${setup.pageSeed}/habits`),
       })
     : identityStyler;
   const strokes: InkStroke[] = [];
@@ -154,6 +175,36 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const pressure = createNoise(inkRng);
   let inkIndex = 0;
   const markRng = createRng(`${setup.pageSeed}/marks`);
+  const pressRng = createRng(`${setup.pageSeed}/pressure`);
+  const press = createNoise(pressRng);
+  let pressIndex = 0;
+
+  /**
+   * Splits a letter into its pen strokes and gives each its own weight: heavier where
+   * the pen has just landed, drifting slowly after that. Weights move in a few fixed
+   * steps so the page still draws as a handful of groups.
+   */
+  const pressed = (stroke: InkStroke, amount: number, landing: boolean): InkStroke[] => {
+    if (amount <= 0 || bank.paint !== 'stroke') return [stroke];
+    const parts: PathCommand[][] = [];
+    for (const command of stroke.path) {
+      if (command.type === 'M' || parts.length === 0) parts.push([]);
+      parts.at(-1)!.push(command);
+    }
+    return parts.map((path, index) => {
+      const t = pressIndex++;
+      const weight =
+        1 +
+        amount * (0.7 * press(t / 6) + 0.3 * (pressRng.next() * 2 - 1)) +
+        (landing && index === 0 ? amount * 0.5 : 0);
+      return {
+        ...stroke,
+        ...(index > 0 ? { part: index } : {}),
+        path,
+        width: stroke.width * (Math.round(weight * 14) / 14),
+      };
+    });
+  };
 
   /** Applies the pen (ink, bold) to a placed glyph outline. */
   const inked = (
@@ -263,8 +314,10 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     const spans = new Map<number, { from: number; to: number }>();
 
     let pen = startX;
+    let word = { shift: 0, scale: 1 };
     for (const slot of slots) {
       pen += slot.isWordStart ? slot.gapBefore * squeeze : slot.gapBefore;
+      if (slot.isWordStart && styler.word) word = styler.word();
       const token = tokens[slot.token]!;
       if (token.struck) {
         const span = spans.get(slot.token);
@@ -273,13 +326,13 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
       }
       if (slot.glyph) {
         const { style } = slot;
-        const scale = unit * size * style.scale;
+        const scale = unit * size * style.scale * word.scale;
         const tanSlant = Math.tan(style.slant + (slot.italic ? ITALIC_LEAN : 0));
         const angle = style.rotation + lineStyle.slope;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
         const originX = pen;
-        const originY = baselineAt(pen);
+        const originY = baselineAt(pen) + word.shift * size;
 
         const place = (glyph: Glyph, dx: number, dy: number): PathCommand[] =>
           transformPath(glyph.path, (gx, gy) => {
@@ -295,7 +348,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           slot.bold,
         );
         if (token.struck) stroke.struck = true;
-        strokes.push(stroke);
+        strokes.push(...pressed(stroke, style.pressure ?? 0, slot.isWordStart));
         report.glyphCount++;
 
         if (token.retrace === slot.charIndex && slot.glyph.char.length === 1) {

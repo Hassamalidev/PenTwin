@@ -81,6 +81,9 @@ const SCALED: [keyof JitterParams, max: number][] = [
   ['strokeWidth', 0.5],
   ['marginDrift', 6],
   ['warp', 0.3],
+  ['wordBounce', 0.6],
+  ['lineRide', 0.6],
+  ['pressure', 0.6],
 ];
 
 /** Choosing a preset also sets the paper, pen and slips that belong to it. */
@@ -102,7 +105,9 @@ export function applyPreset(settings: Settings, preset: PresetName): Settings {
 export function toRenderOptions(settings: Settings): RenderOptions {
   const bundle = presetOptions(settings.preset);
   const jitter: JitterParams = { ...bundle.jitter, fatigue: settings.fatigue };
-  for (const [key, max] of SCALED) jitter[key] = Math.min(max, jitter[key] * settings.unevenness);
+  for (const [key, max] of SCALED) {
+    jitter[key] = Math.min(max, (jitter[key] ?? 0) * settings.unevenness);
+  }
 
   const paper: PaperSpec =
     settings.paper === 'ruled'

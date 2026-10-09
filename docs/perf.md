@@ -48,6 +48,24 @@ The first implementation used pdf-lib's `drawSvgPath` and its built-in compressi
 directly and compressing with the platform's native deflate brought that down to the
 figures above.
 
+## With word bounce, line ride and stroke pressure (2026-10-09)
+
+The default hand gained three habits. Stroke pressure draws each pen stroke of a letter
+at its own weight, in at most about 15 weights per page so the page still draws as a
+handful of groups. Same machine, same command (`pnpm bench`), one run:
+
+| Measure                  | Before          | After         |
+| ------------------------ | --------------- | ------------- |
+| Layout + glyph placement | 40.1 ms/page    | 38.6 ms/page  |
+| PDF export               | 116.0 ms/page   | 105.2 ms/page |
+| Total to PDF             | about 156 ms/pg | 143.9 ms/page |
+| PDF size                 | 164 KB/page     | 168 KB/page   |
+| Peak memory (RSS)        | 437 MB          | 520 MB        |
+
+Speed and size are unchanged within the noise of one run. **Memory is up by about a
+fifth.** The worker's 512 MB container had headroom for that in the earlier 50-page test
+(peak 356 MB), but that test has not been repeated with the new habits.
+
 ## Caveats
 
 - One machine, two runs: treat these as a rough baseline, not a precise benchmark.

@@ -1,3 +1,4 @@
+import { wholeLetters } from './writer';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_JITTER, NO_JITTER, type JitterParams } from './jitter';
 import { pathBounds } from './path';
@@ -15,7 +16,7 @@ const page = (fatigue: number, seed = 'f') =>
 const wander = (scene: ReturnType<typeof page>): { top: number; bottom: number } => {
   const lines = scene.baselines.length;
   const sums = { top: [0, 0], bottom: [0, 0] };
-  for (const stroke of scene.strokes) {
+  for (const stroke of wholeLetters(scene.strokes)) {
     const y = pathBounds(stroke.path).maxY;
     let line = 0;
     scene.baselines.forEach((b, i) => {
@@ -86,7 +87,7 @@ describe('fatigue', { timeout: 120_000 }, () => {
 
   it('keeps wider gaps from pushing text past the right margin', () => {
     const scene = page(1);
-    for (const stroke of scene.strokes) {
+    for (const stroke of wholeLetters(scene.strokes)) {
       expect(pathBounds(stroke.path).maxX).toBeLessThanOrEqual(scene.width - 20 + 2.5);
     }
   });

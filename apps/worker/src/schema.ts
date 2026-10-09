@@ -75,6 +75,9 @@ const jitter = z.object({
   warp: z.number().min(0).max(0.3),
   tracking: z.number().min(-0.3).max(0.5),
   fatigue: z.number().min(0).max(1),
+  wordBounce: z.number().min(0).max(0.6).optional(),
+  lineRide: z.number().min(0).max(0.6).optional(),
+  pressure: z.number().min(0).max(0.6).optional(),
 });
 
 const options = z.strictObject({

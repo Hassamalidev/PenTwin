@@ -4,6 +4,7 @@ import { Caveat } from 'next/font/google';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { JsonLd } from '../components/JsonLd';
+import { NavLinks } from '../components/NavLinks';
 import { absoluteUrl, SITE_URL } from '../lib/site';
 import './globals.css';
 
@@ -54,15 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </svg>
             {BRAND.name}
           </a>
-          <nav aria-label="Main">
-            <a href="/sample">My handwriting</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/faq">FAQ</a>
-            <a href="/account">Account</a>
-            <a className="nav-cta" href="/editor">
-              Open editor
-            </a>
-          </nav>
+          <NavLinks />
         </header>
         <main>{children}</main>
         <footer className="site-footer">

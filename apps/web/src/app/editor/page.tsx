@@ -38,6 +38,13 @@ import { callWorker, WORKER_URL, WorkerProblem, workerHasAccounts } from '../../
 
 type EditorBlock = Block & { id: number };
 
+/** Where the unfinished document is kept, in this browser only. */
+const DRAFT_KEY = 'pentwin.draft.v1';
+/** Drafts with large pictures are not kept: browser storage is small. */
+const DRAFT_LIMIT = 1_500_000;
+/** Width in pixels of the closer look at the preview. Still watermarked, still not print quality. */
+const ZOOM_WIDTH = 1280;
+
 const STARTER =
   'This is your handwriting preview. Replace this text with your own, or upload a Word or PDF file.\n\n' +
   'The preview on this page is free and updates as you type. Exporting gives you the full quality PDF.';
@@ -140,6 +147,50 @@ export default function EditorPage() {
   const [signedIn, setSignedIn] = useState(false);
   const [balance, setBalance] = useState<{ totalPages: number; watermark: boolean }>();
   const [reporting, setReporting] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  // The draft is read after the first render (the server cannot see browser storage),
+  // and nothing is saved until it has been read, or the starter text would replace it.
+  const [draftRead, setDraftRead] = useState(false);
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as {
+        blocks?: Block[];
+        settings?: Partial<Settings>;
+      } | null;
+      if (saved && Array.isArray(saved.blocks) && saved.blocks.length > 0) {
+        setBlocks(withIds(saved.blocks));
+        setSettings({ ...DEFAULT_SETTINGS, ...saved.settings });
+        setRestored(true);
+      }
+    } catch {
+      // A damaged draft is ignored rather than breaking the editor.
+    }
+    setDraftRead(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftRead) return;
+    const timer = setTimeout(() => {
+      try {
+        const draft = JSON.stringify({ blocks: blocks.map(stripId), settings });
+        if (draft.length <= DRAFT_LIMIT) localStorage.setItem(DRAFT_KEY, draft);
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // Storage full or switched off: the editor still works, it just will not remember.
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [blocks, settings, draftRead]);
+
+  const startOver = (): void => {
+    localStorage.removeItem(DRAFT_KEY);
+    setBlocks(withIds(textToBlocks(STARTER)));
+    setSettings(DEFAULT_SETTINGS);
+    setRestored(false);
+    setPageIndex(0);
+  };
 
   useEffect(() => {
     void workerHasAccounts().then(setAccounts);
@@ -174,7 +225,11 @@ export default function EditorPage() {
         try {
           const { pages } = renderDocument(prepared.blocks, loaded.bank, options);
           const index = Math.min(pageIndex, pages.length - 1);
-          const url = await rasterizePreview(pages[index]!, 'PREVIEW');
+          const url = await rasterizePreview(
+            pages[index]!,
+            'PREVIEW',
+            zoomed ? ZOOM_WIDTH : undefined,
+          );
           if (cancelled) return;
           setPageCount(pages.length);
           if (index !== pageIndex) setPageIndex(index);
@@ -190,7 +245,7 @@ export default function EditorPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [loaded, prepared, options, pageIndex]);
+  }, [loaded, prepared, options, pageIndex, zoomed]);
 
   const update = (id: number, change: (block: EditorBlock) => EditorBlock): void =>
     setBlocks((list) => list.map((block) => (block.id === id ? change(block) : block)));
@@ -309,7 +364,15 @@ export default function EditorPage() {
           >
             Add paragraph
           </button>
+          <button type="button" onClick={startOver} data-testid="start-over">
+            Start over
+          </button>
         </div>
+        <p className="muted" style={{ fontSize: '0.88rem' }} data-testid="draft-note">
+          {restored
+            ? 'We brought back what you were working on. It is kept in this browser only.'
+            : 'Your text is kept in this browser while you work, and nowhere else.'}
+        </p>
         {importError && (
           <p className="error" role="alert">
             {importError}
@@ -340,7 +403,7 @@ export default function EditorPage() {
 
       <section className="preview-column" aria-label="Preview and settings">
         <div className="panel preview-panel">
-          <div className="preview" data-testid="preview">
+          <div className={`preview${zoomed ? ' zoomed' : ''}`} data-testid="preview">
             {previewUrl ? (
               <img
                 src={previewUrl}
@@ -406,6 +469,14 @@ export default function EditorPage() {
               data-testid="reroll"
             >
               Reroll look
+            </button>
+            <button
+              type="button"
+              aria-pressed={zoomed}
+              onClick={() => setZoomed((value) => !value)}
+              data-testid="zoom"
+            >
+              {zoomed ? 'Whole page' : 'Zoom in'}
             </button>
           </div>
         </div>

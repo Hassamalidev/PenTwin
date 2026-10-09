@@ -1,3 +1,4 @@
+import { wholeLetters } from './writer';
 import { describe, expect, it } from 'vitest';
 import { NO_JITTER } from './jitter';
 import { pathBounds } from './path';
@@ -17,7 +18,7 @@ const render = (name: PresetName) =>
 /** Average distance of the ink's bottom edge from its ideal baseline, in mm. */
 const baselineError = (name: PresetName): number => {
   const scene = render(name).pages[0]!;
-  const errors = scene.strokes.map((stroke) => {
+  const errors = wholeLetters(scene.strokes).map((stroke) => {
     const bottom = pathBounds(stroke.path).maxY;
     return Math.min(...scene.baselines.map((b) => Math.abs(b - bottom)));
   });

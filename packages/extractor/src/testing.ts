@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pathBounds, PRESETS, renderText, type JitterParams } from '@pentwin/engine';
+import { pathBounds, PRESETS, renderText, wholeLetters, type JitterParams } from '@pentwin/engine';
 import { loadGlyphBank, sceneToPixels } from '@pentwin/engine/node';
 import { createRng } from '@pentwin/shared';
 import { alignToText } from './align';
@@ -49,6 +49,20 @@ export interface SamplePageOptions {
   text?: string;
 }
 
+/**
+ * The hand the synthetic sample pages are written in. It is the normal preset as it was
+ * when the extraction thresholds were calibrated and docs/extraction-accuracy.md was
+ * recorded: without word bounce, line ride and stroke pressure, which were added to the
+ * engine later. Changing this changes every synthetic photo, so it is only to be done
+ * together with a fresh `pnpm extract:measure`.
+ */
+export const SAMPLE_HAND: JitterParams = {
+  ...PRESETS.normal,
+  wordBounce: 0,
+  lineRide: 0,
+  pressure: 0,
+};
+
 /** Renders the copy-paragraph as a clean, flat, evenly lit page. */
 export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
   const dpi = options.dpi ?? 200;
@@ -59,7 +73,7 @@ export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
     xHeight: 3,
     penWidth: 0.5,
     inkColor: '#1a1a2e',
-    jitter: options.jitter ?? PRESETS.normal,
+    jitter: options.jitter ?? SAMPLE_HAND,
   });
   if (pages.length !== 1) throw new Error('Sample text should fit on one page');
   const scene = pages[0]!;
@@ -69,7 +83,7 @@ export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
     pxPerMm,
     lineCount: scene.baselines.length,
     wordCount: (options.text ?? SAMPLE_TEXT).split(/\s+/).filter(Boolean).length,
-    truth: scene.strokes.map((stroke) => {
+    truth: wholeLetters(scene.strokes).map((stroke) => {
       const b = pathBounds(stroke.path);
       return {
         char: stroke.char,

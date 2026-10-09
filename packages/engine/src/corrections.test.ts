@@ -1,3 +1,4 @@
+import { wholeLetters } from './writer';
 import { createRng } from '@pentwin/shared';
 import { describe, expect, it } from 'vitest';
 import { addCorrections, canCorrect, readMarkers, RETRACE, STRUCK } from './corrections';
@@ -130,7 +131,7 @@ describe('corrections in rendering', { timeout: 120_000 }, () => {
   it('writes exactly the original text once the corrections are set aside', () => {
     for (const seed of ['a', 'b', 'c', 'd']) {
       const { pages, corrections } = render(0.4, seed);
-      const strokes = pages.flatMap((page) => page.strokes);
+      const strokes = wholeLetters(pages.flatMap((page) => page.strokes));
       const written = strokes
         .filter((s) => !s.struck && !s.retrace)
         .map((s) => s.char)
@@ -144,7 +145,7 @@ describe('corrections in rendering', { timeout: 120_000 }, () => {
 
   it('draws a line through each struck word, and only those', () => {
     const { pages, corrections } = render(1);
-    const strokes = pages.flatMap((page) => page.strokes);
+    const strokes = wholeLetters(pages.flatMap((page) => page.strokes));
     const lines = strokes.filter((s) => s.struck && s.char === '');
     // One or two passes of the pen per struck word.
     expect(lines.length).toBeGreaterThanOrEqual(corrections.struck);
