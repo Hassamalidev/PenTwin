@@ -1,32 +1,34 @@
 /*
- * Design system. Warm paper, ink-blue accent, a yellow highlighter for emphasis. System
- * fonts for everything; the handwriting-style face (--font-hand) appears only inside
- * display headings, on the words marked <em>. Light and dark follow the device setting.
+ * Design system. Flat and plain: solid colours, thin borders, no gradients, no shadows,
+ * no blur. Black ink on off-white paper with one green accent. System fonts for
+ * everything; the handwriting-style face (--font-hand) appears only inside display
+ * headings, on the words marked <em>. Light and dark follow the device setting.
  * The components are shown together on the /style page.
  */
 :root {
-  --accent: #2438a8;
-  --accent-strong: #1a2a85;
+  --ink: #161616;
+  --ink-contrast: #ffffff;
+  --accent: #1f6f4a;
+  --accent-strong: #175539;
   --accent-contrast: #ffffff;
-  --accent-soft: #eceffd;
-  --highlight: #ffe27a;
-  --text: #171a22;
-  --muted: #5a6072;
-  --line: #e3dfd5;
+  --accent-soft: #e6f0ea;
+  --text: #161616;
+  --muted: #5f5f5a;
+  --line: #d8d8d0;
   --surface: #ffffff;
-  --surface-2: #fbfaf6;
-  --page: #f6f3ec;
-  --desk: #e9e4d8;
-  --warn: #7a4300;
-  --warn-bg: #fff3d6;
+  --surface-2: #f8f8f4;
+  --page: #f3f3ee;
+  --desk: #e4e4dc;
+  --warn: #6b4a00;
+  --warn-bg: #fbefcf;
   --danger: #a11a1a;
-  --danger-bg: #fdf1f1;
-  --ok: #17663a;
-  --radius: 14px;
-  --radius-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(30, 26, 14, 0.06);
-  --shadow: 0 1px 2px rgba(30, 26, 14, 0.05), 0 8px 24px rgba(30, 26, 14, 0.07);
-  --shadow-lg: 0 2px 4px rgba(30, 26, 14, 0.06), 0 18px 48px rgba(30, 26, 14, 0.14);
+  --danger-bg: #fbeaea;
+  --ok: #1f6f4a;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-lg: none;
   --font-display: var(--font-hand), 'Segoe Print', 'Bradley Hand', cursive;
   --width: 1120px;
   color-scheme: light dark;
@@ -34,26 +36,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #a9b8ff;
-    --accent-strong: #c3ceff;
-    --accent-contrast: #10131f;
-    --accent-soft: #1f2540;
-    --highlight: #6b5a12;
-    --text: #ecedf2;
-    --muted: #a5a9ba;
-    --line: #2d3040;
-    --surface: #1a1c27;
-    --surface-2: #161822;
-    --page: #0f1118;
-    --desk: #0b0c12;
-    --warn: #ffd591;
-    --warn-bg: #3a2c10;
+    --ink: #f2f2ec;
+    --ink-contrast: #161616;
+    --accent: #6fcf9c;
+    --accent-strong: #93dfb6;
+    --accent-contrast: #10201a;
+    --accent-soft: #1c2b24;
+    --text: #edede6;
+    --muted: #a6a69f;
+    --line: #33332f;
+    --surface: #1d1d1b;
+    --surface-2: #191917;
+    --page: #121211;
+    --desk: #0c0c0b;
+    --warn: #f3d28a;
+    --warn-bg: #3a2f12;
     --danger: #ff9b9b;
     --danger-bg: #3a1717;
-    --ok: #7fdca4;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 48px rgba(0, 0, 0, 0.45);
+    --ok: #6fcf9c;
   }
 }
 
@@ -155,14 +155,6 @@ h2.display {
   letter-spacing: 0;
   color: var(--accent);
   white-space: nowrap;
-  /* A stroke of highlighter under the words. */
-  background: linear-gradient(
-    transparent 62%,
-    var(--highlight) 62%,
-    var(--highlight) 92%,
-    transparent 92%
-  );
-  padding: 0 0.12em;
 }
 
 .eyebrow {
@@ -185,8 +177,7 @@ h2.display {
   justify-content: space-between;
   gap: 0.5rem 1rem;
   padding: 0.55rem max(1rem, calc((100vw - var(--width)) / 2));
-  background: color-mix(in srgb, var(--page) 86%, transparent);
-  backdrop-filter: saturate(1.4) blur(10px);
+  background: var(--page);
   border-bottom: 1px solid var(--line);
 }
 
@@ -207,7 +198,7 @@ h2.display {
 .site-header nav a {
   flex: none;
   padding: 0.45rem 0.7rem;
-  border-radius: 999px;
+  border-radius: 4px;
   text-decoration: none;
   color: var(--text);
   font-size: 0.95rem;
@@ -263,8 +254,8 @@ main {
 }
 
 .site-footer {
-  background: #141a3c;
-  color: #c9cde0;
+  background: #161616;
+  color: #c4c4bd;
   padding: 3rem 1rem 2rem;
   margin-top: 3rem;
   font-size: 0.94rem;
@@ -288,7 +279,7 @@ main {
 }
 
 .site-footer a {
-  color: #e7e9f5;
+  color: #f2f2ec;
   text-decoration: none;
 }
 
@@ -307,7 +298,7 @@ main {
   font-size: 0.8rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #9aa1c4;
+  color: #8d8d86;
   margin: 0 0 0.35rem;
 }
 
@@ -319,10 +310,10 @@ main {
 }
 
 .site-footer .footer-note {
-  border-top: 1px solid #2a3160;
+  border-top: 1px solid #333330;
   padding-top: 1.25rem;
   margin: 0;
-  color: #a6abc6;
+  color: #a3a39c;
 }
 
 /* --- Layout helpers --- */
@@ -478,7 +469,7 @@ input[type='email']:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 button,
@@ -515,9 +506,6 @@ button.primary,
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-contrast);
-  box-shadow:
-    0 1px 2px rgba(20, 30, 100, 0.25),
-    0 6px 16px rgba(36, 56, 168, 0.22);
 }
 
 button.primary:hover:not(:disabled),
@@ -533,7 +521,7 @@ button.large {
   min-height: 52px;
   padding: 0.7rem 1.4rem;
   font-size: 1.05rem;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
 
 button:disabled {
@@ -590,7 +578,7 @@ input[type='checkbox'] {
 progress {
   accent-color: var(--accent);
   height: 0.6rem;
-  border-radius: 999px;
+  border-radius: 4px;
 }
 
 /* --- Messages --- */
@@ -625,7 +613,7 @@ p.error {
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: 0.15rem 0.6rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--accent-soft);
   color: var(--accent-strong);
   vertical-align: middle;
@@ -673,9 +661,7 @@ p.error {
 
 .card.featured {
   border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    var(--shadow-lg);
+  box-shadow: 0 0 0 1px var(--accent);
   position: relative;
 }
 
@@ -698,7 +684,7 @@ p.error {
 .feature-mark {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--accent-soft);
   color: var(--accent);
   display: grid;
@@ -749,7 +735,6 @@ p.error {
   height: 0.32rem;
   border-left: 2px solid var(--ok);
   border-bottom: 2px solid var(--ok);
-  transform: rotate(-45deg);
 }
 
 [data-testid^='plan-'] {
@@ -792,7 +777,6 @@ p.error {
 }
 
 .hero .sheet {
-  transform: rotate(1.2deg);
 }
 
 .compare-labels {
@@ -831,7 +815,7 @@ p.error {
   inset: 0;
   overflow: hidden;
   background: #ffffff;
-  border-right: 2px solid #2438a8;
+  border-right: 2px solid #161616;
 }
 
 .compare .written img {
@@ -888,7 +872,6 @@ p.error {
   aspect-ratio: 148 / 50;
   border: 0;
   box-shadow: var(--shadow-lg);
-  transform: rotate(-0.6deg);
 }
 
 .demo-paper .preview img {
@@ -925,15 +908,12 @@ p.error {
 }
 
 .gallery figure:nth-child(odd) img {
-  transform: rotate(-0.7deg);
 }
 
 .gallery figure:nth-child(even) img {
-  transform: rotate(0.6deg);
 }
 
 .gallery figure:hover img {
-  transform: translateY(-4px) rotate(0deg);
   box-shadow: var(--shadow-lg);
 }
 
@@ -1006,8 +986,8 @@ p.error {
   max-width: var(--width);
   margin: 2rem auto 0;
   padding: clamp(1.75rem, 5vw, 3rem);
-  border-radius: 20px;
-  background: linear-gradient(135deg, #1a2a85, #2f47c9);
+  border-radius: var(--radius);
+  background: var(--ink);
   color: #ffffff;
   display: grid;
   gap: 1.25rem;
@@ -1022,19 +1002,19 @@ p.error {
 
 .cta-band p {
   margin: 0;
-  color: #d9defa;
+  color: #cfcfc8;
   max-width: 38rem;
 }
 
 .cta-band .button {
   background: #ffffff;
   border-color: #ffffff;
-  color: #1a2a85;
+  color: #161616;
 }
 
 .cta-band .button:hover {
-  background: #eef1ff;
-  color: #1a2a85;
+  background: #e9e9e2;
+  color: #161616;
 }
 
 .cta-band .button.ghost {
@@ -1219,7 +1199,6 @@ p.error {
   position: fixed;
   inset: 0;
   background: rgba(14, 16, 30, 0.55);
-  backdrop-filter: blur(3px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1229,7 +1208,7 @@ p.error {
 
 .dialog {
   background: var(--surface);
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   padding: 1.5rem;
   width: 100%;
   max-width: 540px;
@@ -1245,7 +1224,7 @@ p.error {
   }
 
   .dialog {
-    border-radius: 20px;
+    border-radius: var(--radius);
   }
 }
 
@@ -1449,4 +1428,62 @@ button.link:hover:not(:disabled) {
   display: block;
   width: 100%;
   margin-top: 0.25rem;
+}
+
+/* --- Flat theme: buttons in solid ink, paper marked by a thin border --- */
+button.primary,
+.button.primary,
+.file-button.primary,
+.site-header nav a.nav-cta {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-contrast);
+}
+
+button.primary:hover:not(:disabled),
+.button.primary:hover,
+.file-button.primary:hover,
+.site-header nav a.nav-cta:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.sheet,
+.gallery img,
+.preview-panel .preview img,
+.demo-paper .preview,
+.dialog {
+  border: 1px solid var(--line);
+}
+
+.feature-mark {
+  background: var(--ink);
+  color: var(--ink-contrast);
+}
+
+.cta-band {
+  color: var(--ink-contrast);
+}
+
+.cta-band h2 {
+  color: var(--ink-contrast);
+}
+
+.cta-band .button {
+  background: var(--ink-contrast);
+  border-color: var(--ink-contrast);
+  color: var(--ink);
+}
+
+.cta-band .button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.cta-band .button.ghost {
+  background: transparent;
+  border-color: var(--ink-contrast);
+  color: var(--ink-contrast);
 }

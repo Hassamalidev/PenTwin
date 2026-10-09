@@ -98,7 +98,6 @@ export default function Home() {
 
       <section className="section" id="demo">
         <div className="section-head">
-          <span className="eyebrow">Live demo</span>
           <h2 className="display">Try it</h2>
           <p className="muted">Type anything. It is written out as you go.</p>
         </div>
@@ -107,7 +106,6 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <span className="eyebrow">Three steps</span>
           <h2 className="display">How it works</h2>
         </div>
         <div className="grid">
@@ -127,7 +125,6 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <span className="eyebrow">Not a font</span>
           <h2 className="display">Why it looks handwritten</h2>
           <p className="muted">
             A handwriting font repeats one shape for every letter on a ruler-straight line. Real
@@ -146,7 +143,6 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <span className="eyebrow">Gallery</span>
           <h2 className="display">Examples</h2>
           <p className="muted">
             Unedited output, written with our sample handwriting. Yours will look like you.
@@ -157,7 +153,6 @@ export default function Home() {
 
       <section className="section narrow">
         <div className="section-head">
-          <span className="eyebrow">Good to know</span>
           <h2 className="display">Questions</h2>
         </div>
         <Faq items={GENERAL_FAQ.slice(0, 5)} />

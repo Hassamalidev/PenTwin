@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <a className="brand" href="/">
             {/* The same mark as the browser tab icon. */}
             <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="8" fill="#2438a8" />
+              <rect width="32" height="32" rx="8" fill="#161616" />
               <path
                 d="M7 22c3-1 4-9 7-9s1 8 4 8 3-10 7-11"
                 fill="none"
