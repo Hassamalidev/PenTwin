@@ -6,3 +6,5 @@ export * from './entitlements';
 export * from './migrate';
 export * from './paddle';
 export * from './privacy';
+export * from './feedback';
+export * from './paddle-api';

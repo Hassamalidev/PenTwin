@@ -115,6 +115,12 @@ export function createWorkerServer({
           response.writeHead(204).end();
           return;
         }
+        // Tells the web app which mode this worker is in: with accounts (sign in to
+        // export, pages are counted) or the open local demo.
+        if (request.method === 'GET' && url.pathname === '/info') {
+          json(response, 200, { accounts: accountsApi !== undefined });
+          return;
+        }
         if (request.method === 'GET' && url.pathname === '/health') {
           json(response, 200, { ok: true });
           return;

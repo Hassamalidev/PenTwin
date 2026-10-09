@@ -29,6 +29,7 @@ const TABLES = [
   'public.webhook_events',
   'public.email_outbox',
   'public.consents',
+  'public.feedback',
   'public.account_deletions',
 ];
 

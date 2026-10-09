@@ -175,6 +175,7 @@ describe('.env.example', () => {
       'FINGERPRINT_SALT',
       'ADMIN_TOKEN',
       'RESEND_API_KEY',
+      'PADDLE_API_KEY',
       'DATABASE_URL',
     ]) {
       expect(example, key).toMatch(new RegExp(`^${key}=$`, 'm'));

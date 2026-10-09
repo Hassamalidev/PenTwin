@@ -81,6 +81,24 @@ const profiles = createProfileStore(pool, {
   directory: profilesDir,
   key: 'profile-encryption-key-for-tests-0123456789',
 });
+/** Stands in for Paddle's API: records what it was asked and answers as documented. */
+const portalCalls: { url: string; authorization: string | null; body: unknown }[] = [];
+let portalFails = false;
+const paddleStandIn = ((url: string | URL | Request, init?: RequestInit) => {
+  if (portalFails) return Promise.resolve(new Response('{"error":{}}', { status: 500 }));
+  portalCalls.push({
+    url: String(url),
+    authorization: new Headers(init?.headers).get('authorization'),
+    body: JSON.parse(String(init?.body)),
+  });
+  const customer = String(url).split('/customers/')[1]!.split('/')[0];
+  return Promise.resolve(
+    Response.json({
+      data: { urls: { general: { overview: `https://customer-portal.paddle.test/${customer}` } } },
+    }),
+  );
+}) as typeof fetch;
+
 const server = createWorkerServer({
   service,
   // These tests send many exports from one address at once; the queue and the rate
@@ -97,6 +115,8 @@ const server = createWorkerServer({
     profiles,
     hashSalt: 'salt',
     adminToken: 'admin-token',
+    paddleEnvironment: 'sandbox',
+    paddleApi: { apiKey: 'pdl_api_test_key', environment: 'sandbox', request: paddleStandIn },
   },
 });
 const ready = new Promise<string>((resolve) =>
@@ -621,6 +641,7 @@ describe('privacy: consent, a copy of your data, and deletion', { timeout: 120_0
       ['exports', 'user_id'],
       ['handwriting_profiles', 'user_id'],
       ['consents', 'user_id'],
+      ['feedback', 'user_id'],
       ['email_outbox', 'user_id'],
       ['referral_redemptions', 'referred'],
       ['referral_rejections', 'user_id'],
@@ -671,5 +692,137 @@ describe('privacy: consent, a copy of your data, and deletion', { timeout: 120_0
 
     rmSync(fresh);
     expect(await orphanFiles()).toEqual([]);
+  });
+});
+
+describe('feedback, checkout details and the subscription link', { timeout: 60_000 }, () => {
+  it('says which mode the worker is in and which price is which', async () => {
+    expect((await call('GET', '/info')).body).toEqual({ accounts: true });
+    const plans = (await call('GET', '/plans')).body;
+    expect(plans.checkout).toEqual({
+      environment: 'sandbox',
+      prices: { plans: { student: { month: 'pri_student_month' } }, topUp: 'pri_top_up' },
+    });
+    // Nothing secret is in there.
+    expect(JSON.stringify(plans)).not.toContain(paddle.webhookSecret);
+    expect(JSON.stringify(plans)).not.toContain('pdl_api_test_key');
+  });
+
+  it('stores feedback with only the allowed details, and limits it per day', async () => {
+    const user = await createUser(pool);
+    const sent = await call('POST', '/feedback', {
+      user,
+      body: {
+        kind: 'bad_glyph',
+        message: '  The letter g looks like a q.  ',
+        context: {
+          screen: 'editor',
+          page: 2,
+          style: 'rushed',
+          character: 'g',
+          // None of these may be kept.
+          text: 'My whole private essay',
+          fileName: 'essay-final.docx',
+          bank: { files: { 'g.svg': '<svg/>' } },
+        },
+      },
+    });
+    expect(sent.status).toBe(201);
+    expect(sent.body.feedback).toMatchObject({
+      kind: 'bad_glyph',
+      message: 'The letter g looks like a q.',
+      context: { screen: 'editor', page: 2, style: 'rushed', character: 'g' },
+    });
+    const stored = JSON.stringify(
+      (await pool.query(`select * from public.feedback where user_id = $1`, [user])).rows,
+    );
+    expect(stored).not.toContain('private essay');
+    expect(stored).not.toContain('essay-final');
+    expect(stored).not.toContain('svg');
+
+    expect(
+      (await call('POST', '/feedback', { user, body: { kind: 'rant', message: 'x' } })).status,
+    ).toBe(400);
+    expect(
+      (await call('POST', '/feedback', { user, body: { kind: 'bug', message: '   ' } })).status,
+    ).toBe(400);
+    expect((await call('POST', '/feedback', { body: { kind: 'bug', message: 'x' } })).status).toBe(
+      401,
+    );
+
+    for (let i = 0; i < 19; i++) {
+      expect(
+        (await call('POST', '/feedback', { user, body: { kind: 'idea', message: `Idea ${i}` } }))
+          .status,
+      ).toBe(201);
+    }
+    const over = await call('POST', '/feedback', {
+      user,
+      body: { kind: 'idea', message: 'One more' },
+    });
+    expect(over.status).toBe(429);
+    expect(over.body.code).toBe('feedback_limit_reached');
+
+    // It is part of the user's copy of their data, and goes when the account goes.
+    expect((await call('GET', '/me/data', { user })).body.feedback).toHaveLength(20);
+    expect(
+      (await call('DELETE', '/me', { user, body: { confirm: 'delete my account' } })).status,
+    ).toBe(200);
+    expect(
+      Number(
+        (await pool.query(`select count(*) as n from public.feedback where user_id = $1`, [user]))
+          .rows[0].n,
+      ),
+    ).toBe(0);
+  });
+
+  it('shows the feedback report to the administrator only, without saying who wrote what', async () => {
+    const user = await createUser(pool);
+    await call('POST', '/feedback', {
+      user,
+      body: { kind: 'bug', message: 'The export button did nothing.' },
+    });
+    expect((await call('GET', '/admin/feedback')).status).toBe(404);
+    expect((await call('GET', '/admin/feedback', { token: 'wrong' })).status).toBe(404);
+    const report = await call('GET', '/admin/feedback', { token: 'admin-token' });
+    expect(report.status).toBe(200);
+    expect(report.body.counts.bug).toBeGreaterThan(0);
+    expect(report.body.recent[0]).toMatchObject({
+      kind: 'bug',
+      message: 'The export button did nothing.',
+      plan: 'free',
+    });
+    expect(JSON.stringify(report.body)).not.toContain(user);
+    expect(JSON.stringify(report.body)).not.toContain('@example.test');
+  });
+
+  it('makes a subscription link for a paying customer only', async () => {
+    const free = await createUser(pool);
+    const none = await call('POST', '/me/portal', { user: free });
+    expect(none.status).toBe(404);
+    expect(none.body.code).toBe('no_subscription');
+    expect(portalCalls).toHaveLength(0);
+
+    const payer = await createUser(pool);
+    await paddleEvent('subscription.created', subscription(payer));
+    const link = await call('POST', '/me/portal', { user: payer });
+    expect(link.status).toBe(200);
+    expect(link.body.url).toBe(`https://customer-portal.paddle.test/ctm_${payer}`);
+    // Asked of the sandbox, for this customer and subscription, with the server's key.
+    expect(portalCalls).toEqual([
+      {
+        url: `https://sandbox-api.paddle.com/customers/ctm_${payer}/portal-sessions`,
+        authorization: 'Bearer pdl_api_test_key',
+        body: { subscription_ids: [`sub_${payer}`] },
+      },
+    ]);
+
+    portalFails = true;
+    const down = await call('POST', '/me/portal', { user: payer });
+    expect(down.status).toBe(502);
+    expect(down.body.code).toBe('portal_unavailable');
+    expect(JSON.stringify(down.body)).not.toContain('pdl_api_test_key');
+    portalFails = false;
+    expect((await call('POST', '/me/portal')).status).toBe(401);
   });
 });

@@ -50,6 +50,7 @@ describe('row-level security', () => {
       `key-${b}`,
     ]);
     await pool.query(`select public.record_consent($1, 'terms', '2026-10-08', true, null)`, [b]);
+    await pool.query(`select public.submit_feedback($1, 'bug', 'Something broke', '{}')`, [b]);
 
     const tables = [
       'accounts',
@@ -58,6 +59,7 @@ describe('row-level security', () => {
       'exports',
       'handwriting_profiles',
       'consents',
+      'feedback',
     ];
     for (const table of tables) {
       // B sees their own rows...
@@ -84,6 +86,7 @@ describe('row-level security', () => {
       'exports',
       'handwriting_profiles',
       'consents',
+      'feedback',
       'account_deletions',
     ]) {
       expect(await errorOf(asUser(pool, null, (q) => q(`select * from public.${table}`)))).toMatch(
@@ -111,6 +114,8 @@ describe('row-level security', () => {
          values ('${user}', 'terms', 'x', true)`,
       `select public.record_consent('${user}', 'terms', 'x', true, null)`,
       `select * from public.delete_account('${user}')`,
+      `insert into public.feedback (user_id, kind, message) values ('${user}', 'bug', 'x')`,
+      `select public.submit_feedback('${user}', 'bug', 'x', '{}')`,
     ];
     for (const sql of attempts) {
       expect(await errorOf(asUser(pool, user, (q) => q(sql)))).toMatch(/permission denied/);

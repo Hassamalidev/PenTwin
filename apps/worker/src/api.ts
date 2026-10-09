@@ -4,19 +4,25 @@ import {
   applyEntitlements,
   AuthError,
   BillingError,
+  checkoutPrices,
   completeExport,
   costReport,
+  createPortalLink,
   deleteAccount,
   exportAccountData,
   failExport,
+  feedbackReport,
   getAccount,
   handlePaddleWebhook,
+  listFeedback,
   recentLedger,
   recordConsent,
   redeemReferral,
   reserveExport,
+  submitFeedback,
   verifyAccessToken,
   WebhookSignatureError,
+  type PaddleApiConfig,
   type PaddleConfig,
 } from '@pentwin/billing';
 import { PLANS, TOP_UP } from '@pentwin/shared';
@@ -33,8 +39,12 @@ export interface AccountsConfig {
   profiles: ProfileStore;
   /** Mixed into address and device fingerprints before they are stored. */
   hashSalt: string;
-  /** Protects the cost report. */
+  /** Protects the cost and feedback reports. */
   adminToken?: string;
+  /** Which Paddle the browser's checkout should talk to. Defaults to the sandbox. */
+  paddleEnvironment?: 'sandbox' | 'production';
+  /** For the "manage subscription" link. Without it that link is switched off. */
+  paddleApi?: PaddleApiConfig;
 }
 
 export interface ApiRequest {
@@ -108,17 +118,27 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
     }
 
     if (method === 'GET' && path === '/plans') {
-      return reply(200, { plans: Object.values(PLANS), topUp: TOP_UP });
+      return reply(200, {
+        plans: Object.values(PLANS),
+        topUp: TOP_UP,
+        // Which price is which, for opening a checkout. Price ids are not secret.
+        checkout: {
+          environment: config.paddleEnvironment ?? 'sandbox',
+          prices: checkoutPrices(config.paddle.prices),
+        },
+      });
     }
 
-    if (method === 'GET' && path === '/admin/costs') {
+    if (method === 'GET' && path.startsWith('/admin/')) {
       if (!config.adminToken || !sameSecret(request.headers.authorization, config.adminToken)) {
         return reply(404, { error: 'Not found.' });
       }
-      return reply(200, await costReport(pool));
+      if (path === '/admin/costs') return reply(200, await costReport(pool));
+      if (path === '/admin/feedback') return reply(200, await feedbackReport(pool));
+      return reply(404, { error: 'Not found.' });
     }
 
-    const owned = ['/me', '/export', '/profiles', '/referrals'];
+    const owned = ['/me', '/export', '/profiles', '/referrals', '/feedback'];
     if (!owned.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return undefined;
     const user = userOf(request);
 
@@ -127,6 +147,22 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
         account: await getAccount(pool, user),
         ledger: await recentLedger(pool, user),
       });
+    }
+
+    if (method === 'POST' && path === '/feedback') {
+      const feedback = await submitFeedback(pool, user, await json(request));
+      return reply(201, { feedback });
+    }
+
+    // A link to the payment provider's own pages: change card, invoices, cancel.
+    if (method === 'POST' && path === '/me/portal') {
+      if (!config.paddleApi) {
+        return reply(503, {
+          error: 'Managing a subscription online is not available yet. Please contact support.',
+          code: 'portal_not_configured',
+        });
+      }
+      return reply(200, { url: await createPortalLink(pool, user, config.paddleApi) });
     }
 
     // Everything we hold about the user, for them to keep: their right to a copy.
@@ -140,6 +176,7 @@ export function createAccountsApi(config: AccountsConfig, exports: ExportService
         ...data,
         // The handwriting itself, decrypted for its owner.
         profiles: data.profiles.map((profile, index) => ({ ...profile, bank: banks[index] })),
+        feedback: await listFeedback(pool, user),
         note: 'Documents you exported are not listed with their text because the text was never stored.',
       });
     }

@@ -21,6 +21,7 @@ export const WORKER_ENV_KEYS = [
   'SUPABASE_JWT_SECRET',
   'PADDLE_ENVIRONMENT',
   'PADDLE_WEBHOOK_SECRET',
+  'PADDLE_API_KEY',
   'PADDLE_PRICE_STUDENT_MONTH',
   'PADDLE_PRICE_STUDENT_YEAR',
   'PADDLE_PRICE_PRO_MONTH',
@@ -53,6 +54,8 @@ export interface WorkerConfig {
     jwtSecret: string;
     paddleEnvironment: PaddleEnvironment;
     paddleWebhookSecret: string;
+    /** For the "manage subscription" link. Optional. */
+    paddleApiKey?: string;
     profileKey: string;
     profileDir: string;
     fingerprintSalt: string;
@@ -183,6 +186,7 @@ export function loadConfig(env: Env): WorkerConfig {
       jwtSecret: secret('SUPABASE_JWT_SECRET', true, 1) ?? '',
       paddleEnvironment,
       paddleWebhookSecret: secret('PADDLE_WEBHOOK_SECRET', true, 1) ?? '',
+      paddleApiKey: secret('PADDLE_API_KEY', false, 1),
       profileKey: secret('PROFILE_ENCRYPTION_KEY', true) ?? '',
       profileDir: profileDir ?? join(tmpdir(), 'pentwin-profiles'),
       fingerprintSalt: secret('FINGERPRINT_SALT', true, 16) ?? '',

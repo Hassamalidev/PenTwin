@@ -63,6 +63,10 @@ if (config.accounts) {
     }),
     hashSalt: settings.fingerprintSalt,
     adminToken: settings.adminToken,
+    paddleEnvironment: settings.paddleEnvironment,
+    paddleApi: settings.paddleApiKey
+      ? { apiKey: settings.paddleApiKey, environment: settings.paddleEnvironment }
+      : undefined,
   };
 
   // Emails wait in the database and are sent from here, a few at a time.
