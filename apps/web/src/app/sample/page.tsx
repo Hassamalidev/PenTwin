@@ -409,6 +409,12 @@ export default function SamplePage() {
           type="button"
           className="small"
           onClick={() => {
+            // It cannot be brought back: the only copy is in this browser.
+            if (
+              !window.confirm('Delete your handwriting from this device? This cannot be undone.')
+            ) {
+              return;
+            }
             clearBank();
             reset();
           }}

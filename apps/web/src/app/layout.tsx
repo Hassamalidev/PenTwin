@@ -1,10 +1,11 @@
 import { BRAND } from '@pentwin/shared';
 import type { Metadata, Viewport } from 'next';
-import { Caveat } from 'next/font/google';
+import { Caveat, Instrument_Serif, Space_Grotesk } from 'next/font/google';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { JsonLd } from '../components/JsonLd';
 import { NavLinks } from '../components/NavLinks';
+import { ThemeToggle, THEME_SCRIPT } from '../components/ThemeToggle';
 import { absoluteUrl, SITE_URL } from '../lib/site';
 import './globals.css';
 
@@ -14,6 +15,21 @@ const hand = Caveat({
   subsets: ['latin'],
   weight: ['700'],
   variable: '--font-hand',
+  display: 'swap',
+});
+
+// Headings: an editorial serif, upright and italic. Text: a plain grotesque.
+const editorial = Instrument_Serif({
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  variable: '--font-editorial',
+  display: 'swap',
+});
+
+const grotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-grotesk',
   display: 'swap',
 });
 
@@ -37,13 +53,21 @@ const organization = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={hand.variable}>
+    <html
+      lang="en"
+      className={`${hand.variable} ${editorial.variable} ${grotesk.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Applies a theme the visitor picked before the page is painted, so it never flashes. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <header className="site-header">
           <a className="brand" href="/">
             {/* The same mark as the browser tab icon. */}
             <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="8" fill="#161616" />
+              <rect width="32" height="32" rx="16" fill="#c2410c" />
               <path
                 d="M7 22c3-1 4-9 7-9s1 8 4 8 3-10 7-11"
                 fill="none"
@@ -55,7 +79,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </svg>
             {BRAND.name}
           </a>
-          <NavLinks />
+          <div className="header-end">
+            <NavLinks />
+            <ThemeToggle />
+          </div>
         </header>
         <main>{children}</main>
         <footer className="site-footer">

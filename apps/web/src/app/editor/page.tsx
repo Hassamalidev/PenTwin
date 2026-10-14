@@ -150,6 +150,13 @@ export default function EditorPage() {
   const [zoomed, setZoomed] = useState(false);
   // The draft is read after the first render (the server cannot see browser storage),
   // and nothing is saved until it has been read, or the starter text would replace it.
+  const [drawing, setDrawing] = useState(false);
+  /** What the text and settings were before a file or "Start over" replaced them. */
+  const [replaced, setReplaced] = useState<{
+    what: string;
+    blocks: EditorBlock[];
+    settings: Settings;
+  }>();
   const [draftRead, setDraftRead] = useState(false);
   const [restored, setRestored] = useState(false);
 
@@ -185,6 +192,7 @@ export default function EditorPage() {
   }, [blocks, settings, draftRead]);
 
   const startOver = (): void => {
+    setReplaced({ what: 'Started over', blocks, settings });
     localStorage.removeItem(DRAFT_KEY);
     setBlocks(withIds(textToBlocks(STARTER)));
     setSettings(DEFAULT_SETTINGS);
@@ -206,6 +214,15 @@ export default function EditorPage() {
     loadBank().then(setLoaded, (error: Error) => setLoadError(error.message));
   }, []);
 
+  useEffect(() => {
+    if (!quote) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setQuote(undefined);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [quote]);
+
   const options = useMemo(() => toRenderOptions(settings), [settings]);
 
   // What actually gets written: the blocks without editor bookkeeping, with typographic
@@ -222,6 +239,7 @@ export default function EditorPage() {
     let cancelled = false;
     const timer = setTimeout(() => {
       void (async () => {
+        setDrawing(true);
         try {
           const { pages } = renderDocument(prepared.blocks, loaded.bank, options);
           const index = Math.min(pageIndex, pages.length - 1);
@@ -238,6 +256,8 @@ export default function EditorPage() {
           setProblems(describeProblems(prepared));
         } catch (error) {
           if (!cancelled) setPreviewError((error as Error).message);
+        } finally {
+          if (!cancelled) setDrawing(false);
         }
       })();
     }, 250);
@@ -267,6 +287,7 @@ export default function EditorPage() {
       if (result.blocks.length === 0) {
         throw new Error('No text was found in this file.');
       }
+      setReplaced({ what: 'Replaced your text with the uploaded file', blocks, settings });
       setBlocks(withIds(result.blocks));
       setImportWarnings(result.warnings);
       setPageIndex(0);
@@ -368,6 +389,26 @@ export default function EditorPage() {
             Start over
           </button>
         </div>
+        {replaced && (
+          <p className="notice row" data-testid="undo-replace">
+            <span>{replaced.what}.</span>
+            <button
+              type="button"
+              className="small"
+              onClick={() => {
+                setBlocks(replaced.blocks);
+                setSettings(replaced.settings);
+                setReplaced(undefined);
+                setPageIndex(0);
+              }}
+            >
+              Undo
+            </button>
+            <button type="button" className="small" onClick={() => setReplaced(undefined)}>
+              Dismiss
+            </button>
+          </p>
+        )}
         <p className="muted" style={{ fontSize: '0.88rem' }} data-testid="draft-note">
           {restored
             ? 'We brought back what you were working on. It is kept in this browser only.'
@@ -433,6 +474,11 @@ export default function EditorPage() {
             <span data-testid="page-count">
               Page {pageIndex + 1} of {pageCount}
             </span>
+            {drawing && previewUrl && (
+              <span className="redrawing" role="status">
+                Updating
+              </span>
+            )}
             <button
               type="button"
               className="small"
@@ -519,6 +565,7 @@ export default function EditorPage() {
           />
           <Slider
             label="Writing size"
+            show={(v) => `${Math.round(v * 100)}% of a line`}
             value={settings.size}
             min={0.28}
             max={0.42}
@@ -527,6 +574,7 @@ export default function EditorPage() {
           />
           <Slider
             label="Unevenness"
+            show={(v) => `${Math.round(v * 100)}%`}
             value={settings.unevenness}
             min={0.4}
             max={1.6}
@@ -535,6 +583,7 @@ export default function EditorPage() {
           />
           <Slider
             label="Tiredness down the page"
+            show={(v) => (v === 0 ? 'Off' : `${Math.round(v * 100)}%`)}
             value={settings.fatigue}
             min={0}
             max={1}
@@ -543,6 +592,7 @@ export default function EditorPage() {
           />
           <Slider
             label="Corrections"
+            show={(v) => (v === 0 ? 'Off' : v <= 0.015 ? 'Rare' : v <= 0.03 ? 'Some' : 'Often')}
             value={settings.corrections}
             min={0}
             max={0.05}
@@ -851,6 +901,7 @@ function Select({
 
 function Slider({
   label,
+  show,
   value,
   min,
   max,
@@ -858,6 +909,8 @@ function Slider({
   onChange,
 }: {
   label: string;
+  /** The value in words, shown beside the label and read out by screen readers. */
+  show: (value: number) => string;
   value: number;
   min: number;
   max: number;
@@ -868,8 +921,12 @@ function Slider({
     <div className="field">
       <label>
         {label}
+        <span className="field-value" aria-hidden="true">
+          {show(value)}
+        </span>
         <input
           type="range"
+          aria-valuetext={show(value)}
           value={value}
           min={min}
           max={max}

@@ -43,6 +43,10 @@ const REASONS = [
     text: 'Real writing drifts above and below the line and tilts a little. Here it drifts smoothly, the way a hand does, not at random.',
   },
   {
+    title: 'Dots and words by hand',
+    text: 'People dot their i and cross their t after the word, so the marks land a little off. Each word also tilts on its own, as each is one movement of the wrist.',
+  },
+  {
     title: 'Real pens',
     text: 'Ballpoint, gel, fountain pen and pencil each lay down ink differently: darker and lighter, wider and thinner.',
   },
@@ -72,6 +76,7 @@ export default function Home() {
     <>
       <section className="hero">
         <div>
+          <p className="hero-pill">Made from one page of your writing</p>
           <h1 className="display">
             Turn any document into <em>your own</em> handwriting.
           </h1>
@@ -131,7 +136,7 @@ export default function Home() {
             writing does neither.
           </p>
         </div>
-        <div className="grid">
+        <div className="bento">
           {REASONS.map((reason) => (
             <div className="card feature" key={reason.title}>
               <h3>{reason.title}</h3>
