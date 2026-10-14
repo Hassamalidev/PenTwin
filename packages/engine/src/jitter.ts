@@ -52,6 +52,24 @@ export interface JitterParams {
    * one of the clearest signs of writing that was not done by hand. Off when left out.
    */
   pressure?: number;
+  /**
+   * Fraction of the x-height. How far the dots of i and j and the crossbars of t and f
+   * land from where the letter's shape puts them. They are added after the word is
+   * written, so they drift right, tilt and change size. Off when left out.
+   */
+  dotDrift?: number;
+  /**
+   * Degrees. How far each word tilts on its own about its first letter. A word is one
+   * movement of the wrist, so words are never all parallel to their line. Off when left
+   * out.
+   */
+  wordTilt?: number;
+  /**
+   * 0 to 1. Chance, inside a word, that the pen stays down between two letters whose
+   * shapes allow it and leaves a thin joining stroke. Only for pen-stroke handwriting.
+   * Off when left out.
+   */
+  joins?: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -87,6 +105,9 @@ export const DEFAULT_JITTER: JitterParams = {
   wordBounce: 0.1,
   lineRide: 0.1,
   pressure: 0.14,
+  dotDrift: 0.22,
+  wordTilt: 2.6,
+  joins: 0.12,
 };
 
 const DEG = Math.PI / 180;
@@ -135,13 +156,15 @@ export interface StyleMetrics {
    * never changes anything the other settings already decided.
    */
   habits?: Rng;
+  /** A separate source of chance for word tilt, for the same reason. */
+  gestures?: Rng;
 }
 
 /** Builds the styler for one page. */
 export function createJitterStyler(
   params: JitterParams,
   rng: Rng,
-  { xHeight, glyphXHeight, lineCount = 1, habits }: StyleMetrics,
+  { xHeight, glyphXHeight, lineCount = 1, habits, gestures }: StyleMetrics,
 ): Styler {
   // How tired the hand is on the line being written: 0 at the top of the page, rising
   // to `fatigue` at the bottom, slowly at first.
@@ -171,6 +194,15 @@ export function createJitterStyler(
   const ride = habits ? createNoise(habits) : () => 0;
   const jump = (): number => (habits ? habits.next() + habits.next() - 1 : 0);
   let landing = 0;
+  const wordTilt = gestures ? (params.wordTilt ?? 0) * DEG : 0;
+  // Partly a habit that lasts a few words, partly fresh each word.
+  const lean = gestures ? createNoise(gestures) : () => 0;
+  let tiltIndex = 0;
+  const tiltOf = (): number => {
+    if (wordTilt === 0 || !gestures) return 0;
+    const fresh = gestures.next() + gestures.next() - 1;
+    return wordTilt * (1 + tired) * (0.35 * lean(tiltIndex++ / 4) + 0.65 * fresh);
+  };
 
   return {
     line: (lineIndex) => {
@@ -190,12 +222,14 @@ export function createJitterStyler(
     },
 
     word: () => {
-      if (wordBounce === 0) return { shift: 0, scale: 1 };
+      const tilt = tiltOf();
+      if (wordBounce === 0) return { shift: 0, scale: 1, ...(tilt ? { tilt } : {}) };
       // Partly a drift over several words, partly a fresh landing each time.
       const i = landing++;
       return {
         shift: wordBounce * xHeight * (1 + 2 * tired) * (0.4 * bounce(i / 3) + 0.6 * jump()),
         scale: 1 + wordBounce * 0.45 * jump(),
+        ...(tilt ? { tilt } : {}),
       };
     },
 
@@ -211,6 +245,7 @@ export function createJitterStyler(
           DEG,
         strokeScale: 1 + params.strokeWidth * (0.6 * stroke(t / 12) + 0.4 * wobble()),
         pressure: params.pressure,
+        ...(params.dotDrift ? { dotDrift: params.dotDrift * (1 + tired) } : {}),
         warp:
           params.warp > 0
             ? createWarp(rng, params.warp * (1 + 0.5 * tired), glyphXHeight)

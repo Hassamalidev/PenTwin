@@ -66,6 +66,46 @@ Speed and size are unchanged within the noise of one run. **Memory is up by abou
 fifth.** The worker's 512 MB container had headroom for that in the earlier 50-page test
 (peak 356 MB), but that test has not been repeated with the new habits.
 
+## With the release-review changes (2026-10-14)
+
+The release review (`docs/release-review.md`) added dot drift, word tilt and joins to the
+presets, and a pen model to every named ink.
+
+**Default hand, no ink** (`pnpm bench`). Before and after were run back to back, old code
+from `git stash`, because this laptop's timings swung by a factor of two that day:
+
+| Measure                  | Before (stash) | After, run 1  | After, run 2  |
+| ------------------------ | -------------- | ------------- | ------------- |
+| Layout + glyph placement | 78.2 ms/page   | 43.8 ms/page  | 48.5 ms/page  |
+| PDF export               | 244.8 ms/page  | 125.1 ms/page | 100.3 ms/page |
+| Total to PDF             | 323.0 ms/page  | 168.9 ms/page | 148.8 ms/page |
+| PDF size                 | 168 KB/page    | 169 KB/page   | 169 KB/page   |
+| Peak memory (RSS)        | 518 MB         | 516 MB        | 530 MB        |
+
+Unchanged within the noise; the "before" run happened to be the slow one.
+
+**With a pen** (`pnpm bench --ink ballpoint-blue`, new in this change). A pen-stroke hand
+written with a named ink is now drawn as filled outlines whose width follows the pen.
+The outline is built only when a page is exported, so a page in memory is no bigger, but
+exporting it is more work:
+
+| Measure                  | One run       |
+| ------------------------ | ------------- |
+| Layout + glyph placement | 73.5 ms/page  |
+| PDF export               | 354.7 ms/page |
+| Total to PDF             | 428.2 ms/page |
+| PDF size                 | 229 KB/page   |
+| PNG, one page at 150 dpi | 3874 ms       |
+| Peak memory (RSS)        | 648 MB        |
+
+Within the 1 s per page target, but **peak memory for 50 pages is about 130 MB above the
+same run without ink**, and the worker's container is held to 512 MB. This applies only to
+pen-stroke handwriting (the demo hand and the test letters): handwriting cut from a
+user's photo is filled outlines and never goes through the pen model. **The 50-page
+container test (7.3) has to be repeated with the demo hand and a named ink before
+deploying.** A first attempt that stored the outlines in the page used 705 MB and 287
+KB/page; building them at export time brought that down.
+
 ## Caveats
 
 - One machine, two runs: treat these as a rough baseline, not a precise benchmark.

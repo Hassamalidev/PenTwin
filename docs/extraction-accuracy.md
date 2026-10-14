@@ -1,6 +1,6 @@
 # Extraction accuracy (Phase 2)
 
-Measured 2026-10-07 with `pnpm extract:measure`.
+Measured 2026-10-07 with `pnpm extract:measure`; the last three rows re-measured 2026-10-14.
 
 ## Read this first
 
@@ -22,9 +22,9 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 | skewed photo     | 17/17 | 99.0%             | 0.0%            | 1.0%     | 583        | 0     | 2      | 3             |
 | shadowed photo   | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
 | blurry photo     | 17/17 | 98.6%             | 0.0%            | 1.4%     | 577        | 4     | 2      | 4             |
-| neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 587        | 2     | 2      | 0             |
-| rushed writing   | 17/17 | 96.1%             | 0.8%            | 3.0%     | 549        | 4     | 19     | 2             |
-| touching letters | 17/17 | 94.1%             | 0.2%            | 5.8%     | 544        | 8     | 5      | 17            |
+| neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 585        | 0     | 6      | 0             |
+| rushed writing   | 17/17 | 89.2%             | 5.7%            | 5.2%     | 517        | 34    | 15     | 6             |
+| touching letters | 17/17 | 87.5%             | 1.5%            | 11.0%    | 520        | 8     | 7      | 26            |
 
 **The last three rows changed on 2026-10-09, and not because the extractor did.** Those
 pages are written in the engine's neat, rushed and normal styles, and on that day the
@@ -44,6 +44,36 @@ honest picture: **uneven writing is harder to cut up, and real handwriting is un
 The first five rows use a fixed hand without the new habits (`SAMPLE_HAND` in
 `packages/extractor/src/testing.ts`) so that photo conditions can still be compared like
 for like. Improving the extractor on bouncing, uneven writing is open work.
+
+**They changed again on 2026-10-14, again not because the extractor did.** The release
+review (`docs/release-review.md`) gave the styles three more habits: dots and crossbars
+that land off the stem, words that each tilt a little, and, in quick writing, the pen
+staying down between two letters. Measured with `pnpm extract:measure`; the first five rows
+did not move (they use the fixed `SAMPLE_HAND`, which leaves the new habits off):
+
+| Case             | Labeled correctly, before | After  | Labeled wrongly, before | After    | Left out, before | After |
+| ---------------- | ------------------------- | ------ | ----------------------- | -------- | ---------------- | ----- |
+| neat writing     | 100.0%                    | 100.0% | 0.0%                    | 0.0%     | 0.0%             | 0.0%  |
+| rushed writing   | 96.1%                     | 89.2%  | 0.8%                    | **5.7%** | 3.0%             | 5.2%  |
+| touching letters | 94.1%                     | 87.5%  | 0.2%                    | **1.5%** | 5.8%             | 11.0% |
+
+Which habit does it, on the rushed page (each habit switched off on its own, same seed):
+
+| Rushed page              | Labeled correctly | Labeled wrongly | Left out |
+| ------------------------ | ----------------- | --------------- | -------- |
+| all three habits         | 89.2%             | 5.7%            | 5.2%     |
+| without joins            | 95.1%             | 1.0%            | 3.9%     |
+| without dot drift        | 87.5%             | 7.3%            | 5.2%     |
+| without word tilt        | 88.8%             | 6.5%            | 4.7%     |
+| without any of the three | 96.1%             | 0.8%            | 3.0%     |
+
+**Joins cause almost all of it, and that is a real finding about the extractor, not only
+about the test pages.** Rushed writing now joins about a third of the letter pairs whose
+shapes allow it, as quick real writing does, and on those pages the extractor gives a
+cut the wrong label 5.7% of the time instead of refusing it. The rule is "low confidence means flag or refuse, never
+guess", and joined letters are where it is broken. Until that is fixed, a user who writes
+quickly will get wrong letters in their bank that the review screen has to catch. This is
+listed as an open item in the release review.
 
 How to read the columns:
 

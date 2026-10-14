@@ -84,6 +84,9 @@ const SCALED: [keyof JitterParams, max: number][] = [
   ['wordBounce', 0.6],
   ['lineRide', 0.6],
   ['pressure', 0.6],
+  ['dotDrift', 0.6],
+  ['wordTilt', 8],
+  ['joins', 1],
 ];
 
 /** Choosing a preset also sets the paper, pen and slips that belong to it. */

@@ -22,6 +22,8 @@ export interface GlyphStyle {
   warp?: PointFn;
   /** How much the pen's weight varies between the strokes of this glyph. */
   pressure?: number;
+  /** How far dots and crossbars stray, as a fraction of the x-height. */
+  dotDrift?: number;
 }
 
 /** How one word lands on the line, relative to where the line says it should be. */
@@ -30,6 +32,8 @@ export interface WordStyle {
   shift: number;
   /** Multiplier on the size of the word's letters. */
   scale: number;
+  /** Radians. The word's own tilt about its first letter; positive runs downhill. */
+  tilt?: number;
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { PenModel } from './pen';
+
 export type InkName = 'ballpoint-blue' | 'ballpoint-black' | 'gel' | 'fountain' | 'pencil';
 
 /** How a pen lays down ink. */
@@ -18,6 +20,12 @@ export interface Ink {
   bleed: number;
   /** 0 to 1. Speckle where the paper's texture shows through. Raster output only. */
   grain: number;
+  /**
+   * How the width changes along each stroke. Only for pen-stroke handwriting; filled
+   * outlines cut from a photo already carry the writer's own pen. Left out, every
+   * stroke is drawn at one width.
+   */
+  pen?: PenModel;
 }
 
 export const INKS: Record<InkName, Ink> = {
@@ -29,6 +37,8 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.06,
     bleed: 0,
     grain: 0.12,
+    // Lands with a small blob, lifts off in a thin tail.
+    pen: { taper: 0.55, landing: 0.22, nib: 0 },
   },
   'ballpoint-black': {
     color: '#1d1d1f',
@@ -38,6 +48,8 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.06,
     bleed: 0,
     grain: 0.12,
+    // Lands with a small blob, lifts off in a thin tail.
+    pen: { taper: 0.55, landing: 0.22, nib: 0 },
   },
   /** Dense, even, slightly wider line. */
   gel: {
@@ -48,6 +60,7 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.03,
     bleed: 0.02,
     grain: 0,
+    pen: { taper: 0.35, landing: 0.12, nib: 0 },
   },
   /** Wet line that pools and thins: strong shading, swelling strokes, a little bleed. */
   fountain: {
@@ -58,6 +71,8 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.14,
     bleed: 0.07,
     grain: 0,
+    // An ordinary fine nib held at about 40 degrees: wide down, thin across.
+    pen: { taper: 0.4, landing: 0.08, nib: 0.42, nibAngle: 40 },
   },
   /** Grey, light, grainy. */
   pencil: {
@@ -68,6 +83,8 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.12,
     bleed: 0,
     grain: 0.65,
+    // A worn point has a slight chisel to it.
+    pen: { taper: 0.5, landing: 0.04, nib: 0.12, nibAngle: 30 },
   },
 };
 

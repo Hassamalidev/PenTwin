@@ -1,5 +1,6 @@
 import { inkFilter } from './ink';
 import { serializePath, type PathCommand } from './path';
+import { outlineStroke } from './pen';
 import type { PageScene } from './render';
 
 export interface InkGroup {
@@ -20,13 +21,17 @@ const MODE_ORDER = { stroke: 0, fill: 1, both: 2 } as const;
 export function groupInk(scene: PageScene): InkGroup[] {
   const groups = new Map<string, InkGroup>();
   for (const stroke of scene.strokes) {
-    const mode = stroke.mode ?? scene.paint;
+    // A stroke with a pen model is drawn as the outline of what the pen left.
+    const path = stroke.pen
+      ? outlineStroke(stroke.path, stroke.width, stroke.pen).path
+      : stroke.path;
+    const mode = stroke.pen ? 'fill' : (stroke.mode ?? scene.paint);
     const width = mode === 'fill' ? 0 : Math.round(stroke.width * 100) / 100;
     const opacity = Math.round((stroke.opacity ?? 1) * 20) / 20;
     const key = `${mode}/${width}/${opacity}`;
     const group = groups.get(key);
-    if (group) group.paths.push(stroke.path);
-    else groups.set(key, { mode, width, opacity, paths: [stroke.path] });
+    if (group) group.paths.push(path);
+    else groups.set(key, { mode, width, opacity, paths: [path] });
   }
   return [...groups.values()].sort(
     (a, b) => MODE_ORDER[a.mode] - MODE_ORDER[b.mode] || a.width - b.width || a.opacity - b.opacity,

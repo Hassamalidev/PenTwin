@@ -5,6 +5,7 @@ import {
   degrade,
   extractLabels,
   renderSamplePage,
+  SAMPLE_HAND,
   SAMPLE_TEXT,
   scoreAlignment,
 } from './testing';
@@ -21,8 +22,9 @@ describe('alignToText', { timeout: 180_000 }, () => {
   });
 
   it('flags what it cannot place instead of guessing', () => {
-    // Letters pushed together until many of them touch.
-    const tight = renderSamplePage({ jitter: { ...PRESETS.normal, tracking: -0.12 }, seed: 't' });
+    // Letters pushed together until many of them touch. The fixed sample hand, so this
+    // tests the extractor and not whatever the normal style does today.
+    const tight = renderSamplePage({ jitter: { ...SAMPLE_HAND, tracking: -0.12 }, seed: 't' });
     const { alignment } = extractLabels(degrade(tight.gray, CONDITIONS.good!));
     const score = scoreAlignment(alignment.glyphs, tight.truth);
     expect(alignment.flagged.length).toBeGreaterThan(3);
@@ -31,6 +33,17 @@ describe('alignToText', { timeout: 180_000 }, () => {
     expect(score.unlabeled).toBeGreaterThan(0.02);
     expect(score.wrong).toBeLessThanOrEqual(0.01);
     expect(score.correct).toBeGreaterThanOrEqual(0.9);
+  });
+
+  // KNOWN FAILURE (docs/extraction-accuracy.md, docs/release-review.md): where the pen
+  // stays down between two letters, the extractor labels the cut wrongly instead of
+  // refusing it. `it.fails` keeps that visible in every run; when the extractor is fixed
+  // this turns red, and it becomes a plain `it`.
+  it.fails('refuses letters joined by the pen instead of guessing', () => {
+    const joined = renderSamplePage({ jitter: { ...PRESETS.rushed }, seed: 'rushed' });
+    const { alignment } = extractLabels(degrade(joined.gray, CONDITIONS.good!));
+    const score = scoreAlignment(alignment.glyphs, joined.truth);
+    expect(score.wrong).toBeLessThanOrEqual(0.01);
   });
 
   it('recovers after a word that is missing from the page', () => {

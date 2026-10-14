@@ -8,7 +8,7 @@ export type PresetName = 'neat' | 'normal' | 'rushed' | 'exam' | 'lecture';
 export const PRESETS: Record<PresetName, JitterParams> = {
   /** Careful, slow writing: upright, even, close to the lines. */
   neat: {
-    baselineDrift: 0.15,
+    baselineDrift: 0.2,
     lineSlope: 0.2,
     rotation: 0.6,
     size: 0.025,
@@ -24,6 +24,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     wordBounce: 0.05,
     lineRide: 0.05,
     pressure: 0.1,
+    dotDrift: 0.12,
+    wordTilt: 2.6,
+    joins: 0,
   },
 
   normal: DEFAULT_JITTER,
@@ -46,6 +49,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     wordBounce: 0.2,
     lineRide: 0.22,
     pressure: 0.22,
+    dotDrift: 0.38,
+    wordTilt: 3.4,
+    joins: 0.35,
   },
 
   /**
@@ -69,6 +75,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     wordBounce: 0.14,
     lineRide: 0.15,
     pressure: 0.18,
+    dotDrift: 0.28,
+    wordTilt: 2.8,
+    joins: 0.22,
   },
 
   /**
@@ -92,6 +101,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     wordBounce: 0.12,
     lineRide: 0.13,
     pressure: 0.16,
+    dotDrift: 0.26,
+    wordTilt: 2.6,
+    joins: 0.2,
   },
 };
 

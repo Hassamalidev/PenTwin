@@ -442,6 +442,14 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 
 > **Where the build stands (2026-10-09).** Everything that could be built and tested without outside accounts, real handwriting or people has been. No gate that needs them has passed: Phase 1 (blind test), Phase 3 (comparison), Phase 5 (a real test payment), Phase 7 (load test on the deployed worker) and Phase 8 (beta, first paying users) are all open. Nothing is deployed. `docs/owner-setup.md` lists every account, key, decision and person-only task that is needed, in order.
 
+> **Release review (2026-10-14).** `docs/release-review.md`: not ready to launch, and the
+> first blocker is still real handwriting plus the blind test. The review added a pen model,
+> dot drift, word tilt and pen-drag joins to the engine, and a tell audit (`pnpm tells`,
+> `docs/realism-audit.md`) that fails a mechanical page and guards every style. It found two
+> open items: the extractor guesses on joined letters (5.7% wrong labels on rushed writing,
+> `docs/extraction-accuracy.md`), and a 50-page export with a pen ink needs about 130 MB more
+> memory (`docs/perf.md`). The site was redesigned in the same review.
+
 ---
 
 ## Phase 9: Post-Launch (prioritize by demand)

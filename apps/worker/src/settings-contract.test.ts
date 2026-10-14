@@ -38,8 +38,12 @@ describe('editor settings and worker schema', () => {
     (preset) => {
       for (const extreme of extremes) {
         const settings = { ...applyPreset(DEFAULT_SETTINGS, preset), ...extreme };
-        const result = optionsSchema.safeParse(toRenderOptions(settings));
+        const options = toRenderOptions(settings);
+        const result = optionsSchema.safeParse(options);
         expect(result.error?.issues ?? []).toEqual([]);
+        // Accepted is not enough: a setting the schema does not know is dropped without
+        // an error, and the export would then differ from the preview.
+        expect(result.data).toEqual(options);
       }
     },
   );

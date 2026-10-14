@@ -2,13 +2,23 @@
  * Performance baseline for the engine: renders and exports a 50-page document.
  *
  *   pnpm bench
+ *   pnpm bench --ink ballpoint-blue   with a pen, so strokes are drawn as pen outlines
  */
 import { readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
-import { DEFAULT_JITTER, renderText, scenesToPdf } from '../packages/engine/src/index';
+import {
+  DEFAULT_JITTER,
+  INKS,
+  renderText,
+  scenesToPdf,
+  type InkName,
+} from '../packages/engine/src/index';
 import { loadGlyphBank, sceneToPng } from '../packages/engine/src/node/index';
 
 const PAGES = 50;
+const inkArg = process.argv[process.argv.indexOf('--ink') + 1];
+const ink = process.argv.includes('--ink') ? (inkArg as InkName) : undefined;
+if (ink && !INKS[ink]) throw new Error(`Unknown ink ${inkArg}`);
 const { bank } = loadGlyphBank('tests/fixtures/glyphs/sample-user');
 const text = `${readFileSync('tests/sample.txt', 'utf8')}\n`.repeat(172);
 
@@ -23,6 +33,7 @@ const [rendered, renderMs] = await time(() =>
     seed: 'bench',
     jitter: DEFAULT_JITTER,
     paper: { kind: 'ruled', ruling: 'college', marginLine: true },
+    ...(ink ? { ink } : {}),
   }),
 );
 const pages = rendered.pages.slice(0, PAGES);
@@ -36,6 +47,7 @@ const [png, pngMs] = await time(() => sceneToPng(pages[0]!, 150));
 const memory = process.memoryUsage();
 
 const row = (label: string, value: string): void => console.log(`| ${label} | ${value} |`);
+if (ink) console.log(`Ink: ${ink}`);
 console.log(`Node ${process.version}, ${cpus()[0]?.model.trim()}, ${cpus().length} threads\n`);
 console.log('| Measure | Result |\n| --- | --- |');
 row('Pages', String(PAGES));

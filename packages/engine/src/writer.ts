@@ -2,7 +2,9 @@ import { createRng } from '@pentwin/shared';
 import { createVariantPicker, type Glyph, type GlyphBank } from './glyphs';
 import type { Ink } from './ink';
 import { createJitterStyler, createNoise, type JitterParams } from './jitter';
-import { transformPath, type PathCommand } from './path';
+import { placeMarks } from './marks';
+import { pathBounds, transformPath, type PathCommand } from './path';
+import type { PenModel } from './pen';
 import { identityStyler, type GlyphStyle, type Styler } from './style';
 
 export interface InkStroke {
@@ -29,6 +31,14 @@ export interface InkStroke {
    * Use `wholeLetters` to get one entry per letter again.
    */
   part?: number;
+  /** A thin stroke left where the pen stayed down between two letters. Not part of the text. */
+  join?: true;
+  /**
+   * How the pen's width changes along this stroke. The path stays the pen's centre line;
+   * exporters draw it as a filled outline (`outlineStroke`) when they write the page,
+   * so a page in memory is no bigger than without it.
+   */
+  pen?: PenModel;
 }
 
 /**
@@ -120,6 +130,49 @@ const BOLD_STROKE = 1.6;
 /** Outline added around bold filled glyphs, as a fraction of the pen width. */
 const BOLD_OUTLINE = 0.7;
 
+/** Where the pen enters and leaves a glyph, in glyph units, and whether a join may use them. */
+interface Ends {
+  entry: { x: number; y: number };
+  exit: { x: number; y: number };
+  /** The letter starts at its left side, within the small letters. */
+  entryOk: boolean;
+  /** The letter ends low on its right side, where a join would leave it. */
+  exitOk: boolean;
+}
+
+const endsCache = new WeakMap<Glyph, Ends | null>();
+
+function endsOf(glyph: Glyph, xHeight: number): Ends | null {
+  const cached = endsCache.get(glyph);
+  if (cached !== undefined) return cached;
+  const parts: PathCommand[][] = [];
+  for (const command of glyph.path) {
+    if (command.type === 'M' || parts.length === 0) parts.push([]);
+    parts.at(-1)!.push(command);
+  }
+  // The real strokes: the pen neither starts a join at a dot or crossbar nor leaves from one.
+  const body = parts.filter((part) => {
+    const b = pathBounds(part);
+    return b.maxY - b.minY > xHeight * 0.3;
+  });
+  const first = body[0]?.[0];
+  const last = body.at(-1)?.at(-1);
+  if (!first || first.type !== 'M' || !last || last.type === 'Z') {
+    endsCache.set(glyph, null);
+    return null;
+  }
+  const b = pathBounds(glyph.path);
+  const width = Math.max(1e-6, b.maxX - b.minX);
+  const ends: Ends = {
+    entry: { x: first.x, y: first.y },
+    exit: { x: last.x, y: last.y },
+    entryOk: first.x - b.minX < width * 0.45 && first.y > -xHeight * 1.2 && first.y < xHeight * 0.1,
+    exitOk: last.y > -xHeight * 0.45 && last.y < xHeight * 0.15 && last.x > b.maxX - width * 0.35,
+  };
+  endsCache.set(glyph, ends);
+  return ends;
+}
+
 interface Slot {
   glyph?: Glyph;
   style: GlyphStyle;
@@ -163,6 +216,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         glyphXHeight: bank.xHeight,
         lineCount: setup.lineCount,
         habits: createRng(`${setup.pageSeed}/habits`),
+        gestures: createRng(`${setup.pageSeed}/gestures`),
       })
     : identityStyler;
   const strokes: InkStroke[] = [];
@@ -178,6 +232,15 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const pressRng = createRng(`${setup.pageSeed}/pressure`);
   const press = createNoise(pressRng);
   let pressIndex = 0;
+  const delayedRng = createRng(`${setup.pageSeed}/delayed`);
+  const joinRng = createRng(`${setup.pageSeed}/joins`);
+  const joinRate = bank.paint === 'stroke' ? (setup.jitter?.joins ?? 0) : 0;
+
+  /** Marks a pen-stroke to be drawn with the ink's pen model, when it has one. */
+  const penned = (stroke: InkStroke): InkStroke =>
+    !ink?.pen || bank.paint !== 'stroke' || stroke.mode === 'fill'
+      ? stroke
+      : { ...stroke, pen: ink.pen };
 
   /**
    * Splits a letter into its pen strokes and gives each its own weight: heavier where
@@ -314,10 +377,17 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
     const spans = new Map<number, { from: number; to: number }>();
 
     let pen = startX;
-    let word = { shift: 0, scale: 1 };
+    let word: { shift: number; scale: number; tilt?: number } = { shift: 0, scale: 1 };
+    let wordStart = startX;
+    // Where the pen left the previous letter of this word, if a join could start there.
+    let exit: { x: number; y: number } | undefined;
     for (const slot of slots) {
       pen += slot.isWordStart ? slot.gapBefore * squeeze : slot.gapBefore;
-      if (slot.isWordStart && styler.word) word = styler.word();
+      if (slot.isWordStart) {
+        if (styler.word) word = styler.word();
+        wordStart = pen;
+        exit = undefined;
+      }
       const token = tokens[slot.token]!;
       if (token.struck) {
         const span = spans.get(slot.token);
@@ -328,27 +398,57 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         const { style } = slot;
         const scale = unit * size * style.scale * word.scale;
         const tanSlant = Math.tan(style.slant + (slot.italic ? ITALIC_LEAN : 0));
-        const angle = style.rotation + lineStyle.slope;
+        const tilt = word.tilt ?? 0;
+        const angle = style.rotation + lineStyle.slope + tilt;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
         const originX = pen;
-        const originY = baselineAt(pen) + word.shift * size;
+        const originY = baselineAt(pen) + word.shift * size + Math.tan(tilt) * (pen - wordStart);
 
-        const place = (glyph: Glyph, dx: number, dy: number): PathCommand[] =>
-          transformPath(glyph.path, (gx, gy) => {
-            const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];
-            const x = (wx - wy * tanSlant) * scale;
-            const y = wy * scale;
-            return [originX + dx + x * cos - y * sin, originY + dy + x * sin + y * cos];
+        const map = (gx: number, gy: number): [number, number] => {
+          const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];
+          const x = (wx - wy * tanSlant) * scale;
+          const y = wy * scale;
+          return [originX + x * cos - y * sin, originY + x * sin + y * cos];
+        };
+        const place = (path: readonly PathCommand[], dx: number, dy: number): PathCommand[] =>
+          transformPath(path, (gx, gy) => {
+            const [x, y] = map(gx, gy);
+            return [x + dx, y + dy];
           });
-        const stroke = inked(
-          slot.glyph.char,
-          place(slot.glyph, 0, 0),
-          style.strokeScale,
-          slot.bold,
-        );
+        const shape = style.dotDrift
+          ? placeMarks(slot.glyph, bank.xHeight, bank.paint, style.dotDrift, delayedRng)
+          : slot.glyph.path;
+        const stroke = inked(slot.glyph.char, place(shape, 0, 0), style.strokeScale, slot.bold);
         if (token.struck) stroke.struck = true;
-        strokes.push(...pressed(stroke, style.pressure ?? 0, slot.isWordStart));
+
+        const ends = joinRate > 0 && !token.struck ? endsOf(slot.glyph, bank.xHeight) : null;
+        if (exit && ends?.entryOk && !slot.isWordStart) {
+          // The pen stays down: out of the last letter along the line, then up into this one.
+          const [ex, ey] = map(ends.entry.x, ends.entry.y);
+          const reach = ex - exit.x;
+          if (reach > 0 && reach < xHeight * size * 1.5 && joinRng.next() < joinRate) {
+            const join: InkStroke = {
+              char: '',
+              join: true,
+              width: penWidth * 0.75,
+              path: [
+                { type: 'M', x: exit.x, y: exit.y },
+                { type: 'Q', x1: exit.x + reach * 0.6, y1: exit.y, x: ex, y: ey },
+              ],
+              ...(stroke.opacity !== undefined ? { opacity: stroke.opacity } : {}),
+            };
+            strokes.push(penned(join));
+          }
+        }
+        if (ends?.exitOk) {
+          const [x, y] = map(ends.exit.x, ends.exit.y);
+          exit = { x, y };
+        } else {
+          exit = undefined;
+        }
+
+        strokes.push(...pressed(stroke, style.pressure ?? 0, slot.isWordStart).map(penned));
         report.glyphCount++;
 
         if (token.retrace === slot.charIndex && slot.glyph.char.length === 1) {
@@ -357,12 +457,12 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           const offset = (): number => markRng.float(-1, 1) * xHeight * 0.07;
           const second = inked(
             again.char,
-            place(again, offset(), offset()),
+            place(again.path, offset(), offset()),
             style.strokeScale,
             slot.bold,
           );
           second.retrace = true;
-          strokes.push(second);
+          strokes.push(penned(second));
         }
       }
       pen += slot.advance;

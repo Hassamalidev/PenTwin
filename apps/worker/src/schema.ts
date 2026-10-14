@@ -78,6 +78,9 @@ const jitter = z.object({
   wordBounce: z.number().min(0).max(0.6).optional(),
   lineRide: z.number().min(0).max(0.6).optional(),
   pressure: z.number().min(0).max(0.6).optional(),
+  dotDrift: z.number().min(0).max(0.6).optional(),
+  wordTilt: z.number().min(0).max(8).optional(),
+  joins: z.number().min(0).max(1).optional(),
 });
 
 const options = z.strictObject({

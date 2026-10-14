@@ -52,7 +52,8 @@ export interface SamplePageOptions {
 /**
  * The hand the synthetic sample pages are written in. It is the normal preset as it was
  * when the extraction thresholds were calibrated and docs/extraction-accuracy.md was
- * recorded: without word bounce, line ride and stroke pressure, which were added to the
+ * recorded: without word bounce, line ride, stroke pressure, dot drift, word tilt and
+ * joins, which were added to the
  * engine later. Changing this changes every synthetic photo, so it is only to be done
  * together with a fresh `pnpm extract:measure`.
  */
@@ -61,6 +62,9 @@ export const SAMPLE_HAND: JitterParams = {
   wordBounce: 0,
   lineRide: 0,
   pressure: 0,
+  dotDrift: 0,
+  wordTilt: 0,
+  joins: 0,
 };
 
 /** Renders the copy-paragraph as a clean, flat, evenly lit page. */

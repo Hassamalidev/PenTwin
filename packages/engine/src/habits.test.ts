@@ -120,7 +120,8 @@ describe('stroke pressure', () => {
 });
 
 describe('all together', () => {
-  it('works with tiredness and corrections in every style', () => {
+  // Five long documents: slow when the whole suite runs at once.
+  it('works with tiredness and corrections in every style', { timeout: 20_000 }, () => {
     const text = Array.from(
       { length: 30 },
       () => 'Writing changes as the hand tires and the page fills up.',
@@ -143,7 +144,9 @@ describe('all together', () => {
   });
 
   it('gives a hurried hand more of each habit than a careful one', () => {
-    for (const habit of ['wordBounce', 'lineRide', 'pressure'] as const) {
+    // Word tilt is left out: it is a habit of the wrist more than of care, and neat and
+    // normal share it.
+    for (const habit of ['wordBounce', 'lineRide', 'pressure', 'dotDrift', 'joins'] as const) {
       expect(PRESETS.neat[habit]!).toBeLessThan(PRESETS.normal[habit]!);
       expect(PRESETS.normal[habit]!).toBeLessThan(PRESETS.rushed[habit]!);
     }
