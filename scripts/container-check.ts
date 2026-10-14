@@ -7,19 +7,36 @@
  *   pnpm exec tsx scripts/container-check.ts http://localhost:8797 6
  *
  * The second argument is how many different 50-page exports to send at the same time.
+ * `--hand demo` writes with the demo handwriting (pen strokes) instead of the test letters,
+ * and `--ink <name>` adds a pen, so strokes are drawn as pen outlines:
+ *
+ *   pnpm exec tsx scripts/container-check.ts http://localhost:8797 1 --hand demo --ink ballpoint-blue
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PDFDocument } from 'pdf-lib';
-import { renderDocument, type Block } from '../packages/engine/src/index';
+import {
+  buildGlyphBank,
+  INKS,
+  renderDocument,
+  type Block,
+  type InkName,
+} from '../packages/engine/src/index';
 import { loadGlyphBank } from '../packages/engine/src/node/index';
+import { buildDemoHand } from './demo-hand';
 
 const PAGES = 50;
 const base = (process.argv[2] ?? 'http://localhost:8787').replace(/\/$/, '');
 const together = Number(process.argv[3] ?? 1);
+const flag = (name: string): string | undefined =>
+  process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
+const demo = flag('--hand') === 'demo';
+const ink = flag('--ink') as InkName | undefined;
+if (ink && !INKS[ink]) throw new Error(`Unknown ink ${ink}`);
 
 const glyphDir = 'tests/fixtures/glyphs/sample-user';
-const bank = {
+const hand = demo ? buildDemoHand() : undefined;
+const bank = hand ?? {
   metadata: JSON.parse(readFileSync(join(glyphDir, 'metadata.json'), 'utf8')) as unknown,
   files: Object.fromEntries(
     readdirSync(glyphDir)
@@ -27,18 +44,27 @@ const bank = {
       .map((name) => [name, readFileSync(join(glyphDir, name), 'utf8')]),
   ),
 };
-const options = { pageSize: 'A4', paper: { kind: 'ruled', ruling: 'college' } } as const;
+const options = {
+  pageSize: 'A4',
+  paper: { kind: 'ruled', ruling: 'college' },
+  ...(ink ? { ink } : {}),
+} as const;
 
 // Add paragraphs until the document is at least 50 pages long.
 const paragraph = readFileSync('tests/sample.txt', 'utf8').trim();
-const local = loadGlyphBank(glyphDir).bank;
+const local = hand
+  ? buildGlyphBank(hand.metadata, (file) => hand.files[file]!)
+  : loadGlyphBank(glyphDir).bank;
 const blocks: Block[] = [];
 let pages = 0;
 while (pages < PAGES) {
   for (let i = 0; i < 10; i++) blocks.push({ type: 'paragraph', text: paragraph });
   pages = renderDocument(blocks, local, { ...options, seed: 'size' }).pages.length;
 }
-console.log(`document: ${blocks.length} paragraphs, ${pages} pages; sending ${together} at once`);
+console.log(
+  `document: ${blocks.length} paragraphs, ${pages} pages; sending ${together} at once` +
+    `${demo ? ', demo hand' : ''}${ink ? `, ink ${ink}` : ''}`,
+);
 
 interface Outcome {
   status: number;

@@ -4,7 +4,12 @@ import { parsePath, type PathCommand } from './path';
 import type { PageScene } from './render';
 import { groupInk } from './svg';
 
-const n = (v: number): string => String(Math.round(v * 100) / 100);
+/**
+ * Coordinates and widths are written as whole hundredths of a millimetre (the page is
+ * scaled to match). Same precision as two decimals, and much quicker to turn into text,
+ * which matters for pages drawn as pen outlines.
+ */
+const n = (v: number): string => String(Math.round(v * 100));
 
 const color = (hex: string): string => {
   const v = parseInt(hex.replace('#', ''), 16);
@@ -52,8 +57,10 @@ const PAINT = { stroke: 'S', fill: 'f', both: 'B' } as const;
 function pageContent(scene: PageScene, opacityState: (opacity: number) => string): string {
   const parts = [
     'q',
-    // Flip the y axis and scale mm to points. Line widths below are therefore in mm too.
+    // Flip the y axis and scale mm to points.
     `${MM_TO_PT} 0 0 ${-MM_TO_PT} 0 ${scene.height * MM_TO_PT} cm`,
+    // Hundredths of a millimetre from here on: everything below is written in whole numbers.
+    '0.01 0 0 0.01 0 0 cm',
     '1 J 1 j', // round caps and joins
   ];
 

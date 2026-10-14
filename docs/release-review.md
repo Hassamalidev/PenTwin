@@ -182,8 +182,11 @@ word in each heading that is meant to look written.
    named ink adds about 130 MB of peak memory to a 50-page export on the laptop (648 MB
    against 519 MB, `pnpm bench --ink ballpoint-blue`). The worker's container is held to
    512 MB. Handwriting from a user's photo is filled outlines and is not affected; the
-   demo hand is. **Open:** repeat the 50-page container test (7.3) with the demo hand and
-   an ink before deploying, or keep demo-hand exports short.
+   demo hand is. **Closed for memory:** the 50-page container test was repeated with the
+   demo hand and a ballpoint: peak 423 MiB for one export and 439 MiB for three at once in
+   the 512 MB container, never killed. The pen path was also made faster (97 s down to 63 s
+   for 50 pages). **Speed stays open:** a 50-page pen export takes about a minute, near
+   some hosts' request limit; long exports belong in a background job (`docs/perf.md`).
 6. **A numbers-only check missed a broken letter.** While building the pen model, a bug
    turned every "o" of the test letters into a dot, and the tell audit still passed. It
    was caught by looking at the picture, as the engine rules require. A test now covers

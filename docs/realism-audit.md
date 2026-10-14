@@ -35,7 +35,7 @@ at all, in two hands: the demo handwriting the site uses and the plain test lett
 | demo hand    | normal                | 0.000 pass        | 0.038 pass           | 0.908 pass        | 0.125 pass              | 0.700 pass         |
 | demo hand    | rushed                | 0.000 pass        | 0.059 pass           | 0.942 pass        | 0.191 pass              | 0.905 pass         |
 | demo hand    | exam                  | 0.000 pass        | 0.051 pass           | 0.924 pass        | 0.197 pass              | 1.129 pass         |
-| demo hand    | lecture               | 0.000 pass        | 0.044 pass           | 0.763 pass        | 0.171 pass              | 0.890 pass         |
+| demo hand    | lecture               | 0.000 pass        | 0.044 pass           | 0.762 pass        | 0.171 pass              | 0.890 pass         |
 | test letters | no variation          | 0.734 **FAIL**    | 0.017 **FAIL**       | 0.000 **FAIL**    | 0.031 **FAIL**          | 0.148 **FAIL**     |
 | test letters | normal, before review | 0.000 pass        | 0.030 pass           | 0.073 **FAIL**    | 0.051 pass              | 0.416 **FAIL**     |
 | test letters | neat                  | 0.000 pass        | 0.035 pass           | 0.580 pass        | 0.058 pass              | 0.548 pass         |

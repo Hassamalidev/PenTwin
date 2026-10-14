@@ -106,6 +106,38 @@ container test (7.3) has to be repeated with the demo hand and a named ink befor
 deploying.** A first attempt that stored the outlines in the page used 705 MB and 287
 KB/page; building them at export time brought that down.
 
+### Pen exports in the 512 MB container (2026-10-14, later the same day)
+
+The container test was repeated, then the pen path was made faster. A CPU profile showed
+the time going to turning PDF coordinates into text (now written as whole hundredths of a
+millimetre under one scale, the same precision) and to building outlines (now plain loops,
+with curves cut into only as many pieces as their bend needs at 0.02 mm). Rendered side
+by side at 200 dpi, a page differs from before in 62 of 1.9 million pixels.
+
+Same laptop, Docker Desktop, `--memory=512m --memory-swap=512m`, one 50-page A4 document
+each, with `pnpm exec tsx scripts/container-check.ts <url> <n> [--hand demo] [--ink <name>]`:
+
+| Export                               | Before speed-up | After       | Peak memory |
+| ------------------------------------ | --------------- | ----------- | ----------- |
+| test letters, no ink (as in 7.3)     | 18 s (10-08)    | 22.8 s      |             |
+| demo hand, no ink                    |                 | 34.0 s      |             |
+| demo hand, ballpoint                 | 97.3 s          | 63.0 s      | 423 MiB     |
+| demo hand, ballpoint, 3 sent at once |                 | 57 to 149 s | 439 MiB     |
+
+**No export was killed for memory, and the worker stayed healthy.** The memory question is
+closed for these cases. Six at once was tried before the speed-up: the container held
+(peak 425 MiB) but the test's own client gave up waiting after 300 seconds, because the
+exports queue one after another.
+
+What is still open is speed, not memory: a 50-page document in the demo hand with a pen
+takes about a minute, close to the request limit some hosts set. Most documents are a few
+pages and take a second or two; the long ones are the reason to move exporting to a
+background job, as `docs/deployment.md` already says.
+
+`pnpm bench --ink ballpoint-blue` against `pnpm bench`, run back to back on a busy laptop:
+603.8 against 350.0 ms/page, 233 against 170 KB/page, 590 against 448 MB peak RSS. The pen
+costs about 1.7 times the time of the same page without it.
+
 ## Caveats
 
 - One machine, two runs: treat these as a rough baseline, not a precise benchmark.
