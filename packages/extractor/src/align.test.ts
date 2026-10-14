@@ -27,17 +27,23 @@ describe('alignToText', { timeout: 180_000 }, () => {
     const tight = renderSamplePage({ jitter: { ...SAMPLE_HAND, tracking: -0.12 }, seed: 't' });
     const { alignment } = extractLabels(degrade(tight.gray, CONDITIONS.good!));
     const score = scoreAlignment(alignment.glyphs, tight.truth);
-    expect(alignment.flagged.length).toBeGreaterThan(3);
-    expect(alignment.flagged.every((f) => f.reason === 'letters-joined')).toBe(true);
+    const joined = alignment.flagged.filter((f) => f.reason === 'letters-joined');
+    expect(joined.length).toBeGreaterThan(3);
+    // Besides joined pairs, only single letters whose shape contradicted their label.
+    for (const f of alignment.flagged) {
+      if (f.reason !== 'letters-joined') expect(f).toMatchObject({ reason: 'unclear' });
+      if (f.reason === 'unclear') expect([...f.expected]).toHaveLength(1);
+    }
     // Much more is left out than on a clean page, but very little is labeled wrongly.
     expect(score.unlabeled).toBeGreaterThan(0.02);
     expect(score.wrong).toBeLessThanOrEqual(0.01);
     expect(score.correct).toBeGreaterThanOrEqual(0.9);
   });
 
-  // KNOWN FAILURE (docs/extraction-accuracy.md, docs/release-review.md): where the pen
-  // stays down between two letters, the extractor labels the cut wrongly instead of
-  // refusing it. `it.fails` keeps that visible in every run; when the extractor is fixed
+  // KNOWN FAILURE (docs/extraction-accuracy.md, "Joined letters"): where the pen stays
+  // down between two letters, a few cuts at the edge of a neighbour still get its label:
+  // 1.02% on the rushed page (6 of 591), against a limit of 1%. Down from 2.7% with the
+  // shape check. `it.fails` keeps it visible in every run; when it gets under the limit
   // this turns red, and it becomes a plain `it`.
   it.fails('refuses letters joined by the pen instead of guessing', () => {
     const joined = renderSamplePage({ jitter: { ...PRESETS.rushed }, seed: 'rushed' });

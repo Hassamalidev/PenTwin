@@ -90,6 +90,44 @@ function shapeMismatch(word: DetectedWord, text: string): number {
   return compared > 0 ? wrong / compared : 0;
 }
 
+/**
+ * A cut's height above the baseline, in band heights, splits cleanly between small
+ * letters and tall ones; the same for depth below it and letters with a tail. Measured
+ * on the synthetic sample pages (`docs/extraction-accuracy.md`): small letters reach at
+ * most about 1.07 and tall ones start at about 1.29; letters without a tail go at most
+ * about 0.07 below the line and tails about 0.4. The limits sit in those gaps.
+ */
+const TALL_LIMIT = 1.18;
+const DEEP_LIMIT = 0.2;
+
+/**
+ * The word's baseline: the median foot of the letters in it that sit on the line. Letters
+ * with tails are left out, or a word full of them would put its baseline at their tips.
+ */
+function wordBaseline(cuts: readonly (Box & { char: string })[]): number | undefined {
+  const bottoms = cuts
+    .filter((c) => isLetterOrDigit(c.char) && !DEEP.has(c.char))
+    .map((c) => c.y1)
+    .sort((a, b) => a - b);
+  return bottoms.length >= 2 ? bottoms[Math.floor(bottoms.length / 2)] : undefined;
+}
+
+/**
+ * Whether a cut's shape contradicts the letter it was given: a "y" that does not hang
+ * below the line, an "a" that sticks up like a "d". Only letters and digits are judged.
+ */
+function shapeDisagrees(box: Box, char: string, baseline: number, xHeight: number): boolean {
+  // Letters and digits only: brackets and signs sit on the line in too many ways.
+  if (!/[a-zA-Z0-9]/.test(char)) return false;
+  const tall = baseline - box.y0 > xHeight * TALL_LIMIT;
+  const deep = box.y1 - baseline > xHeight * DEEP_LIMIT;
+  const expectTall = TALL.has(char) || (char >= 'A' && char <= 'Z');
+  // An i or j is tall only by its dot, which is written afterwards and often lands in
+  // another cut; only its depth says anything.
+  const heightCounts = char !== 'i' && char !== 'j';
+  return (heightCounts && tall !== expectTall) || deep !== DEEP.has(char);
+}
+
 interface Group {
   detected: number[];
   expected: number[];
@@ -334,6 +372,8 @@ export function alignToText(
 
     const exactWords = group.detected.length === 1 && group.expected.length === 1;
     const certainty = (exactWords ? 1 : 0.9) * (repairs === 0 ? 1 : 0.9);
+    // The word's cuts are collected first, so its baseline can come from its own letters.
+    const pending: LabeledGlyph[] = [];
     const emit = (
       char: string,
       box: Box,
@@ -341,7 +381,7 @@ export function alignToText(
       cut: CharStep,
       confidence: number,
     ): void => {
-      glyphs.push({ ...box, char, componentIds: ids, cut, line, word: wordIndex, confidence });
+      pending.push({ ...box, char, componentIds: ids, cut, line, word: wordIndex, confidence });
     };
 
     let s = 0;
@@ -396,6 +436,17 @@ export function alignToText(
         }
         s++;
         c += 2;
+      }
+    }
+
+    // A cut whose shape says it is some other letter is refused, not kept. Where the pen
+    // joins letters, a word's cuts can slide by one; this is what catches it.
+    const baseline = wordBaseline(pending);
+    for (const glyph of pending) {
+      if (baseline !== undefined && shapeDisagrees(glyph, glyph.char, baseline, page.bandHeight)) {
+        flagged.push({ expected: glyph.char, line, reason: 'unclear' });
+      } else {
+        glyphs.push(glyph);
       }
     }
   }

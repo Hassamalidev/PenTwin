@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pathBounds, PRESETS, renderText, wholeLetters, type JitterParams } from '@pentwin/engine';
+import {
+  pathBounds,
+  PRESETS,
+  renderText,
+  wholeLetters,
+  type Bounds,
+  type JitterParams,
+  type PathCommand,
+} from '@pentwin/engine';
 import { loadGlyphBank, sceneToPixels } from '@pentwin/engine/node';
 import { createRng } from '@pentwin/shared';
 import { alignToText } from './align';
@@ -67,6 +75,27 @@ export const SAMPLE_HAND: JitterParams = {
   joins: 0,
 };
 
+/**
+ * Where a written letter is, for scoring: the box of its body. A dot or a crossbar is
+ * left out, because it lands off the letter (dot drift) and can sit over the next one.
+ */
+function bodyBounds(path: readonly PathCommand[]): Bounds {
+  const parts: PathCommand[][] = [];
+  for (const command of path) {
+    if (command.type === 'M' || parts.length === 0) parts.push([]);
+    parts.at(-1)!.push(command);
+  }
+  const boxes = parts.map((part) => pathBounds(part));
+  const tallest = Math.max(...boxes.map((b) => b.maxY - b.minY));
+  const body = boxes.filter((b) => b.maxY - b.minY >= tallest * 0.5);
+  return {
+    minX: Math.min(...body.map((b) => b.minX)),
+    minY: Math.min(...body.map((b) => b.minY)),
+    maxX: Math.max(...body.map((b) => b.maxX)),
+    maxY: Math.max(...body.map((b) => b.maxY)),
+  };
+}
+
 /** Renders the copy-paragraph as a clean, flat, evenly lit page. */
 export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
   const dpi = options.dpi ?? 200;
@@ -87,14 +116,16 @@ export function renderSamplePage(options: SamplePageOptions = {}): SamplePage {
     pxPerMm,
     lineCount: scene.baselines.length,
     wordCount: (options.text ?? SAMPLE_TEXT).split(/\s+/).filter(Boolean).length,
-    truth: wholeLetters(scene.strokes).map((stroke) => {
-      const b = pathBounds(stroke.path);
-      return {
-        char: stroke.char,
-        x: ((b.minX + b.maxX) / 2) * pxPerMm,
-        y: ((b.minY + b.maxY) / 2) * pxPerMm,
-      };
-    }),
+    truth: wholeLetters(scene.strokes)
+      .filter((stroke) => stroke.char !== '')
+      .map((stroke) => {
+        const b = bodyBounds(stroke.path);
+        return {
+          char: stroke.char,
+          x: ((b.minX + b.maxX) / 2) * pxPerMm,
+          y: ((b.minY + b.maxY) / 2) * pxPerMm,
+        };
+      }),
   };
 }
 

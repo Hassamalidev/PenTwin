@@ -1,6 +1,6 @@
 # Extraction accuracy (Phase 2)
 
-Measured 2026-10-07 with `pnpm extract:measure`; the last three rows re-measured 2026-10-14.
+Measured 2026-10-07 with `pnpm extract:measure`; re-measured 2026-10-14 after the shape check (see "Joined letters" below).
 
 ## Read this first
 
@@ -21,10 +21,10 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 | dim photo        | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
 | skewed photo     | 17/17 | 99.0%             | 0.0%            | 1.0%     | 583        | 0     | 2      | 3             |
 | shadowed photo   | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
-| blurry photo     | 17/17 | 98.6%             | 0.0%            | 1.4%     | 577        | 4     | 2      | 4             |
+| blurry photo     | 17/17 | 98.5%             | 0.0%            | 1.5%     | 576        | 4     | 2      | 4             |
 | neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 585        | 0     | 6      | 0             |
-| rushed writing   | 17/17 | 89.2%             | 5.7%            | 5.2%     | 517        | 34    | 15     | 6             |
-| touching letters | 17/17 | 87.5%             | 1.5%            | 11.0%    | 520        | 8     | 7      | 26            |
+| rushed writing   | 17/17 | 84.6%             | 1.0%            | 14.4%    | 475        | 25    | 9      | 6             |
+| touching letters | 17/17 | 88.2%             | 1.0%            | 10.8%    | 513        | 8     | 7      | 26            |
 
 **The last three rows changed on 2026-10-09, and not because the extractor did.** Those
 pages are written in the engine's neat, rushed and normal styles, and on that day the
@@ -74,6 +74,39 @@ cut the wrong label 5.7% of the time instead of refusing it. The rule is "low co
 guess", and joined letters are where it is broken. Until that is fixed, a user who writes
 quickly will get wrong letters in their bank that the review screen has to catch. This is
 listed as an open item in the release review.
+
+### Joined letters: what was fixed (2026-10-14, same day)
+
+Two things were wrong, one in the measurement and one in the extractor.
+
+1. **The measurement counted joining strokes as letters.** The test's list of "what is
+   written where" included the thin strokes that join letters, which have no character, so
+   any cut covering one was scored as a wrong label. Letters are now located by the box of
+   their body, without the joining strokes or a dot that drifted off. On the rushed page
+   that alone moved wrong labels from 5.7% to 2.7%: the rest was real.
+2. **The extractor now checks each cut's shape against its label.** Where the pen joins
+   letters, the cuts of a word can slide by one, and a cut is then labeled with its
+   neighbour's letter. A cut that sticks up when its letter should not (an "a" shaped like
+   a "d"), or hangs below the line when its letter has no tail, is refused instead of kept.
+   The limits sit in the gap between small and tall letters measured on the sample pages
+   (small letters at most about 1.07 band heights, tall ones from about 1.29; the limit is
+   1.18). The baseline comes from the word's own letters that sit on the line, and i and j
+   are judged by depth only, since their dot is written separately.
+
+| Case             | Wrong labels, before | After     | Labeled correctly, before | After |
+| ---------------- | -------------------- | --------- | ------------------------- | ----- |
+| clean photos     | 0.0%                 | 0.0%      | 98.6 to 99.3%             | same  |
+| rushed writing   | 2.7% (5.7% measured) | **1.02%** | 93.2%                     | 84.6% |
+| touching letters | 1.5% measured        | **1.0%**  | 87.5%                     | 88.2% |
+
+**Still just over the rule on the rushed page:** 6 wrong out of 591 letters, against a
+limit of 1%. The six are letters at the edge of a neighbour's cut where joined letters
+overlap. The price of the check is coverage: about 14% of a rushed page is left out, and
+the top-up flow has to fill it. Tried and dropped, because they did not help: treating a
+run of three or more joined letters as one unit, a sloped baseline per word, and refusing
+letters built from a mark plus a speck (that last one also refused real "!" and "?").
+`align.test.ts` keeps "refuses letters joined by the pen" as a known failure until the
+rushed page is under 1%.
 
 How to read the columns:
 

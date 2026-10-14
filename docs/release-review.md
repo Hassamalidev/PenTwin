@@ -170,9 +170,14 @@ word in each heading that is meant to look written.
    touching-letters page (0.2% before). Switching joins off alone brings it back to 1.0%,
    so the joins are the cause (`docs/extraction-accuracy.md`). This breaks the rule "low
    confidence means flag or refuse, never guess", and a quick writer's bank would get
-   wrong letters that only the review screen can catch. **Open, and the most important
-   engineering item before a beta.** A test marked as a known failure
-   (`align.test.ts`, "refuses letters joined by the pen") keeps it visible in every run.
+   wrong letters that only the review screen can catch.
+   **Mostly fixed, not closed.** Half of the 5.7% was the test counting joining strokes as
+   letters; the real figure was 2.7%. A per-letter shape check now refuses a cut whose
+   height or tail contradicts its label, which brings rushed writing to 1.02% (6 of 591)
+   and touching letters to 1.0%, with clean photos unchanged. That is at the 1% rule, not
+   under it, and it costs coverage (about 14% of a rushed page is left out for the top-up
+   flow). The known-failure test (`align.test.ts`, "refuses letters joined by the pen")
+   stays until the rushed page is under 1%.
 5. **Memory with a pen (found by this round).** Drawing pen-stroke handwriting with a
    named ink adds about 130 MB of peak memory to a 50-page export on the laptop (648 MB
    against 519 MB, `pnpm bench --ink ballpoint-blue`). The worker's container is held to
