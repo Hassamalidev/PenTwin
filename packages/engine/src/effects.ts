@@ -86,7 +86,45 @@ export function applyEffects(image: RasterImage, options: EffectOptions): Raster
   const tone = tint.map((t) => 1 - (1 - t) * strength);
   const base = 1 - (photo ? 0.04 : 0.015) * strength;
 
+  // A phone photo, beyond a scan: the phone's own soft shadow falling in from one edge,
+  // paper that is not quite flat, a camera that softens edges a little, blacks that never
+  // reach black, and sensor noise that is stronger in the dark than on white paper.
+  // Drawn from their own stream so the scan look never changes.
+  const look = createRng(`${options.seed ?? 0}/effects/photo-look`);
+  const shadowAngle = look.float(0, Math.PI * 2);
+  const shadowX = Math.cos(shadowAngle) * 1.3;
+  const shadowY = Math.sin(shadowAngle) * 1.3;
+  const shadow = (photo ? 0.075 : 0) * strength;
+  const cockle = (photo ? 0.012 : 0) * strength;
+  const wave = [0, 1].map(() => ({
+    a: look.float(1.2, 2.6),
+    b: look.float(1.2, 2.6),
+    p: look.float(0, Math.PI * 2),
+  }));
+  const soften = (photo ? 0.45 : 0) * strength;
+  const lift = (photo ? 11 : 0) * strength;
+
   const data = rotate(image, turn);
+  // The camera's softness: a light blur mixed into the sharp page.
+  const sharp = soften > 0 ? new Uint8ClampedArray(data) : data;
+  if (soften > 0) {
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const o = (y * width + x) * 4;
+        for (let c = 0; c < 3; c++) {
+          const blurred =
+            (sharp[o + c]! * 4 +
+              sharp[o - 4 + c]! +
+              sharp[o + 4 + c]! +
+              sharp[o - width * 4 + c]! +
+              sharp[o + width * 4 + c]!) /
+            8;
+          data[o + c] = sharp[o + c]! * (1 - soften) + blurred * soften;
+        }
+      }
+    }
+  }
+
   for (let y = 0; y < height; y++) {
     const v = (y / (height - 1)) * 2 - 1;
     let fold = 0;
@@ -97,17 +135,31 @@ export function applyEffects(image: RasterImage, options: EffectOptions): Raster
     }
     for (let x = 0; x < width; x++) {
       const u = (x / (width - 1)) * 2 - 1;
-      const light =
+      let light =
         base *
           (1 - falloff * (0.5 + 0.5 * (u * lightX + v * lightY))) *
           (1 - vignette * (u * u + v * v) * 0.5) +
         fold;
+      if (photo) {
+        const dx = u - shadowX;
+        const dy = v - shadowY;
+        light *= 1 - shadow * Math.exp(-(dx * dx + dy * dy) / (2 * 0.55 * 0.55));
+        light *=
+          1 +
+          cockle *
+            Math.sin(wave[0]!.a * u + wave[0]!.b * v + wave[0]!.p) *
+            Math.sin(wave[1]!.a * u - wave[1]!.b * v + wave[1]!.p);
+      }
       // One noise value for all channels: luminance grain, not colour speckle.
       const grain = rng.float(-noise, noise);
       const o = (y * width + x) * 4;
-      data[o] = clamp(data[o]! * light * tone[0]! + grain);
-      data[o + 1] = clamp(data[o + 1]! * light * tone[1]! + grain);
-      data[o + 2] = clamp(data[o + 2]! * light * tone[2]! + grain);
+      // In a photo the grain is heavier where the page is dark: ink, not paper.
+      const darkness = photo ? 1 - (data[o]! + data[o + 1]! + data[o + 2]!) / 765 : 0;
+      const g = photo ? grain * (0.45 + 0.9 * darkness) : grain;
+      for (let c = 0; c < 3; c++) {
+        const value = lift + data[o + c]! * (1 - lift / 255);
+        data[o + c] = clamp(value * light * tone[c]! + g);
+      }
     }
   }
   return { width, height, data };

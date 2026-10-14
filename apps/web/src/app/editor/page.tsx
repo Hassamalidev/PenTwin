@@ -24,6 +24,7 @@ import { pageRange, track, trackOnce } from '../../lib/analytics';
 import { currentSession } from '../../lib/auth';
 import { loadBank, type LoadedBank } from '../../lib/bank';
 import { ACCEPTED_FILES, importFile } from '../../lib/import-file';
+import { downloadBytes } from '../../lib/photo';
 import { rasterizePreview } from '../../lib/preview';
 import {
   applyPreset,
@@ -270,6 +271,15 @@ export default function EditorPage() {
   const update = (id: number, change: (block: EditorBlock) => EditorBlock): void =>
     setBlocks((list) => list.map((block) => (block.id === id ? change(block) : block)));
   const remove = (id: number): void => setBlocks((list) => list.filter((b) => b.id !== id));
+  const move = (id: number, by: -1 | 1): void =>
+    setBlocks((list) => {
+      const from = list.findIndex((b) => b.id === id);
+      const to = from + by;
+      if (from < 0 || to < 0 || to >= list.length) return list;
+      const next = [...list];
+      [next[from], next[to]] = [next[to]!, next[from]!];
+      return next;
+    });
   const insertAfter = (id: number, block: Block): void =>
     setBlocks((list) => {
       const at = list.findIndex((b) => b.id === id);
@@ -328,9 +338,18 @@ export default function EditorPage() {
       const pages = pageRange(body.pageCount ?? 1);
       trackOnce('first_export', { source: 'editor', pages });
       track('export_completed', { source: 'editor', pages, style: settings.preset });
+      const downloadUrl = `${WORKER_URL}${body.downloadPath}`;
+      // Saved straight away, fetched rather than followed: a link that fails must never
+      // take the page (and the document on it) away. If it fails, the button is still there.
+      void fetch(downloadUrl)
+        .then((file) =>
+          file.ok ? file.arrayBuffer() : Promise.reject(new Error(String(file.status))),
+        )
+        .then((bytes) => downloadBytes(new Uint8Array(bytes), 'handwritten.pdf', 'application/pdf'))
+        .catch(() => undefined);
       setExportState({
         status: 'done',
-        downloadUrl: `${WORKER_URL}${body.downloadPath}`,
+        downloadUrl,
         pageCount: body.pageCount,
         billablePages: body.billablePages,
         pagesLeft: body.account?.totalPages,
@@ -377,14 +396,25 @@ export default function EditorPage() {
               }}
             />
           </label>
-          <button
-            type="button"
-            onClick={() =>
-              setBlocks((list) => [...list, ...withIds([{ type: 'paragraph', text: '' }])])
-            }
-          >
-            Add paragraph
-          </button>
+          <span className="row add-blocks" role="group" aria-label="Add to the document">
+            {(
+              [
+                ['Paragraph', { type: 'paragraph', text: '' }],
+                ['Heading', { type: 'heading', text: '' }],
+                ['List', { type: 'list', items: [''] }],
+              ] as [string, Block][]
+            ).map(([name, block]) => (
+              <button
+                key={name}
+                type="button"
+                className="small"
+                aria-label={`Add ${name.toLowerCase()}`}
+                onClick={() => setBlocks((list) => [...list, ...withIds([block])])}
+              >
+                + {name}
+              </button>
+            ))}
+          </span>
           <button type="button" onClick={startOver} data-testid="start-over">
             Start over
           </button>
@@ -430,11 +460,14 @@ export default function EditorPage() {
         )}
 
         <div data-testid="blocks" style={{ marginTop: '0.75rem' }}>
-          {blocks.map((block) => (
+          {blocks.map((block, index) => (
             <BlockEditor
               key={block.id}
               block={block}
               onChange={(change) => update(block.id, change)}
+              onMove={(by) => move(block.id, by)}
+              first={index === 0}
+              last={index === blocks.length - 1}
               onRemove={() => remove(block.id)}
               onBreakAfter={() => insertAfter(block.id, { type: 'pageBreak' })}
             />
@@ -534,7 +567,14 @@ export default function EditorPage() {
             testId="preset"
             value={settings.preset}
             options={PRESET_LABELS}
-            onChange={(value) => setSettings((s) => applyPreset(s, value as PresetName))}
+            onChange={(value) => {
+              setReplaced({
+                what: `The ${PRESET_LABELS[value as PresetName]} style also set its own pen, paper and corrections`,
+                blocks,
+                settings,
+              });
+              setSettings((s) => applyPreset(s, value as PresetName));
+            }}
           />
           <Select
             label="Pen"
@@ -694,7 +734,7 @@ export default function EditorPage() {
             <div className="row">
               {exportState.status === 'done' ? (
                 <a className="file-button" href={exportState.downloadUrl} data-testid="download">
-                  Download PDF
+                  Download again
                 </a>
               ) : accounts && !signedIn ? (
                 <a
@@ -761,22 +801,59 @@ export default function EditorPage() {
 function BlockEditor({
   block,
   onChange,
+  onMove,
+  first,
+  last,
   onRemove,
   onBreakAfter,
 }: {
   block: EditorBlock;
   onChange: (change: (block: EditorBlock) => EditorBlock) => void;
+  onMove: (by: -1 | 1) => void;
+  first: boolean;
+  last: boolean;
   onRemove: () => void;
   onBreakAfter: () => void;
 }) {
+  const moves = (
+    <>
+      <button
+        type="button"
+        className="small icon"
+        aria-label="Move up"
+        title="Move up"
+        disabled={first}
+        onClick={() => onMove(-1)}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 15l6-6 6 6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="small icon"
+        aria-label="Move down"
+        title="Move down"
+        disabled={last}
+        onClick={() => onMove(1)}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </>
+  );
   if (block.type === 'pageBreak') {
     return (
       <div className="block page-break" data-testid="block-pageBreak">
         <div className="block-head">
           <span>Page break</span>
-          <button type="button" className="small" onClick={onRemove}>
-            Remove
-          </button>
+          <span className="row">
+            {moves}
+            <button type="button" className="small" onClick={onRemove}>
+              Remove
+            </button>
+          </span>
         </div>
       </div>
     );
@@ -809,6 +886,7 @@ function BlockEditor({
           <button type="button" className="small" onClick={onRemove} aria-label="Remove block">
             Remove
           </button>
+          {moves}
         </span>
       </div>
 

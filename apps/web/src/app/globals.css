@@ -1910,3 +1910,99 @@ textarea {
 .bento .card {
   padding: 1.5rem;
 }
+
+/* Square icon buttons on a block: move it up or down. */
+button.small.icon {
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+}
+
+button.small.icon svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.add-blocks {
+  gap: 0.3rem;
+}
+
+/* Where you are in making a handwriting sample. */
+.stepper {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.stepper li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stepper-number {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.stepper li.current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stepper li.current .stepper-number {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.stepper li.done .stepper-number {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent-bright) 35%, transparent);
+  color: var(--accent);
+}
+
+.photo-back {
+  margin: 0 0 1rem;
+}
+
+.photo-back img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.photo-back figcaption {
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
+}
+
+/* On a phone a block's actions get their own line, so none of them is cut off. */
+@media (max-width: 560px) {
+  .block-head {
+    flex-wrap: wrap;
+  }
+
+  .block-head .row {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}

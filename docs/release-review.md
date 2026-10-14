@@ -70,7 +70,10 @@ Ordered by how fast a reader notices them.
    each is one motion of the wrist.
 5. **The photo effect looks like a filter.** A flat grey wash and an even vignette. It is
    not offered to users yet, which is the right call; it should not be until it is
-   better. (Not fixed in this round.)
+   better. **Improved:** photo mode now adds the phone's own soft shadow from one edge,
+   paper that is not quite flat, slight camera softness, lifted blacks and noise that is
+   heavier in the dark (`docs/samples/effect-photo.png`); scan mode is unchanged. Whether to
+   offer it to users is the owner's decision.
 6. **Ink density is flat inside a stroke** in vector output. Raster output adds grain.
    Accepted for PDF: vector output is a feature.
 
@@ -134,21 +137,22 @@ word in each heading that is meant to look written.
 
 ### Editor
 
-| Problem                                                  | Fix in this round                        |
-| -------------------------------------------------------- | ---------------------------------------- |
-| Sliders show no value                                    | yes                                      |
-| Nothing shows that the preview is being redrawn          | yes                                      |
-| "Start over" wipes the draft with no confirmation        | yes, with an Undo instead of a question  |
-| Uploading a file replaces the draft with no confirmation | yes, with an Undo instead of a question  |
-| The export dialog cannot be closed with Escape           | yes                                      |
-| Blocks cannot be reordered; only paragraphs can be added | no, next round                           |
-| Export takes three clicks                                | no, next round                           |
-| Choosing a style silently resets pen, paper and slips    | no, next round (needs a design decision) |
+| Problem                                                  | Fix in this round                          |
+| -------------------------------------------------------- | ------------------------------------------ |
+| Sliders show no value                                    | yes                                        |
+| Nothing shows that the preview is being redrawn          | yes                                        |
+| "Start over" wipes the draft with no confirmation        | yes, with an Undo instead of a question    |
+| Uploading a file replaces the draft with no confirmation | yes, with an Undo instead of a question    |
+| The export dialog cannot be closed with Escape           | yes                                        |
+| Blocks cannot be reordered; only paragraphs can be added | yes: move up and down; add heading or list |
+| Export takes three clicks                                | yes: two, the PDF saves itself when ready  |
+| Choosing a style silently resets pen, paper and slips    | yes: it says so, with an Undo              |
 
 ### Handwriting capture
 
-- The photo is never shown back to the user, so they cannot see what was read. Next round.
-- There is no step indicator for a three-step flow. Next round.
+- The photo is never shown back to the user, so they cannot see what was read. Fixed: it
+  is shown (from the device, never uploaded).
+- There is no step indicator for a three-step flow. Fixed.
 - "Delete it from this device" has no confirmation. Fixed in this round.
 
 ## Part 3: engineering findings

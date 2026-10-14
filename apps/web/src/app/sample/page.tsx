@@ -51,6 +51,14 @@ export default function SamplePage() {
   const [testUrl, setTestUrl] = useState<string>();
   const [confirmed, setConfirmed] = useState(false);
   const [saved, setSaved] = useState(false);
+  /** The photo that was read, shown back so the user sees what we saw. Never uploaded. */
+  const [photoUrl, setPhotoUrl] = useState<string>();
+  useEffect(
+    () => () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    },
+    [photoUrl],
+  );
 
   // The bank as it will be used: the user's glyphs plus stand-ins for the gaps.
   const filled = useMemo(() => (own ? applyFallbacks(own) : undefined), [own]);
@@ -105,6 +113,7 @@ export default function SamplePage() {
   const onSamplePhoto = async (file: File | undefined): Promise<void> => {
     if (!file) return;
     reset();
+    setPhotoUrl(URL.createObjectURL(file));
     setWorking('Reading your handwriting...');
     await nextFrame();
     const started = performance.now();
@@ -208,9 +217,30 @@ export default function SamplePage() {
   );
   const selectedVariants = selected ? (filled?.bank.metadata.glyphs[selected] ?? []) : [];
 
+  const step = saved ? 3 : own ? 2 : 1;
+  const STEPS = ['Write and photograph', 'Check your letters', 'Save'];
+
   return (
     <div className="panel narrow">
       <h1>My handwriting</h1>
+      <ol className="stepper" aria-label="Progress">
+        {STEPS.map((label, index) => (
+          <li
+            key={label}
+            className={index + 1 < step ? 'done' : index + 1 === step ? 'current' : undefined}
+            aria-current={index + 1 === step ? 'step' : undefined}
+          >
+            <span className="stepper-number">{index + 1}</span>
+            {label}
+          </li>
+        ))}
+      </ol>
+      {photoUrl && (own || issues.length > 0 || error) && (
+        <figure className="photo-back" data-testid="photo-back">
+          <img src={photoUrl} alt="The photo of your handwriting that was read" />
+          <figcaption className="muted">The photo we read. It stays on this device.</figcaption>
+        </figure>
+      )}
 
       {!own && (
         <section>
