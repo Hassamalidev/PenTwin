@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalizedGlyph } from './normalize';
-import { verifyGlyphs } from './verify';
+import { letterTemplates, verifyGlyphs } from './verify';
 
 /** A glyph drawn from rows of text: "#" is ink. */
 const glyph = (char: string, rows: string[]): NormalizedGlyph => {
@@ -86,5 +86,23 @@ describe('letters checking each other', () => {
   it('never changes the order or drops a sound cut', () => {
     const all = [...bars(4), ...rings(4)];
     expect(verifyGlyphs(all, 8).kept.map((g) => g.char)).toEqual(all.map((g) => g.char));
+  });
+});
+
+describe("reading a page with the writer's own letters", () => {
+  it('says a cut is more like the letter it really is', () => {
+    const unlike = letterTemplates([...bars(4), ...rings(4)]);
+    const ring = glyph('o', RING).bitmap;
+    expect(unlike(ring, 'o')).toBeLessThan(0.1);
+    expect(unlike(ring, 't')).toBeGreaterThan(0.5);
+  });
+
+  it('stays neutral about a letter it has no samples of', () => {
+    expect(letterTemplates(bars(4))(glyph('z', RING).bitmap, 'z')).toBe(0.5);
+  });
+
+  it('scores a page by how many letters look like their own label', () => {
+    const sound = verifyGlyphs([...bars(5), ...rings(5)], 8);
+    expect(sound.consistency).toBe(1);
   });
 });

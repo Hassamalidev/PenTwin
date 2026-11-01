@@ -1,6 +1,7 @@
 import { serializePath, transformPath, type GlyphMetadata } from '@pentwin/engine';
 import { alignToText, type FlaggedWord } from './align';
 import { cleanImage } from './clean';
+import { cutGlyph } from './cut';
 import { reportCoverage, type CoverageReport } from './coverage';
 import type { RgbaImage } from './image';
 import { normalizeGlyphs, type NormalizedGlyph, type PageMetrics } from './normalize';
@@ -8,7 +9,7 @@ import { assessQuality, type QualityReport } from './quality';
 import { segmentPage } from './segment';
 import { measureStyle, type StyleFeatures } from './style';
 import { vectorize } from './vectorize';
-import { verifyGlyphs } from './verify';
+import { letterTemplates, verifyGlyphs } from './verify';
 
 /** A glyph bank in the engine's format: metadata plus one SVG document per variant. */
 export interface ExtractedBank {
@@ -38,11 +39,18 @@ export interface Extraction {
   style?: StyleFeatures;
   /** Words and letter pairs that were left out rather than guessed. */
   flagged: FlaggedWord[];
+  /** Share of kept letters that look most like their own label (see `verifyGlyphs`). */
+  consistency?: number;
   /** Size of the bank in bytes (metadata and all SVG files). */
   bankBytes: number;
   /** Milliseconds spent in each stage. */
   timings: Record<string, number>;
 }
+
+/** A letter with fewer samples than this after the second reading is topped up from the first. */
+const MIN_LETTER_SAMPLES = 2;
+/** How unlike its letter a first-reading sample may be and still be used. */
+const MAX_UNLIKE = 0.7;
 
 /** Letters smaller than this many pixels are read again at a higher resolution. */
 const GOOD_BAND = 30;
@@ -175,13 +183,58 @@ export function extractGlyphBank(
     binary = timed('clean', () => cleanImage(photo, { maxWidth })).binary;
     page = timed('segment', () => segmentPage(binary));
   }
-  const alignment = timed('align', () => alignToText(page, binary.width, expectedText));
+  const firstReading = timed('align', () => alignToText(page, binary.width, expectedText));
+  const firstCuts = timed('normalize', () => normalizeGlyphs(firstReading, page, binary.width));
+  const firstCheck = verifyGlyphs(firstCuts.glyphs, firstCuts.metrics.xHeight);
+
+  // Now that the page has shown what this writer's letters look like, read it again. In
+  // joined writing the marks and letters do not line up one to one, and knowing the hand is
+  // what tells which letter is which.
+  const looksUnlike = letterTemplates(firstCheck.kept);
+  const unlike = new Map<string, number>();
+  const alignment = timed('align', () =>
+    alignToText(page, binary.width, expectedText, (segment, char) => {
+      const key = `${segment.x0}/${segment.y0}/${char}`;
+      let cost = unlike.get(key);
+      if (cost === undefined) {
+        const bitmap = cutGlyph(
+          { ...segment, char, confidence: 1, line: 0, word: 0, cut: 'clean' },
+          page.labels,
+          binary.width,
+        );
+        cost = bitmap ? looksUnlike(bitmap, char) : 0.5;
+        unlike.set(key, cost);
+      }
+      return cost;
+    }),
+  );
   const normalized = timed('normalize', () => normalizeGlyphs(alignment, page, binary.width));
   const { metrics } = normalized;
   // The writer's letters check each other before any of them is kept.
-  const { kept: glyphs, refused } = timed('verify', () =>
-    verifyGlyphs(normalized.glyphs, metrics.xHeight),
-  );
+  const {
+    kept: secondKept,
+    refused,
+    consistency,
+  } = timed('verify', () => verifyGlyphs(normalized.glyphs, metrics.xHeight));
+  // A letter the second reading lost may have sound samples from the first: a gap on the page
+  // is a worse failure than one more doubtful sample, as long as it still looks the part.
+  const counted = new Map<string, number>();
+  for (const glyph of secondKept) counted.set(glyph.char, (counted.get(glyph.char) ?? 0) + 1);
+  const glyphs = [...secondKept];
+  for (const glyph of firstCheck.kept) {
+    if (glyph.char.length !== 1 || (counted.get(glyph.char) ?? 0) >= MIN_LETTER_SAMPLES) continue;
+    if (looksUnlike(glyph.bitmap, glyph.char) > MAX_UNLIKE) continue;
+    // The same mark may already be here: both readings cut from one page.
+    const sameMark = glyphs.some(
+      (other) =>
+        other.char === glyph.char &&
+        Math.abs(other.bitmap.x - glyph.bitmap.x) < other.bitmap.width &&
+        Math.abs(other.bitmap.y - glyph.bitmap.y) < other.bitmap.height,
+    );
+    if (sameMark) continue;
+    counted.set(glyph.char, (counted.get(glyph.char) ?? 0) + 1);
+    glyphs.push(glyph);
+  }
   for (const glyph of refused) {
     alignment.flagged.push({ expected: glyph.char, line: glyph.line, reason: 'unclear' });
   }
@@ -216,25 +269,32 @@ export function extractGlyphBank(
   /** Traces the variants of one glyph (or letter pair) into SVG files and bank entries. */
   const trace = (key: string, variants: NormalizedGlyph[]) => {
     const code = [...key].map((c) => c.codePointAt(0)!.toString(16).padStart(4, '0')).join('_');
-    return variants.map((glyph, i) => {
+    return variants.flatMap((glyph, i) => {
       const file = `u${code}-${i + 1}.svg`;
       const path = transformPath(vectorize(glyph.bitmap), (x, y) => [x * scale, y * scale]);
+      // A mark too small to trace would leave an empty glyph, which is no glyph at all.
+      if (path.length === 0) return [];
       const { width, height } = glyph.bitmap;
       files[file] =
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${round(width)} ${round(height)}">` +
         `<path d="${serializePath(path, 1)}"/></svg>`;
-      return {
-        file,
-        // The pen always moves forward, even for a glyph that overlaps both neighbours.
-        advance: Math.max(round(width) * 0.2, round(glyph.lsb + width + glyph.rsb)),
-        lsb: round(glyph.lsb),
-        rsb: round(glyph.rsb),
-        baseline: round(glyph.baseline),
-      };
+      return [
+        {
+          file,
+          // The pen always moves forward, even for a glyph that overlaps both neighbours.
+          advance: Math.max(round(width) * 0.2, round(glyph.lsb + width + glyph.rsb)),
+          lsb: round(glyph.lsb),
+          rsb: round(glyph.rsb),
+          baseline: round(glyph.baseline),
+        },
+      ];
     });
   };
   timed('vectorize', () => {
-    for (const [char, variants] of chosen) metadata.glyphs[char] = trace(char, variants);
+    for (const [char, variants] of chosen) {
+      const traced = trace(char, variants);
+      if (traced.length > 0) metadata.glyphs[char] = traced;
+    }
     if (words.size > 0) {
       metadata.words = Object.fromEntries(
         [...words].map(([word, variants]) => [word, trace(word, variants)]),
@@ -261,6 +321,7 @@ export function extractGlyphBank(
     metrics,
     bigrams: [...pairs.keys()].sort(),
     style: measureStyle(singles, metrics),
+    consistency,
     flagged: alignment.flagged,
     bankBytes,
     timings,

@@ -173,7 +173,7 @@ export function normalizeGlyphs(
     const { char } = c.glyph;
     if (char.length !== 1 || !/[a-zA-Z0-9]/.test(char)) return fitted;
     const foot = HANGS.has(char) ? c.bitmap.height - descender : c.bitmap.height;
-    return Math.abs(fitted - foot) > xHeight * 0.35 ? foot : fitted;
+    return Math.abs(fitted - foot) > xHeight * 0.15 ? foot : fitted;
   };
 
   return {

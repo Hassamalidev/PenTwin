@@ -6,7 +6,7 @@ import type { NormalizedGlyph } from './normalize';
  * A wrong cut is usually unlike the other samples of its label, and often more like some
  * other letter. Nothing here comes from outside: each writer is the reference for themselves.
  */
-const SIZE = 14;
+const SIZE = 20;
 /** Samples of a letter needed before it can vouch for anything. */
 const MIN_SAMPLES = 3;
 /** How many of the nearest samples count: a letter can have two or three written forms. */
@@ -16,7 +16,7 @@ const MIN_LIKENESS = 0.3;
 /** How much more a cut may resemble another letter before it is taken to be mislabelled. */
 const RIVAL_MARGIN = 0.02;
 /** Widths outside this share of a letter's usual width are not that letter. */
-const MAX_WIDTH = 1.8;
+const MAX_WIDTH = 1.45;
 const MIN_WIDTH = 0.4;
 
 /** A cut reduced to a small, even grid of ink, so shapes of any size can be compared. */
@@ -73,9 +73,11 @@ const median = (values: number[]): number =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
 
 /** A pair or word has to look like its letters, slice by slice, or it is not that word. */
-const MIN_SHAPE_LIKENESS = 0.2;
+const MIN_SHAPE_LIKENESS = 0.35;
 /** Joined letters overlap a little, but not by this much. */
 const MIN_SHAPE_WIDTH = 0.75;
+/** Wider than this and a pair or word holds more than its own letters. */
+const MAX_SHAPE_WIDTH = 1.3;
 
 /** Rough width of a letter within a word, for slicing a joined shape along its letters. */
 const share = (char: string): number =>
@@ -104,7 +106,32 @@ function shapeMatchesLetters(
   return judged >= Math.ceil(chars.length * 0.5) && sum / judged >= MIN_SHAPE_LIKENESS;
 }
 
+/**
+ * The writer's own letters as a reference: how unlike a cut is to a letter, 0 to 1. Letters
+ * with no trusted samples cost a middling amount, so they neither help nor rule anything out.
+ */
+export function letterTemplates(
+  glyphs: readonly NormalizedGlyph[],
+): (bitmap: NormalizedGlyph['bitmap'], char: string) => number {
+  const samples = new Map<string, Float32Array[]>();
+  for (const glyph of glyphs) {
+    if (glyph.char.length !== 1) continue;
+    samples.set(glyph.char, [...(samples.get(glyph.char) ?? []), signature(glyph)]);
+  }
+  return (bitmap, char) => {
+    const list = samples.get(char);
+    if (!list || list.length < 2) return 0.5;
+    const cut = signature({ bitmap } as NormalizedGlyph);
+    return Math.max(0, Math.min(1, 1 - nearest(list.map((sample) => likeness(cut, sample)))));
+  };
+}
+
 export interface Verification {
+  /**
+   * Share of the kept letters that look most like their own label among the writer's other
+   * letters, 0 to 1. Needs no answer key, so it can be measured on any real page.
+   */
+  consistency: number;
   kept: NormalizedGlyph[];
   /** Cuts the writer's other letters did not support. */
   refused: NormalizedGlyph[];
@@ -174,19 +201,23 @@ export function verifyGlyphs(glyphs: readonly NormalizedGlyph[], xHeight: number
       .filter((g) => g.char === char || g.char === char.toLowerCase())
       .map((g) => signatures.get(g)!);
   /** A pair or word must be about as wide as its letters, or some of them are not in it. */
-  const tooNarrow = (shape: NormalizedGlyph): boolean => {
+  const wrongWidth = (shape: NormalizedGlyph): boolean => {
     const usual = [...shape.char].map((char) => {
       const widths = [...alive].filter((g) => g.char === char).map((g) => g.bitmap.width);
       if (widths.length) return median(widths);
       return /[a-zA-Z0-9]/.test(char) ? xHeight * 0.7 : xHeight * 0.2;
     });
-    return shape.bitmap.width < usual.reduce((sum, w) => sum + w, 0) * MIN_SHAPE_WIDTH;
+    const together = usual.reduce((sum, w) => sum + w, 0);
+    return (
+      shape.bitmap.width < together * MIN_SHAPE_WIDTH ||
+      shape.bitmap.width > together * MAX_SHAPE_WIDTH
+    );
   };
   const kept: NormalizedGlyph[] = [];
   const refused: NormalizedGlyph[] = [];
   for (const glyph of glyphs) {
     if (oversized(glyph)) refused.push(glyph);
-    else if (glyph.char.length > 1 && (tooNarrow(glyph) || !shapeMatchesLetters(glyph, proven))) {
+    else if (glyph.char.length > 1 && (wrongWidth(glyph) || !shapeMatchesLetters(glyph, proven))) {
       refused.push(glyph);
     } else if (!signatures.has(glyph)) kept.push(glyph);
     else if (alive.has(glyph)) {
@@ -195,5 +226,27 @@ export function verifyGlyphs(glyphs: readonly NormalizedGlyph[], xHeight: number
       kept.push(self === undefined ? glyph : { ...glyph, typicality: self });
     } else refused.push(glyph);
   }
-  return { kept, refused };
+  // Each kept letter against every other letter: is its nearest company its own label?
+  const survivors = [...alive].filter((g) => signatures.has(g));
+  const classes = new Map<string, Float32Array[]>();
+  for (const g of survivors) {
+    classes.set(g.char, [...(classes.get(g.char) ?? []), signatures.get(g)!]);
+  }
+  let right = 0;
+  let judged = 0;
+  for (const glyph of survivors) {
+    const mine = signatures.get(glyph)!;
+    const own = classes.get(glyph.char)!.filter((s) => s !== mine);
+    if (own.length < 2) continue;
+    const self = nearest(own.map((s) => likeness(mine, s)));
+    let best = -1;
+    for (const [char, list] of classes) {
+      if (char !== glyph.char && list.length >= 2) {
+        best = Math.max(best, nearest(list.map((s) => likeness(mine, s))));
+      }
+    }
+    judged++;
+    if (self >= best) right++;
+  }
+  return { kept, refused, consistency: judged ? right / judged : 1 };
 }

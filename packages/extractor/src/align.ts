@@ -212,6 +212,15 @@ function outlineMismatch(word: DetectedWord, text: string): number {
   return Math.min(1, (wrong + missing) / OUTLINE_SLICES);
 }
 
+/**
+ * How unlike a mark is to a letter of the writer's own, 0 to 1: known on a second reading of
+ * the page, once the first has found which letters can be trusted.
+ */
+export type LetterCost = (segment: Segment, char: string) => number;
+
+/** How much a mark's look counts against its width when choosing what it is. */
+const READ_WEIGHT = 1.5;
+
 interface Group {
   detected: number[];
   expected: number[];
@@ -321,7 +330,11 @@ type CharStep = 'clean' | 'merged' | 'split';
  * segment per letter. Where the counts differ, widths decide which letters touch
  * (one wide segment for two letters) or which letter is in two pieces.
  */
-function alignChars(segments: Segment[], chars: string[]): CharStep[] | undefined {
+function alignChars(
+  segments: Segment[],
+  chars: string[],
+  unlike?: LetterCost,
+): CharStep[] | undefined {
   const k = segments.length;
   const n = chars.length;
   const widths = segments.map((s) => s.x1 - s.x0);
@@ -350,7 +363,13 @@ function alignChars(segments: Segment[], chars: string[]): CharStep[] | undefine
       if (here === Infinity) continue;
       if (s < k && c < n) {
         const quote = chars[c] === '"';
-        relax(s + 1, c + 1, here + fit(widths[s]!, wanted[c]!) + (quote ? 0.5 : 0), 'clean');
+        const shape = unlike ? unlike(segments[s]!, chars[c]!) * READ_WEIGHT : 0;
+        relax(
+          s + 1,
+          c + 1,
+          here + fit(widths[s]!, wanted[c]!) + (quote ? 0.5 : 0) + shape,
+          'clean',
+        );
         if (s + 1 < k) {
           const joined = segments[s + 1]!.x1 - segments[s]!.x0;
           relax(s + 2, c + 1, here + fit(joined, wanted[c]!) + (quote ? 0 : 1), 'merged');
@@ -421,6 +440,7 @@ export function alignToText(
   page: Segmentation,
   imageWidth: number,
   expectedText: string,
+  unlike?: LetterCost,
 ): Alignment {
   const detected: DetectedWord[] = page.lines.flatMap((line, lineIndex) =>
     line.words.map((word) => ({
@@ -465,7 +485,7 @@ export function alignToText(
         });
       }
     }
-    const steps = alignChars(segments, chars);
+    const steps = alignChars(segments, chars, unlike);
     // A repair is any letter that did not come from exactly one segment. The two ticks of
     // a double quote are expected, so they do not count.
     let repairs = 0;

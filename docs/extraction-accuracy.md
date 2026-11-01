@@ -39,6 +39,26 @@ are still sometimes wrong** ("eold" for "cold"), and writers with fully joined h
 far fewer characters. There is no letter-by-letter truth for these pages, so this comes from
 looking at them, not a measured error rate.
 
+### Reading each page twice, with a score that needs no answer key (2026-11-01)
+
+`pnpm real:render` now prints how many kept letters look most like their own label among the
+writer's other letters, on 26 real writers. It is a proxy, not a true error rate: a letter
+can resemble the wrong class, and a mistake repeated often enough can look consistent.
+
+| Step                                                | Look like their label | Text covered |
+| --------------------------------------------------- | --------------------- | ------------ |
+| Start of this round                                 | 62.4%                 | 87.7%        |
+| Stricter widths for letters, pairs and words        | 63.9%                 | 87.7%        |
+| Finer letter comparison                             | 64.5%                 | 87.7%        |
+| Second reading using the writer's own letters       | 85.2%                 | 75.5%        |
+| Letters lost by it topped up from the first reading | 85.8%                 | 88.2%        |
+
+The first reading finds which letters can be trusted; they become templates, and the second
+reading realigns every word by how much each mark looks like each letter. Six of the 26 writers
+now cover the test text with no gaps. Most other gaps are rare letters (p, N, T) with few
+samples on these two pages, which the top-up sheet exists for. On a laptop, one page takes
+about 8 seconds to extract; **no real phone has been timed.**
+
 ## Read this first
 
 **Every number here comes from synthetic photos, not real handwriting.** The test pages

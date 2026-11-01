@@ -46,6 +46,8 @@ const read = (name: string) => {
 
 const files = readdirSync(dir).filter((n) => n.endsWith('.pgm') && n.includes(filter));
 const writers = [...new Set(files.map((n) => n.slice(0, 5)))];
+const scores: number[] = [];
+const covered: number[] = [];
 for (const writer of writers) {
   const sources = files.filter((n) => n.startsWith(writer));
   const first = sources.find((n) => n.includes('pWOZ'));
@@ -64,6 +66,8 @@ for (const writer of writers) {
     ? mergeTopUp(result.bank, extra.bank, Object.keys(extra.bank.metadata.glyphs), 12).bank
     : result.bank;
   const filled = applyFallbacks(merged);
+  const checked = [result.consistency, extra?.consistency].filter((v) => v !== undefined);
+  scores.push(checked.reduce((sum, v) => sum + v, 0) / Math.max(1, checked.length));
   const bank = buildGlyphBank(filled.bank.metadata, (file) => filled.bank.files[file]!);
   const preset = presetOptions(style as PresetName);
   const xHeight = 2.6;
@@ -81,8 +85,14 @@ for (const writer of writers) {
   const file = join(out, `${writer}-${style}.png`);
   writeFileSync(file, await encodePng(page));
   const counts = Object.values(filled.bank.metadata.glyphs).map((v) => v.length);
+  covered.push(
+    1 - Object.keys(report.unknownChars).length / new Set(NEW_TEXT.replace(/s/g, '')).size,
+  );
   console.log(
     `${file}: ${counts.length} characters, ${counts.reduce((a, b) => a + b, 0)} samples, ` +
       `gaps left: ${Object.keys(report.unknownChars).join('') || 'none'}`,
   );
 }
+const mean = (values: number[]): string =>
+  ((values.reduce((sum, v) => sum + v, 0) / Math.max(1, values.length)) * 100).toFixed(1);
+console.log(`letters like their own label: ${mean(scores)}%; text covered: ${mean(covered)}%`);
