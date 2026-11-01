@@ -41,60 +41,136 @@ const median = (values: number[]): number => {
   return sorted[Math.floor(sorted.length / 2)]!;
 };
 
-/**
- * Finds the lines of writing from the amount of ink in each pixel row.
- *
- * Lines are first separated at the empty rows between them. Where two lines touch
- * (a descender reaching the next line's ascenders) the block is far too tall, and is
- * split again at its thinnest rows. Each line is then reduced to its dense core, which
- * is measured against that line's own peak so a line with a single short word counts
- * just as much as a full one.
- */
-function findBands(binary: BinaryImage): { top: number; bottom: number }[] {
-  const { width, height, data } = binary;
-  const rows = new Float64Array(height);
-  for (let y = 0; y < height; y++) {
-    let count = 0;
-    for (let x = 0; x < width; x++) count += data[y * width + x]!;
-    rows[y] = count;
-  }
-  // Smooth a little so one thin row does not split a line in two.
-  const smooth = rows.map((_, y) => (rows[y - 1] ?? 0) / 4 + rows[y]! / 2 + (rows[y + 1] ?? 0) / 4);
-  const busy = [...smooth].filter((v) => v > 0).sort((a, b) => a - b);
-  if (busy.length === 0) return [];
-  const empty = Math.max(1, busy[Math.floor(busy.length * 0.95)]! * 0.02);
+/** A mark that is no part of the writing: a scanner's edge, a fold, a ruled line. */
+const isStray = (c: Component, binary: BinaryImage): boolean => {
+  const { width, height } = binary;
+  const w = c.x1 - c.x0;
+  const h = c.y1 - c.y0;
+  const longAndThin = (w > width * 0.25 && h < w * 0.08) || (h > height * 0.25 && w < h * 0.08);
+  return longAndThin || h > height * 0.3 || w > width * 0.7;
+};
 
-  const runs = (from: number, to: number, isInk: (y: number) => boolean): [number, number][] => {
-    const out: [number, number][] = [];
-    for (let y = from; y < to; y++) {
-      if (!isInk(y)) continue;
-      const last = out.at(-1);
-      if (last && y - last[1] <= 2) last[1] = y + 1;
-      else out.push([y, y + 1]);
+interface Track {
+  /** Centres of the marks followed so far, left to right. */
+  points: { x: number; y: number }[];
+  /** Right edge of the last mark. */
+  end: number;
+  members: Component[];
+}
+
+/** Height of the line at `x`, between the marks followed. Flat beyond both ends. */
+const trackAt = (points: Track['points'], x: number): number => {
+  if (x <= points[0]!.x) return points[0]!.y;
+  for (let i = 1; i < points.length; i++) {
+    const b = points[i]!;
+    if (x <= b.x) {
+      const a = points[i - 1]!;
+      return a.y + ((b.y - a.y) * (x - a.x)) / Math.max(1, b.x - a.x);
     }
-    return out;
-  };
-  const peakOf = (from: number, to: number): number => {
-    let peak = 0;
-    for (let y = from; y < to; y++) peak = Math.max(peak, smooth[y]!);
-    return peak;
-  };
+  }
+  return points.at(-1)!.y;
+};
 
-  let blocks = runs(0, height, (y) => smooth[y]! > empty);
-  const typical = median(blocks.map(([a, b]) => b - a));
-  blocks = blocks.flatMap(([a, b]) => {
-    if (b - a <= typical * 1.7) return [[a, b] as [number, number]];
-    const peak = peakOf(a, b);
-    return runs(a, b, (y) => smooth[y]! > peak * 0.2);
-  });
-  // A sliver on its own is a row of dots or quote marks, not a line.
-  blocks = blocks.filter(([a, b]) => b - a >= typical * 0.3);
+/**
+ * Finds the lines of writing by following the marks from left to right. Real lines slope
+ * and wander, often by more than the gap between them over a full width, so a row-by-row
+ * ink profile of the page smears them together. Followed mark by mark, each only has to
+ * continue from where the last one was.
+ */
+function trackLines(components: readonly Component[], binary: BinaryImage): Track[] {
+  const heights = components
+    .map((c) => c.y1 - c.y0)
+    .filter((h) => h >= 3)
+    .sort((a, b) => a - b);
+  if (heights.length === 0) return [];
+  // The taller marks are letters and words; the shorter ones are dots and commas.
+  const body = heights[Math.floor(heights.length * 0.6)]!;
+  const bodies = components
+    .filter((c) => !isStray(c, binary) && c.y1 - c.y0 >= body * 0.45)
+    .sort((a, b) => a.x0 - b.x0);
 
-  return blocks.map(([a, b]) => {
-    const peak = peakOf(a, b);
-    const core = runs(a, b, (y) => smooth[y]! >= peak * 0.45);
-    return { top: core[0]![0], bottom: core.at(-1)![1] };
-  });
+  let tracks: Track[] = [];
+  for (const c of bodies) {
+    const y = (c.y0 + c.y1) / 2;
+    let best: Track | undefined;
+    let bestCost = Infinity;
+    for (const track of tracks) {
+      const last = track.points.at(-1)!;
+      const before = track.points.at(-5) ?? track.points[0]!;
+      const run = last.x - before.x;
+      const slope = run > 0 ? Math.max(-0.12, Math.min(0.12, (last.y - before.y) / run)) : 0;
+      const expected = last.y + slope * (c.x0 - last.x);
+      const off = Math.abs(y - expected);
+      const gap = c.x0 - track.end;
+      if (off > body * 0.75 || gap > body * 16) continue;
+      const cost = off + Math.max(0, gap) * 0.03;
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = track;
+      }
+    }
+    if (best) {
+      best.points.push({ x: (c.x0 + c.x1) / 2, y });
+      best.end = Math.max(best.end, c.x1);
+      best.members.push(c);
+    } else {
+      tracks.push({ points: [{ x: (c.x0 + c.x1) / 2, y }], end: c.x1, members: [c] });
+    }
+  }
+
+  // Pieces of one line that a wide gap kept apart: side by side, at the same height.
+  tracks.sort((a, b) => a.points[0]!.x - b.points[0]!.x);
+  const merged: Track[] = [];
+  for (const track of tracks) {
+    const same = merged.find(
+      (other) =>
+        track.points[0]!.x > other.end - body &&
+        Math.abs(track.points[0]!.y - other.points.at(-1)!.y) < body * 0.9,
+    );
+    if (same) {
+      same.points.push(...track.points);
+      same.members.push(...track.members);
+      same.end = Math.max(same.end, track.end);
+    } else {
+      merged.push(track);
+    }
+  }
+  tracks = merged;
+  // A lone mark is a stray tail or a dot: it joins whichever line is nearest, below.
+  const real = tracks.filter((t) => t.members.length >= 2 || t.end - t.points[0]!.x > body * 4);
+  return real.sort(
+    (a, b) =>
+      a.points.reduce((sum, p) => sum + p.y, 0) / a.points.length -
+      b.points.reduce((sum, p) => sum + p.y, 0) / b.points.length,
+  );
+}
+
+/**
+ * The dense band of a line, measured along the line itself so that a slope does not widen
+ * it: roughly the x-height zone. Returned as offsets from the line's own path.
+ */
+function lineBand(
+  track: Track,
+  labels: Int32Array,
+  width: number,
+): { top: number; bottom: number; middle: number } {
+  const counts = new Map<number, number>();
+  for (const c of track.members) {
+    for (let y = c.y0; y < c.y1; y++) {
+      for (let x = c.x0; x < c.x1; x++) {
+        if (labels[y * width + x] !== c.id) continue;
+        const offset = Math.round(y - trackAt(track.points, x));
+        counts.set(offset, (counts.get(offset) ?? 0) + 1);
+      }
+    }
+  }
+  const offsets = [...counts.keys()].sort((a, b) => a - b);
+  const value = (o: number): number =>
+    (counts.get(o - 1) ?? 0) / 4 + (counts.get(o) ?? 0) / 2 + (counts.get(o + 1) ?? 0) / 4;
+  const peak = Math.max(...offsets.map(value));
+  const dense = offsets.filter((o) => value(o) >= peak * 0.45);
+  const middle = track.points.reduce((sum, p) => sum + p.y, 0) / track.points.length;
+  return { top: middle + dense[0]!, bottom: middle + dense.at(-1)! + 1, middle };
 }
 
 /** Groups marks that sit above one another (dots, the two bars of "=") into one segment. */
@@ -128,7 +204,9 @@ function buildSegments(components: Component[]): Segment[] {
  */
 function findWordGapThreshold(gaps: number[]): number {
   if (gaps.length < 8) return 0.5;
-  const sorted = [...gaps].sort((a, b) => a - b);
+  // A stray mark far along a line makes a huge gap, which would pull the "between words"
+  // cluster away from real word gaps. Gaps beyond a few letters wide all count the same.
+  const sorted = gaps.map((g) => Math.min(g, 4)).sort((a, b) => a - b);
   let small = sorted[Math.floor(sorted.length * 0.25)]!;
   let large = sorted[Math.floor(sorted.length * 0.95)]!;
   for (let i = 0; i < 20; i++) {
@@ -145,18 +223,22 @@ function findWordGapThreshold(gaps: number[]): number {
 /** Finds the lines, words and candidate characters on a cleaned, straightened page. */
 export function segmentPage(binary: BinaryImage): Segmentation {
   const { labels, components } = findComponents(binary);
-  const bands = findBands(binary);
+  const tracks = trackLines(components, binary);
+  const bands = tracks.map((track) => lineBand(track, labels, binary.width));
   const typicalHeight = median(bands.map((b) => b.bottom - b.top));
 
-  // Each mark goes to the line whose band it is in, or nearest to.
+  // Each mark goes to the line whose path it is nearest to.
   const perLine: Component[][] = bands.map(() => []);
   for (const c of components) {
-    if (c.y1 - c.y0 > typicalHeight * 6) continue; // not writing: a fold, an edge, a ruled line
+    if (isStray(c, binary)) continue;
     const centre = (c.y0 + c.y1) / 2;
+    const middle = (c.x0 + c.x1) / 2;
     let best = -1;
     let bestDistance = Infinity;
-    bands.forEach((band, i) => {
-      const distance = Math.max(band.top - centre, centre - band.bottom, 0);
+    tracks.forEach((track, i) => {
+      const band = bands[i]!;
+      const shift = trackAt(track.points, middle) - band.middle;
+      const distance = Math.max(band.top + shift - centre, centre - band.bottom - shift, 0);
       if (distance < bestDistance) {
         bestDistance = distance;
         best = i;

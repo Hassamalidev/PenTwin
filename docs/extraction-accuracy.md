@@ -2,6 +2,26 @@
 
 Measured 2026-10-07 with `pnpm extract:measure`; re-measured 2026-10-14 after the shape check (see "Joined letters" below).
 
+## Real handwriting, for the first time (2026-11-01)
+
+Nine real pages from the CSAFE Handwriting Database (eight writers, blue ballpoint, 300 dpi,
+all copying the same known text; see `docs/real-data.md`). The numbers below the next
+heading are synthetic and say little about this. The text was written across about nine
+lines and is 69 words long. There is no letter-by-letter truth for these pages, so wrong
+labels cannot be counted yet.
+
+| Measure                   | Before line tracking | After    |
+| ------------------------- | -------------------- | -------- |
+| Lines found               | 1 to 9               | 4 to 12  |
+| Words found               | 27 to 67             | 30 to 82 |
+| Different characters kept | 0 to 27              | 15 to 25 |
+
+**What broke:** lines were found from a single ink profile of the page, which fails as soon
+as lines slope. They are now followed mark by mark. **What is still weak:** one page finds
+only 4 lines, and over half of most pages' letters are refused, because in joined writing
+single letters cannot be cut out. Whole words and pairs are the next step. Three of the nine
+pages are rightly called cropped: the dataset's trim clips the tops of their first lines.
+
 ## Read this first
 
 **Every number here comes from synthetic photos, not real handwriting.** The test pages
@@ -17,14 +37,14 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 
 | Case             | Lines | Labeled correctly | Labeled wrongly | Left out | Clean cuts | Split | Merged | Pairs refused |
 | ---------------- | ----- | ----------------- | --------------- | -------- | ---------- | ----- | ------ | ------------- |
-| good photo       | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
-| dim photo        | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
-| skewed photo     | 17/17 | 99.0%             | 0.0%            | 1.0%     | 583        | 0     | 2      | 3             |
-| shadowed photo   | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
+| good photo       | 17/17 | 99.8%             | 0.0%            | 0.2%     | 584        | 3     | 3      | 0             |
+| dim photo        | 17/17 | 99.8%             | 0.0%            | 0.2%     | 584        | 3     | 3      | 0             |
+| skewed photo     | 17/17 | 99.5%             | 0.0%            | 0.5%     | 583        | 3     | 2      | 1             |
+| shadowed photo   | 17/17 | 99.8%             | 0.0%            | 0.2%     | 584        | 3     | 3      | 0             |
 | blurry photo     | 17/17 | 98.5%             | 0.0%            | 1.5%     | 576        | 4     | 2      | 4             |
 | neat writing     | 17/17 | 99.7%             | 0.0%            | 0.3%     | 583        | 0     | 6      | 0             |
 | rushed writing   | 17/17 | 71.6%             | 2.7%            | 25.7%    | 420        | 13    | 7      | 37            |
-| touching letters | 18/18 | 85.6%             | 1.5%            | 12.9%    | 508        | 2     | 3      | 26            |
+| touching letters | 18/18 | 86.0%             | 1.5%            | 12.5%    | 510        | 2     | 3      | 26            |
 
 **The last three rows changed on 2026-10-09, and not because the extractor did.** Those
 pages are written in the engine's neat, rushed and normal styles, and on that day the

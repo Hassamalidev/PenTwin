@@ -21,6 +21,8 @@
     "extract:demo": "tsx scripts/extract-demo.ts",
     "benchmark": "tsx scripts/make-benchmark.ts",
     "tells": "tsx scripts/tells.ts",
+    "real:measure": "tsx scripts/real-measure.ts",
+    "learn": "tsx scripts/learn.ts",
     "closeup": "tsx scripts/closeup.ts",
     "worker": "tsx apps/worker/src/main.ts",
     "web": "pnpm --filter @pentwin/web dev",

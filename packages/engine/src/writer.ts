@@ -198,7 +198,7 @@ interface Slot {
 export function createPageWriter(setup: WriterSetup): PageWriter {
   const { bank, xHeight, penWidth, report } = setup;
   const unit = xHeight / bank.xHeight;
-  const spaceWidth = bank.spaceAdvance * unit;
+  const spaceWidth = bank.spaceAdvance * unit * (setup.jitter?.wordGapScale ?? 1);
 
   const nominalAdvance = new Map<string, number>();
   for (const [char, variants] of bank.glyphs) {

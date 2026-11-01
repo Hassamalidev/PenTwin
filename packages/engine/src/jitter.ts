@@ -87,6 +87,8 @@ export interface JitterParams {
    * Off when left out.
    */
   layout?: number;
+  /** Multiplier on the width of a space. Real writers leave wider gaps than a font does. */
+  wordGapScale?: number;
 }
 
 export const NO_JITTER: JitterParams = {

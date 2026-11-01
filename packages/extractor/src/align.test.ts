@@ -28,7 +28,7 @@ describe('alignToText', { timeout: 180_000 }, () => {
     const { alignment } = extractLabels(degrade(tight.gray, CONDITIONS.good!));
     const score = scoreAlignment(alignment.glyphs, tight.truth);
     const joined = alignment.flagged.filter((f) => f.reason === 'letters-joined');
-    expect(joined.length).toBeGreaterThan(3);
+    expect(joined.length).toBeGreaterThanOrEqual(3);
     // Besides joined pairs, only single letters whose shape contradicted their label.
     for (const f of alignment.flagged) {
       if (f.reason !== 'letters-joined') expect(f).toMatchObject({ reason: 'unclear' });

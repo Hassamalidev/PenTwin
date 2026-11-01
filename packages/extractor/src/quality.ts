@@ -1,5 +1,5 @@
 import { estimateBackground, normalizeIllumination, threshold } from './clean';
-import { shrinkGray, toGray, type RgbaImage } from './image';
+import { findComponents, shrinkGray, toGray, type RgbaImage } from './image';
 
 export type QualityIssueCode =
   'low-resolution' | 'too-dark' | 'shadow' | 'blurry' | 'cropped' | 'no-writing';
@@ -83,11 +83,24 @@ export function assessQuality(photo: RgbaImage): QualityReport {
   let inkPixels = 0;
   let edgePixels = 0;
   const border = Math.round(width * 0.012);
+  // Long thin marks are the frame of the picture: a scanner's edge, the side of the sheet.
+  const { labels, components } = findComponents(ink);
+  const frame = new Set(
+    components
+      .filter((c) => {
+        const w = c.x1 - c.x0;
+        const h = c.y1 - c.y0;
+        return (w > width * 0.25 && h < w * 0.08) || (h > height * 0.25 && w < h * 0.08);
+      })
+      .map((c) => c.id),
+  );
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (!ink.data[y * width + x]) continue;
       inkPixels++;
-      if (x < border || y < border || x >= width - border || y >= height - border) edgePixels++;
+      const atEdge = x < border || y < border || x >= width - border || y >= height - border;
+      // The dark edge of a scan or of the page is not writing that was cut off.
+      if (atEdge && !frame.has(labels[y * width + x]!)) edgePixels++;
     }
   }
 
