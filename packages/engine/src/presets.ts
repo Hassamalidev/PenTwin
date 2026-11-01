@@ -27,6 +27,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     dotDrift: 0.12,
     wordTilt: 2.6,
     joins: 0,
+    coherence: 0.7,
+    speed: 0.15,
+    layout: 0.5,
   },
 
   normal: DEFAULT_JITTER,
@@ -52,6 +55,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     dotDrift: 0.38,
     wordTilt: 3.4,
     joins: 0.35,
+    coherence: 0.8,
+    speed: 0.9,
+    layout: 1,
   },
 
   /**
@@ -78,6 +84,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     dotDrift: 0.28,
     wordTilt: 2.8,
     joins: 0.22,
+    coherence: 0.8,
+    speed: 0.7,
+    layout: 1,
   },
 
   /**
@@ -104,6 +113,9 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     dotDrift: 0.26,
     wordTilt: 2.6,
     joins: 0.2,
+    coherence: 0.8,
+    speed: 0.55,
+    layout: 0.9,
   },
 };
 

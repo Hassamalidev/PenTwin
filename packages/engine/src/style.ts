@@ -34,6 +34,14 @@ export interface WordStyle {
   scale: number;
   /** Radians. The word's own tilt about its first letter; positive runs downhill. */
   tilt?: number;
+  /** Radians. The word's own lean, added to each letter's slant. */
+  slant?: number;
+  /** Radians. Extra lean from the hand speeding up or slowing down. */
+  lean?: number;
+  /** 0 to 1. How fast the hand is moving through this word. */
+  speed?: number;
+  /** Multiplier on letter height: loops get flatter as the hand speeds up. */
+  flatten?: number;
 }
 
 /**

@@ -81,6 +81,9 @@ const jitter = z.object({
   dotDrift: z.number().min(0).max(0.6).optional(),
   wordTilt: z.number().min(0).max(8).optional(),
   joins: z.number().min(0).max(1).optional(),
+  coherence: z.number().min(0).max(1).optional(),
+  speed: z.number().min(0).max(1).optional(),
+  layout: z.number().min(0).max(1).optional(),
 });
 
 const options = z.strictObject({

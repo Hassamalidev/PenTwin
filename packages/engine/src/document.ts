@@ -2,6 +2,7 @@ import { createRng } from '@pentwin/shared';
 import { addCorrections, readMarkers, type CorrectionCounts } from './corrections';
 import { layoutHeader, writeFurniture } from './furniture';
 import type { GlyphBank } from './glyphs';
+import { createLayoutHabits } from './jitter';
 import {
   resolvePage,
   type PageScene,
@@ -43,6 +44,8 @@ export type Block = (
 const HEADING_SCALE = { 1: 1.35, 2: 1.15 } as const;
 /** Space between a table cell's border and its text, in mm. */
 const CELL_PADDING = 1.5;
+/** Most slips of the pen on a page written by hand. */
+const SLIPS_PER_PAGE = 2;
 /** Share of a line above the baseline, used to place boxes around lines of text. */
 const ASCENT = 0.72;
 
@@ -65,6 +68,10 @@ export function renderDocument(
   const left = page.margins.left;
   const right = page.width - page.margins.right;
   const step = page.lineHeight;
+  const handLayout = page.jitter?.layout ?? 0;
+  const habits = createLayoutHabits(createRng(`${options.seed}/edge`), handLayout, right - left);
+  const listRng = createRng(`${options.seed}/lists`);
+  let lineNumber = 0;
   const ruler = createPageWriter({
     bank,
     xHeight: page.xHeight,
@@ -82,7 +89,9 @@ export function renderDocument(
   const capacity = (pageIndex: number): number =>
     Math.max(
       1,
-      Math.floor((page.height - page.margins.bottom - firstBaseline(pageIndex)) / step + 1e-6) + 1,
+      Math.floor((page.height - page.margins.bottom - firstBaseline(pageIndex)) / step + 1e-6) +
+        1 -
+        habits.pageSlack(pageIndex),
     );
 
   interface Sheet {
@@ -141,7 +150,15 @@ export function renderDocument(
     (typeof content === 'string' ? [{ text: content }] : content).flatMap((run) => {
       let text = run.text;
       if (style.correct) {
-        const result = addCorrections(text, options.corrections ?? 0, correctionRng);
+        // By hand, no more than a couple of slips a page.
+        const budget =
+          handLayout > 0
+            ? Math.max(
+                0,
+                SLIPS_PER_PAGE * sheets.length - corrections.struck - corrections.retraced,
+              )
+            : Infinity;
+        const result = addCorrections(text, options.corrections ?? 0, correctionRng, budget);
         text = result.text;
         corrections.struck += result.counts.struck;
         corrections.retraced += result.counts.retraced;
@@ -157,15 +174,17 @@ export function renderDocument(
     });
 
   /** Greedy word wrap of tokens into lines no wider than `width`. */
-  const wrap = (tokens: Token[], width: number, scale = 1): Token[][] => {
+  const wrap = (tokens: Token[], width: number, scale = 1, ragged = false): Token[][] => {
     const lines: Token[][] = [[]];
     let used = 0;
     for (const token of tokens) {
       const w = sheet.writer.measure(token.text, scale);
       const gap = lines.at(-1)!.length > 0 ? sheet.writer.spaceWidth * scale : 0;
-      if (used + gap + w > width && lines.at(-1)!.length > 0) {
+      const limit = ragged ? width - habits.lineSlack(lineNumber) : width;
+      if (used + gap + w > limit && lines.at(-1)!.length > 0) {
         lines.push([token]);
         used = w;
+        lineNumber++;
       } else {
         lines.at(-1)!.push(token);
         used += gap + w;
@@ -175,7 +194,7 @@ export function renderDocument(
   };
 
   const writeFlow = (tokens: Token[], indent = 0, marker?: string): void => {
-    wrap(tokens, right - left - indent).forEach((line, i) => {
+    wrap(tokens, right - left - indent, 1, true).forEach((line, i) => {
       const at = nextLine();
       if (i === 0 && marker) {
         sheet.writer.writeLine([{ text: marker }], { ...at, left, right });
@@ -195,7 +214,8 @@ export function renderDocument(
         const level = block.level ?? 1;
         const scale = block.scale ?? HEADING_SCALE[level];
         const underline = block.underline ?? level === 1;
-        const lines = wrap(toTokens(block.text, { bold: true }), right - left, scale);
+        // Nobody writes in bold: a hand makes a heading bigger and underlines it.
+        const lines = wrap(toTokens(block.text, { bold: handLayout <= 0 }), right - left, scale);
         skip(1);
         // Keep a heading together with at least one line of what follows.
         need(lines.length + 1);
@@ -216,10 +236,17 @@ export function renderDocument(
         break;
 
       case 'list': {
-        const widest = block.ordered ? `${block.items.length}.` : '-';
+        const number = (i: number): string => (handLayout > 0 ? `${i + 1})` : `${i + 1}.`);
+        const widest = block.ordered ? number(block.items.length - 1) : '-';
         const indent = sheet.writer.measure(widest) + sheet.writer.spaceWidth;
         block.items.forEach((item, i) => {
-          writeFlow(toTokens(item, { correct: true }), indent, block.ordered ? `${i + 1}.` : '-');
+          // Each item starts where the hand happens to land, not on a tab stop.
+          const uneven = handLayout > 0 ? listRng.float(-0.5, 0.9) * handLayout : 0;
+          writeFlow(
+            toTokens(item, { correct: true }),
+            indent + uneven,
+            block.ordered ? number(i) : '-',
+          );
         });
         skip(Math.round(options.paragraphSpacing ?? 0));
         break;

@@ -83,6 +83,8 @@ describe('realism features combined', { timeout: 120_000 }, () => {
     const { pages, corrections } = renderText(text, bank, {
       seed: 'all',
       ...presetOptions('exam'),
+      // Without the page habits, so the slips are not capped at a couple a page.
+      jitter: { ...presetOptions('exam').jitter, layout: 0 },
       corrections: 0.2,
       header: [{ label: 'Name', value: 'Sara Khan' }],
       pageNumbers: true,

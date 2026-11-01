@@ -121,7 +121,7 @@ describe('addCorrections', () => {
 
 describe('corrections in rendering', { timeout: 120_000 }, () => {
   const render = (corrections?: number, seed = 'c') =>
-    renderText(text, bank, { seed, jitter: PRESETS.normal, corrections });
+    renderText(text, bank, { seed, jitter: { ...PRESETS.normal, layout: 0 }, corrections });
 
   it('changes nothing when off', () => {
     expect(render().corrections).toEqual({ struck: 0, retraced: 0 });

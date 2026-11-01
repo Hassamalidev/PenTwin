@@ -76,6 +76,8 @@ export function placeMarks(
   paint: 'stroke' | 'fill',
   amount: number,
   rng: Rng,
+  /** Glyph units a crossbar may run on to the right, over the next letter. */
+  reach = 0,
 ): readonly PathCommand[] {
   if (amount <= 0) return glyph.path;
   let marks = cache.get(glyph);
@@ -103,12 +105,15 @@ export function placeMarks(
     // A crossbar is a quick flick: usually rising to the right, never quite level.
     const tilt = -Math.min(0.35, amount * 0.9) * rng.float(-0.3, 1);
     const stretch = 1 + Math.min(0.6, amount) * rng.float(-0.4, 1);
-    const dx = unit * rng.float(-0.3, 0.6);
+    const width = b.maxX - b.minX;
+    const carried = reach > 0 ? reach * rng.float(0, 1) : 0;
+    const longer = width > 0 ? stretch + carried / width : stretch;
+    const dx = unit * rng.float(-0.3, 0.6) + carried / 2;
     const dy = unit * rng.float(-0.4, 0.3);
     const cos = Math.cos(tilt);
     const sin = Math.sin(tilt);
     return transformPath(part, (x, y) => {
-      const sx = (x - cx) * stretch;
+      const sx = (x - cx) * longer;
       const sy = y - cy;
       return [cx + sx * cos - sy * sin + dx, cy + sx * sin + sy * cos + dy];
     });

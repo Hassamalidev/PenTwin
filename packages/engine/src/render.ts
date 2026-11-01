@@ -3,7 +3,7 @@ import { addCorrections, readMarkers, RETRACE, STRUCK, type CorrectionCounts } f
 import { layoutHeader, writeFurniture, type FurnitureOptions } from './furniture';
 import type { GlyphBank } from './glyphs';
 import { INKS, type Ink, type InkName } from './ink';
-import type { JitterParams } from './jitter';
+import { createLayoutHabits, type JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
 import { createPaper, type Paper, type PaperSpec } from './paper';
 import { createPageWriter, type InkStroke, type RenderReport } from './writer';
@@ -152,10 +152,17 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     text,
     options.corrections ?? 0,
     createRng(`${options.seed}/corrections`),
+    // About two slips for each 250 words, which is roughly a page.
+    page.jitter?.layout ? Math.ceil(text.split(/s+/).length / 125) : Infinity,
   );
   const header = options.header?.length
     ? layoutHeader(page, options.header, (text) => ruler.measure(text))
     : undefined;
+  const habits = createLayoutHabits(
+    createRng(`${options.seed}/edge`),
+    page.jitter?.layout ?? 0,
+    page.width - page.margins.left - page.margins.right,
+  );
   const laidOut = layoutText(corrected.text, {
     pageWidth: page.width,
     pageHeight: page.height,
@@ -166,6 +173,8 @@ export function renderText(text: string, bank: GlyphBank, options: RenderOptions
     firstPageBaseline: header?.bodyStart,
     paragraphSpacing: options.paragraphSpacing,
     hyphenate: options.hyphenate,
+    lineSlack: habits.lineSlack,
+    pageSlack: habits.pageSlack,
     spaceWidth: ruler.spaceWidth,
     measure: (char) => (char === STRUCK || char === RETRACE ? 0 : ruler.measure(char)),
   });

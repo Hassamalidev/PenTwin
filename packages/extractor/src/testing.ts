@@ -73,6 +73,9 @@ export const SAMPLE_HAND: JitterParams = {
   dotDrift: 0,
   wordTilt: 0,
   joins: 0,
+  coherence: 0,
+  speed: 0,
+  layout: 0,
 };
 
 /**

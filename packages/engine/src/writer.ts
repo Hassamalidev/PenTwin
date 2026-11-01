@@ -5,7 +5,7 @@ import { createJitterStyler, createNoise, type JitterParams } from './jitter';
 import { placeMarks } from './marks';
 import { pathBounds, transformPath, type PathCommand } from './path';
 import type { PenModel } from './pen';
-import { identityStyler, type GlyphStyle, type Styler } from './style';
+import { identityStyler, type GlyphStyle, type Styler, type WordStyle } from './style';
 
 export interface InkStroke {
   /** The character (or letter pair) this glyph stands for. Empty for drawn lines. */
@@ -121,6 +121,9 @@ export interface WriterSetup {
   lineCount?: number;
 }
 
+/** How far a crossbar may run on at full speed, as a fraction of the x-height. */
+const BAR_REACH = 0.7;
+
 /** Word gaps shrink at most this far to keep a line inside its right limit. */
 const MIN_GAP_SQUEEZE = 0.5;
 /** Extra lean of italic text, in radians (about 10 degrees). */
@@ -235,6 +238,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const delayedRng = createRng(`${setup.pageSeed}/delayed`);
   const joinRng = createRng(`${setup.pageSeed}/joins`);
   const joinRate = bank.paint === 'stroke' ? (setup.jitter?.joins ?? 0) : 0;
+  const handLayout = setup.jitter?.layout ?? 0;
 
   /** Marks a pen-stroke to be drawn with the ink's pen model, when it has one. */
   const penned = (stroke: InkStroke): InkStroke =>
@@ -375,13 +379,15 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
       spec.baseline + lineStyle.baselineShift(x) + Math.tan(lineStyle.slope) * (x - startX);
     // Where each struck word starts and ends, so it can be crossed out afterwards.
     const spans = new Map<number, { from: number; to: number }>();
+    // Words written for emphasis: by hand that is an underline, not a heavier pen.
+    const stressed = new Map<number, { from: number; to: number }>();
 
     let pen = startX;
-    let word: { shift: number; scale: number; tilt?: number } = { shift: 0, scale: 1 };
+    let word: WordStyle = { shift: 0, scale: 1 };
     let wordStart = startX;
     // Where the pen left the previous letter of this word, if a join could start there.
     let exit: { x: number; y: number } | undefined;
-    for (const slot of slots) {
+    for (const [slotIndex, slot] of slots.entries()) {
       pen += slot.isWordStart ? slot.gapBefore * squeeze : slot.gapBefore;
       if (slot.isWordStart) {
         if (styler.word) word = styler.word();
@@ -394,10 +400,18 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         if (span) span.to = pen + slot.advance;
         else spans.set(slot.token, { from: pen, to: pen + slot.advance });
       }
+      if (slot.bold && handLayout > 0) {
+        const span = stressed.get(slot.token);
+        if (span) span.to = pen + slot.advance;
+        else stressed.set(slot.token, { from: pen, to: pen + slot.advance });
+      }
       if (slot.glyph) {
         const { style } = slot;
         const scale = unit * size * style.scale * word.scale;
-        const tanSlant = Math.tan(style.slant + (slot.italic ? ITALIC_LEAN : 0));
+        const flatten = word.flatten ?? 1;
+        const tanSlant = Math.tan(
+          style.slant + (word.slant ?? 0) + (word.lean ?? 0) + (slot.italic ? ITALIC_LEAN : 0),
+        );
         const tilt = word.tilt ?? 0;
         const angle = style.rotation + lineStyle.slope + tilt;
         const cos = Math.cos(angle);
@@ -408,7 +422,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         const map = (gx: number, gy: number): [number, number] => {
           const [wx, wy] = style.warp ? style.warp(gx, gy) : [gx, gy];
           const x = (wx - wy * tanSlant) * scale;
-          const y = wy * scale;
+          const y = wy * scale * flatten;
           return [originX + x * cos - y * sin, originY + x * sin + y * cos];
         };
         const place = (path: readonly PathCommand[], dx: number, dy: number): PathCommand[] =>
@@ -416,10 +430,21 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
             const [x, y] = map(gx, gy);
             return [x + dx, y + dy];
           });
+        // The faster the hand, the later the dots and the further the crossbars run.
+        const hurry = word.speed ?? 0.4;
+        const midWord = slots[slotIndex + 1]?.token === slot.token;
         const shape = style.dotDrift
-          ? placeMarks(slot.glyph, bank.xHeight, bank.paint, style.dotDrift, delayedRng)
+          ? placeMarks(
+              slot.glyph,
+              bank.xHeight,
+              bank.paint,
+              style.dotDrift * (0.7 + 0.75 * hurry),
+              delayedRng,
+              midWord && word.speed !== undefined ? BAR_REACH * bank.xHeight * hurry : 0,
+            )
           : slot.glyph.path;
-        const stroke = inked(slot.glyph.char, place(shape, 0, 0), style.strokeScale, slot.bold);
+        const heavy = slot.bold && handLayout <= 0;
+        const stroke = inked(slot.glyph.char, place(shape, 0, 0), style.strokeScale, heavy);
         if (token.struck) stroke.struck = true;
 
         const ends = joinRate > 0 && !token.struck ? endsOf(slot.glyph, bank.xHeight) : null;
@@ -427,7 +452,8 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
           // The pen stays down: out of the last letter along the line, then up into this one.
           const [ex, ey] = map(ends.entry.x, ends.entry.y);
           const reach = ex - exit.x;
-          if (reach > 0 && reach < xHeight * size * 1.5 && joinRng.next() < joinRate) {
+          const joinChance = joinRate * (word.speed === undefined ? 1 : 0.5 + 1.25 * word.speed);
+          if (reach > 0 && reach < xHeight * size * 1.5 && joinRng.next() < joinChance) {
             const join: InkStroke = {
               char: '',
               join: true,
@@ -459,7 +485,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
             again.char,
             place(again.path, offset(), offset()),
             style.strokeScale,
-            slot.bold,
+            heavy,
           );
           second.retrace = true;
           strokes.push(penned(second));
@@ -484,11 +510,27 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         strokes.push(line);
       }
     }
+    for (const { from, to } of stressed.values()) {
+      const drop = xHeight * size * 0.3;
+      strokes.push(
+        drawnLine(from, baselineAt(from) + drop, to + xHeight * 0.2, baselineAt(to) + drop),
+      );
+    }
     return pen;
   };
 
   const drawLine = (x0: number, y0: number, x1: number, y1: number): void => {
-    strokes.push(drawnLine(x0, y0, x1, y1));
+    // A ruled line by hand starts early and stops late: corners cross instead of meeting.
+    if (handLayout <= 0) {
+      strokes.push(drawnLine(x0, y0, x1, y1));
+      return;
+    }
+    const length = Math.hypot(x1 - x0, y1 - y0) || 1;
+    const ux = (x1 - x0) / length;
+    const uy = (y1 - y0) / length;
+    const before = markRng.float(0, 1.3) * handLayout;
+    const after = markRng.float(0.1, 1.8) * handLayout;
+    strokes.push(drawnLine(x0 - ux * before, y0 - uy * before, x1 + ux * after, y1 + uy * after));
   };
   return { writeLine, drawLine, measure, spaceWidth, strokes };
 }

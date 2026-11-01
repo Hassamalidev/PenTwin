@@ -22,9 +22,9 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 | skewed photo     | 17/17 | 99.0%             | 0.0%            | 1.0%     | 583        | 0     | 2      | 3             |
 | shadowed photo   | 17/17 | 99.3%             | 0.0%            | 0.7%     | 584        | 0     | 3      | 2             |
 | blurry photo     | 17/17 | 98.5%             | 0.0%            | 1.5%     | 576        | 4     | 2      | 4             |
-| neat writing     | 17/17 | 100.0%            | 0.0%            | 0.0%     | 585        | 0     | 6      | 0             |
-| rushed writing   | 17/17 | 84.6%             | 1.0%            | 14.4%    | 475        | 25    | 9      | 6             |
-| touching letters | 17/17 | 88.2%             | 1.0%            | 10.8%    | 513        | 8     | 7      | 26            |
+| neat writing     | 17/17 | 99.7%             | 0.0%            | 0.3%     | 583        | 0     | 6      | 0             |
+| rushed writing   | 17/17 | 71.6%             | 2.7%            | 25.7%    | 420        | 13    | 7      | 37            |
+| touching letters | 18/18 | 85.6%             | 1.5%            | 12.9%    | 508        | 2     | 3      | 26            |
 
 **The last three rows changed on 2026-10-09, and not because the extractor did.** Those
 pages are written in the engine's neat, rushed and normal styles, and on that day the
@@ -107,6 +107,14 @@ run of three or more joined letters as one unit, a sloped baseline per word, and
 letters built from a mark plus a speck (that last one also refused real "!" and "?").
 `align.test.ts` keeps "refuses letters joined by the pen" as a known failure until the
 rushed page is under 1%.
+
+### After the speed habit (2026-11-01)
+
+The styles gained a writing pace: when the hand speeds up, more letters join and loops get
+flatter. The extractor did not change, but the rushed page became much harder (71.6% correct,
+2.7% wrong, 25.7% left out; it was 84.6%, 1.0%, 14.4%). **This number is deliberately not
+being chased.** It comes from synthetic writing, and joined real handwriting is the case
+that has to be measured next, on real pages.
 
 How to read the columns:
 

@@ -14,6 +14,8 @@ export interface PenModel {
   nib: number;
   /** Degrees. Direction a broad nib is held at; strokes along it are thinnest. */
   nibAngle?: number;
+  /** Fraction. Extra width on strokes pulled down the page, less on strokes pushed up. */
+  down?: number;
 }
 
 interface Point {
@@ -234,7 +236,7 @@ function widthProfile(points: readonly Point[], width: number, pen: PenModel): F
   const liftZone = Math.min(length * 0.4, width * 5);
 
   let nibFactor: Float64Array | undefined;
-  if (pen.nib > 0) {
+  if (pen.nib > 0 || pen.down) {
     const nibAngle = ((pen.nibAngle ?? 40) * Math.PI) / 180;
     const cosNib = Math.cos(nibAngle);
     const sinNib = Math.sin(nibAngle);
@@ -248,7 +250,9 @@ function widthProfile(points: readonly Point[], width: number, pen: PenModel): F
       const dy = b.y - a.y;
       const d = Math.hypot(dx, dy) || 1e-9;
       const across = Math.abs((-dy / d) * cosNib - (dx / d) * sinNib);
-      direction[i] = 1 - pen.nib + (pen.nib * across) / MEAN_SIN;
+      // Pulling down leans on the pen; pushing up lets it off. dy is positive going down.
+      const pull = dy >= 0 ? (dy / d) * (pen.down ?? 0) : 0.6 * (dy / d) * (pen.down ?? 0);
+      direction[i] = (1 - pen.nib + (pen.nib * across) / MEAN_SIN) * (1 + pull);
     }
     // The nib turns smoothly through a curve; average out single-step jumps.
     nibFactor = new Float64Array(n);

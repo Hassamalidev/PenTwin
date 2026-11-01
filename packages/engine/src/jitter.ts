@@ -70,6 +70,23 @@ export interface JitterParams {
    * Off when left out.
    */
   joins?: number;
+  /**
+   * 0 to 1. How much of the variation moves from single letters up to the page, the line
+   * and the word. Slant and size then drift together across a line instead of shaking
+   * from letter to letter, which is what makes writing look nervous. Off when left out.
+   */
+  coherence?: number;
+  /**
+   * 0 to 1. How fast the hand moves. The pace rises and falls slowly along the page, and
+   * slant, joins, dots, crossbars and loop height all follow it together. Off when left out.
+   */
+  speed?: number;
+  /**
+   * 0 to 1. How much the page itself is laid out by a person: an uneven right edge, a left
+   * margin that creeps, pages not filled to the last line, no bold, rules that overshoot.
+   * Off when left out.
+   */
+  layout?: number;
 }
 
 export const NO_JITTER: JitterParams = {
@@ -108,6 +125,9 @@ export const DEFAULT_JITTER: JitterParams = {
   dotDrift: 0.22,
   wordTilt: 2.6,
   joins: 0.12,
+  coherence: 0.8,
+  speed: 0.4,
+  layout: 0.8,
 };
 
 const DEG = Math.PI / 180;
@@ -143,6 +163,28 @@ export function createNoise(rng: Rng): (t: number) => number {
  */
 export const pairBias = (prev: string, char: string): number =>
   hash((prev.codePointAt(0) ?? 0) * 0x10001 + (char.codePointAt(0) ?? 0));
+
+/** Where a person stops a line and a page: neither is ever exactly at the limit. */
+export interface LayoutHabits {
+  /** mm left unused at the right of a line. */
+  lineSlack: (line: number) => number;
+  /** Lines left unused at the bottom of a page. */
+  pageSlack: (page: number) => number;
+}
+
+export const NO_LAYOUT_HABITS: LayoutHabits = { lineSlack: () => 0, pageSlack: () => 0 };
+
+/** The right edge wanders slowly, with an occasional line stopped well short. */
+export function createLayoutHabits(rng: Rng, layout: number, textWidth: number): LayoutHabits {
+  if (layout <= 0) return NO_LAYOUT_HABITS;
+  const edge = createNoise(rng);
+  const salt = rng.int(0, 0x7fffffff);
+  return {
+    lineSlack: (line) =>
+      layout * textWidth * (0.035 * (1 + edge(line / 3)) + (hash(line ^ salt) > 0.72 ? 0.07 : 0)),
+    pageSlack: (page) => Math.floor(layout * 2.99 * (0.5 + 0.5 * hash(page ^ salt ^ 0x5bd1))),
+  };
+}
 
 export interface StyleMetrics {
   /** x-height on the page, in mm. */
@@ -194,6 +236,23 @@ export function createJitterStyler(
   const ride = habits ? createNoise(habits) : () => 0;
   const jump = (): number => (habits ? habits.next() + habits.next() - 1 : 0);
   let landing = 0;
+
+  // Variation that belongs to the page, the line and the word rather than the letter.
+  const coherence = gestures ? (params.coherence ?? 0) : 0;
+  const steadiness = 1 - 0.75 * coherence;
+  const lineSlant = coherence > 0 ? createNoise(gestures!) : () => 0;
+  const lineSize = coherence > 0 ? createNoise(gestures!) : () => 0;
+  const wordSlant = coherence > 0 ? createNoise(gestures!) : () => 0;
+  const turn = coherence > 0 ? createNoise(gestures!) : () => 0;
+  const pageLean = coherence > 0 ? gestures!.float(-1, 1) : 0;
+  const pageSize = coherence > 0 ? gestures!.float(-1, 1) : 0;
+  let lineLean = 0;
+  let lineGrowth = 0;
+
+  // The pace of the hand: everything that follows from speed reads this one value.
+  const speed = gestures ? (params.speed ?? 0) : 0;
+  const pace = speed > 0 ? createNoise(gestures!) : () => 0;
+  let paceIndex = 0;
   const wordTilt = gestures ? (params.wordTilt ?? 0) * DEG : 0;
   // Partly a habit that lasts a few words, partly fresh each word.
   const lean = gestures ? createNoise(gestures) : () => 0;
@@ -208,8 +267,12 @@ export function createJitterStyler(
     line: (lineIndex) => {
       const t = tiredAt(lineIndex);
       tired = t;
+      lineLean = coherence * (0.5 * pageLean + 0.7 * lineSlant(lineIndex / 3));
+      lineGrowth = coherence * (0.4 * pageSize + 0.6 * lineSize(lineIndex / 3));
+      const progress = Math.min(1, lineIndex / Math.max(1, lineCount - 1));
       return {
-        offsetX: params.marginDrift * margin(lineIndex / 5),
+        // The left edge creeps inward down a page, as a writer stops looking at it.
+        offsetX: params.marginDrift * margin(lineIndex / 5) + (params.layout ?? 0) * 2.2 * progress,
         slope: params.lineSlope * (1 + 0.8 * t) * DEG * slope(lineIndex / 4),
         // A slow wander across the page plus a much smaller, quicker ripple, and the
         // height this whole line happens to ride at.
@@ -223,25 +286,45 @@ export function createJitterStyler(
 
     word: () => {
       const tilt = tiltOf();
-      if (wordBounce === 0) return { shift: 0, scale: 1, ...(tilt ? { tilt } : {}) };
+      const place = paceIndex++;
+      const now = Math.max(0, Math.min(1, speed + 0.22 * pace(place / 7) + 0.12 * tired));
+      const moves = {
+        ...(tilt ? { tilt } : {}),
+        ...(coherence > 0
+          ? { slant: coherence * params.slantVariation * DEG * 0.5 * wordSlant(place / 2.5) }
+          : {}),
+        ...(speed > 0
+          ? { speed: now, lean: (now - speed) * 7 * DEG, flatten: 1 - 0.08 * now }
+          : {}),
+      };
+      if (wordBounce === 0) return { shift: 0, scale: 1, ...moves };
       // Partly a drift over several words, partly a fresh landing each time.
       const i = landing++;
       return {
         shift: wordBounce * xHeight * (1 + 2 * tired) * (0.4 * bounce(i / 3) + 0.6 * jump()),
         scale: 1 + wordBounce * 0.45 * jump(),
-        ...(tilt ? { tilt } : {}),
+        ...moves,
       };
     },
 
     glyph: () => {
       const t = glyphIndex++;
       return {
-        scale: 1 + params.size * (1 + 0.6 * tired) * (0.7 * size(t / 20) + 0.3 * wobble()),
-        rotation: params.rotation * (1 + 0.5 * tired) * DEG * wobble(),
+        scale:
+          1 +
+          params.size *
+            (1 + 0.6 * tired) *
+            (0.7 * size(t / 20) + 0.3 * steadiness * wobble() + 0.7 * lineGrowth),
+        rotation:
+          params.rotation *
+          (1 + 0.5 * tired) *
+          DEG *
+          (steadiness * wobble() + 0.5 * coherence * turn(t / 9)),
         slant:
           (params.slant +
             3 * tired +
-            params.slantVariation * (0.7 * slant(t / 30) + 0.3 * wobble())) *
+            params.slantVariation *
+              (0.7 * slant(t / 30) + 0.3 * steadiness * wobble() + 0.8 * lineLean)) *
           DEG,
         strokeScale: 1 + params.strokeWidth * (0.6 * stroke(t / 12) + 0.4 * wobble()),
         pressure: params.pressure,

@@ -158,3 +158,68 @@ describe('joins', () => {
     expect(pages[0]!.strokes.some((s) => s.join)).toBe(false);
   });
 });
+
+describe('a page laid out by hand', () => {
+  const words = Array.from({ length: 400 }, () => 'written line after line down the page').join(
+    ' ',
+  );
+  const options = { seed: 'hand', pageSize: 'A5', lineHeight: 8 } as const;
+  const rightEdges = (layout: number): number[] => {
+    const { pages } = renderText(words, bank, {
+      ...options,
+      jitter: { ...NO_JITTER, layout },
+    });
+    return pages[0]!.baselines.map((baseline) =>
+      Math.max(
+        ...pages[0]!.strokes
+          .map((s) => pathBounds(s.path))
+          .filter((b) => Math.abs(b.maxY - baseline) < 3)
+          .map((b) => b.maxX),
+      ),
+    );
+  };
+
+  it('leaves the right edge uneven, inside the margin', () => {
+    const edges = rightEdges(1);
+    expect(Math.max(...edges) - Math.min(...edges)).toBeGreaterThan(6);
+    expect(Math.max(...edges)).toBeLessThanOrEqual(148 - 20 + 1);
+  });
+
+  it('never fills every page to the last line, and the page count stays reproducible', () => {
+    const count = (layout: number): number[] =>
+      renderText(words, bank, { ...options, jitter: { ...NO_JITTER, layout } }).pages.map(
+        (page) => page.baselines.length,
+      );
+    expect(Math.min(...count(1).slice(0, -1))).toBeLessThan(Math.max(...count(0)));
+    expect(count(1)).toEqual(count(1));
+  });
+
+  it('caps slips at about two a page', () => {
+    const { corrections } = renderText(words.slice(0, 1200), bank, {
+      ...options,
+      jitter: { ...NO_JITTER, layout: 1 },
+      corrections: 1,
+    });
+    expect(corrections.struck + corrections.retraced).toBeLessThanOrEqual(
+      Math.ceil(words.slice(0, 1200).split(/\s+/).length / 125),
+    );
+  });
+});
+
+describe('speed ties several things together', () => {
+  it('leans further and flattens loops when the hand is fast', () => {
+    const text = 'minimum consumer services across numerous summer scenes';
+    const tall = (speed: number): number => {
+      const { pages } = renderText(text, bank, {
+        ...base,
+        jitter: { ...NO_JITTER, speed },
+      });
+      const heights = wholeLetters(pages[0]!.strokes).map((s) => {
+        const b = pathBounds(s.path);
+        return b.maxY - b.minY;
+      });
+      return heights.reduce((sum, h) => sum + h, 0) / heights.length;
+    };
+    expect(tall(1)).toBeLessThan(tall(0.05));
+  });
+});

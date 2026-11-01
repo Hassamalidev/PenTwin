@@ -25,6 +25,10 @@ export interface LayoutOptions {
    * trailing hyphen. Words that fit on a line are never split. Defaults to false.
    */
   hyphenate?: boolean;
+  /** mm to leave unused at the right of the given line. Defaults to none. */
+  lineSlack?: (line: number) => number;
+  /** Lines to leave unused at the bottom of the given page. Defaults to none. */
+  pageSlack?: (page: number) => number;
 }
 
 export interface LaidOutWord {
@@ -59,10 +63,15 @@ export function layoutText(text: string, options: LayoutOptions): LaidOutPage[] 
 
   const pages: LaidOutPage[] = [{ lines: [] }];
   let baseline = options.firstPageBaseline ?? firstBaseline;
+  let lineNumber = 0;
+  const limitNow = (): number => maxWidth - (options.lineSlack?.(lineNumber) ?? 0);
+  const lastOn = (page: number): number =>
+    lastBaseline - (options.pageSlack?.(page) ?? 0) * lineHeight;
 
   const emit = (words: LaidOutWord[]): void => {
     let page = pages.at(-1)!;
-    if (baseline > lastBaseline + EPSILON && page.lines.length > 0) {
+    lineNumber++;
+    if (baseline > lastOn(pages.length - 1) + EPSILON && page.lines.length > 0) {
       page = { lines: [] };
       pages.push(page);
       baseline = firstBaseline;
@@ -102,7 +111,7 @@ export function layoutText(text: string, options: LayoutOptions): LaidOutPage[] 
     const place = (word: string): void => {
       const width = widthOf(word);
       const x = line.length > 0 ? cursor + spaceWidth : 0;
-      if (line.length > 0 && x + width > maxWidth + EPSILON) {
+      if (line.length > 0 && x + width > limitNow() + EPSILON) {
         flush();
         place(word);
         return;

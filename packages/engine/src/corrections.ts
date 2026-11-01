@@ -53,6 +53,8 @@ export function addCorrections(
   text: string,
   rate: number,
   rng: Rng,
+  /** Most slips to make, of both kinds together. A real page has one or two at most. */
+  limit = Infinity,
 ): { text: string; counts: CorrectionCounts } {
   const counts: CorrectionCounts = { struck: 0, retraced: 0 };
   if (rate <= 0) return { text, counts };
@@ -61,7 +63,7 @@ export function addCorrections(
   const out = text.split(/(\s+)/).map((part) => {
     const match = SAFE_WORD.exec(part);
     // Never two corrections in a row: that reads as a staged mess, not a slip.
-    if (!match || previousCorrected) {
+    if (!match || previousCorrected || counts.struck + counts.retraced >= limit) {
       if (match || part.trim()) previousCorrected = false;
       return part;
     }

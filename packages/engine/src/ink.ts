@@ -38,7 +38,7 @@ export const INKS: Record<InkName, Ink> = {
     bleed: 0,
     grain: 0.12,
     // Lands with a small blob, lifts off in a thin tail.
-    pen: { taper: 0.55, landing: 0.22, nib: 0 },
+    pen: { taper: 0.55, landing: 0.22, nib: 0, down: 0.1 },
   },
   'ballpoint-black': {
     color: '#1d1d1f',
@@ -49,7 +49,7 @@ export const INKS: Record<InkName, Ink> = {
     bleed: 0,
     grain: 0.12,
     // Lands with a small blob, lifts off in a thin tail.
-    pen: { taper: 0.55, landing: 0.22, nib: 0 },
+    pen: { taper: 0.55, landing: 0.22, nib: 0, down: 0.1 },
   },
   /** Dense, even, slightly wider line. */
   gel: {
@@ -60,7 +60,7 @@ export const INKS: Record<InkName, Ink> = {
     widthVariation: 0.03,
     bleed: 0.02,
     grain: 0,
-    pen: { taper: 0.35, landing: 0.12, nib: 0 },
+    pen: { taper: 0.35, landing: 0.12, nib: 0, down: 0.2 },
   },
   /** Wet line that pools and thins: strong shading, swelling strokes, a little bleed. */
   fountain: {
@@ -72,7 +72,7 @@ export const INKS: Record<InkName, Ink> = {
     bleed: 0.07,
     grain: 0,
     // An ordinary fine nib held at about 40 degrees: wide down, thin across.
-    pen: { taper: 0.4, landing: 0.08, nib: 0.42, nibAngle: 40 },
+    pen: { taper: 0.4, landing: 0.08, nib: 0.42, nibAngle: 40, down: 0.08 },
   },
   /** Grey, light, grainy. */
   pencil: {
@@ -84,7 +84,7 @@ export const INKS: Record<InkName, Ink> = {
     bleed: 0,
     grain: 0.65,
     // A worn point has a slight chisel to it.
-    pen: { taper: 0.5, landing: 0.04, nib: 0.12, nibAngle: 30 },
+    pen: { taper: 0.5, landing: 0.04, nib: 0.12, nibAngle: 30, down: 0.14 },
   },
 };
 
