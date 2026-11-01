@@ -21,6 +21,7 @@ import {
 import { BRAND, type PageSizeName } from '@pentwin/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FeedbackForm } from '../../components/FeedbackForm';
+import { Journey } from '../../components/Journey';
 import { pageRange, track, trackOnce } from '../../lib/analytics';
 import { currentSession } from '../../lib/auth';
 import { loadBank, type LoadedBank } from '../../lib/bank';
@@ -163,6 +164,7 @@ export default function EditorPage() {
   // The draft is read after the first render (the server cannot see browser storage),
   // and nothing is saved until it has been read, or the starter text would replace it.
   const [drawing, setDrawing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   /** What has been learned about this writer, in this browser only. */
   const [hand, setHand] = useState<HandMemory>(NEW_HAND);
   useEffect(() => setHand(loadHand()), []);
@@ -397,336 +399,402 @@ export default function EditorPage() {
     }
   };
 
-  if (loadError) return <p className="error">{loadError}</p>;
-  if (!loaded) return <p className="muted">Loading your handwriting...</p>;
+  if (loadError) {
+    return (
+      <div className="panel narrow" data-testid="load-error">
+        <p className="error" role="alert">
+          {loadError}
+        </p>
+        <div className="row">
+          <button type="button" className="primary" onClick={() => window.location.reload()}>
+            Try again
+          </button>
+          <a className="button" href="/sample">
+            Go to my handwriting
+          </a>
+        </div>
+      </div>
+    );
+  }
+  if (!loaded) {
+    return (
+      <div className="editor-loading" role="status" data-testid="editor-loading">
+        <span className="redrawing">Getting your handwriting ready</span>
+        <div className="skeleton" />
+      </div>
+    );
+  }
 
   return (
-    <div className="editor">
-      <section className="panel text-panel" aria-label="Your text">
-        <h1>Editor</h1>
-        {loaded.isDemo && (
-          <p className="notice" data-testid="demo-notice">
-            You are using the demo handwriting. <a href="/sample">Add your own handwriting</a> to
-            write in yours.
-          </p>
-        )}
+    <div className="editor-page">
+      <Journey step={quote ? 4 : 3} skipped={loaded.isDemo} />
+      <div
+        className={`editor${dragging ? ' dragging' : ''}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget === event.target) setDragging(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          void onFile(event.dataTransfer.files[0]);
+        }}
+      >
+        <section className="panel text-panel" aria-label="Your text">
+          <h1>Editor</h1>
+          {loaded.isDemo && (
+            <div className="notice" data-testid="demo-notice">
+              <p style={{ margin: 0 }}>This is sample handwriting, not yours.</p>
+              <a className="button primary" href="/sample" data-testid="use-my-handwriting">
+                Use my own handwriting
+              </a>
+            </div>
+          )}
 
-        <div className="row">
-          <label className="file-button primary">
-            {busy ? 'Reading...' : 'Upload Word or PDF'}
-            <input
-              className="photo-input"
-              type="file"
-              accept={ACCEPTED_FILES}
-              disabled={busy}
-              data-testid="file-input"
-              onChange={(event) => {
-                void onFile(event.target.files?.[0]);
-                event.target.value = '';
-              }}
-            />
-          </label>
-          <span className="row add-blocks" role="group" aria-label="Add to the document">
-            {(
-              [
-                ['Paragraph', { type: 'paragraph', text: '' }],
-                ['Heading', { type: 'heading', text: '' }],
-                ['List', { type: 'list', items: [''] }],
-              ] as [string, Block][]
-            ).map(([name, block]) => (
+          <div className="row">
+            <label className="file-button primary">
+              {busy ? 'Reading...' : 'Upload Word or PDF'}
+              <input
+                className="photo-input"
+                type="file"
+                accept={ACCEPTED_FILES}
+                disabled={busy}
+                data-testid="file-input"
+                onChange={(event) => {
+                  void onFile(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+              />
+            </label>
+            <span className="row add-blocks" role="group" aria-label="Add to the document">
+              {(
+                [
+                  ['Paragraph', { type: 'paragraph', text: '' }],
+                  ['Heading', { type: 'heading', text: '' }],
+                  ['List', { type: 'list', items: [''] }],
+                ] as [string, Block][]
+              ).map(([name, block]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="small"
+                  aria-label={`Add ${name.toLowerCase()}`}
+                  onClick={() => setBlocks((list) => [...list, ...withIds([block])])}
+                >
+                  + {name}
+                </button>
+              ))}
+            </span>
+            <button type="button" onClick={startOver} data-testid="start-over">
+              Start over
+            </button>
+          </div>
+          {replaced && (
+            <p className="notice row" data-testid="undo-replace">
+              <span>{replaced.what}.</span>
               <button
-                key={name}
                 type="button"
                 className="small"
-                aria-label={`Add ${name.toLowerCase()}`}
-                onClick={() => setBlocks((list) => [...list, ...withIds([block])])}
+                onClick={() => {
+                  setBlocks(replaced.blocks);
+                  setSettings(replaced.settings);
+                  setReplaced(undefined);
+                  setPageIndex(0);
+                }}
               >
-                + {name}
+                Undo
               </button>
-            ))}
-          </span>
-          <button type="button" onClick={startOver} data-testid="start-over">
-            Start over
-          </button>
-        </div>
-        {replaced && (
-          <p className="notice row" data-testid="undo-replace">
-            <span>{replaced.what}.</span>
-            <button
-              type="button"
-              className="small"
-              onClick={() => {
-                setBlocks(replaced.blocks);
-                setSettings(replaced.settings);
-                setReplaced(undefined);
-                setPageIndex(0);
-              }}
-            >
-              Undo
-            </button>
-            <button type="button" className="small" onClick={() => setReplaced(undefined)}>
-              Dismiss
-            </button>
-          </p>
-        )}
-        <p className="muted" style={{ fontSize: '0.88rem' }} data-testid="draft-note">
-          {restored
-            ? 'We brought back what you were working on. It is kept in this browser only.'
-            : 'Your text is kept in this browser while you work, and nowhere else.'}
-        </p>
-        {importError && (
-          <p className="error" role="alert">
-            {importError}
-          </p>
-        )}
-        {importWarnings.length > 0 && (
-          <div className="notice">
-            <ul>
-              {importWarnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div data-testid="blocks" style={{ marginTop: '0.75rem' }}>
-          {blocks.map((block, index) => (
-            <BlockEditor
-              key={block.id}
-              block={block}
-              onChange={(change) => update(block.id, change)}
-              onMove={(by) => move(block.id, by)}
-              first={index === 0}
-              last={index === blocks.length - 1}
-              onRemove={() => remove(block.id)}
-              onBreakAfter={() => insertAfter(block.id, { type: 'pageBreak' })}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="preview-column" aria-label="Preview and settings">
-        <div className="panel preview-panel">
-          <div className={`preview${zoomed ? ' zoomed' : ''}`} data-testid="preview">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt={`Preview of page ${pageIndex + 1}`}
-                data-testid="preview-image"
-              />
-            ) : (
-              <p className="muted" style={{ padding: '2rem' }}>
-                Drawing the preview...
-              </p>
-            )}
-          </div>
-          {previewError && (
-            <p className="error" role="alert">
-              {previewError}
+              <button type="button" className="small" onClick={() => setReplaced(undefined)}>
+                Dismiss
+              </button>
             </p>
           )}
-          <div className="row pager">
-            <button
-              type="button"
-              className="small"
-              disabled={pageIndex === 0}
-              onClick={() => setPageIndex((i) => i - 1)}
-            >
-              Previous
-            </button>
-            <span data-testid="page-count">
-              Page {pageIndex + 1} of {pageCount}
-            </span>
-            {drawing && previewUrl && (
-              <span className="redrawing" role="status">
-                Updating
-              </span>
-            )}
-            <button
-              type="button"
-              className="small"
-              disabled={pageIndex >= pageCount - 1}
-              onClick={() => setPageIndex((i) => i + 1)}
-            >
-              Next
-            </button>
-          </div>
-
-          <div className="hand-question" data-testid="hand-question">
-            <span>
-              {loaded.isDemo ? 'How does this writing look?' : 'Does this look like you?'}
-            </span>
-            <span className="row">
-              <button type="button" className="small" onClick={() => answer('too-neat')}>
-                Too neat
-              </button>
-              <button type="button" className="small" onClick={() => answer('right')}>
-                Looks right
-              </button>
-              <button type="button" className="small" onClick={() => answer('too-messy')}>
-                Too messy
-              </button>
-            </span>
-            {hand.answers > 0 && (
-              <span className="muted" data-testid="hand-learned">
-                Learned from {hand.answers} {hand.answers === 1 ? 'answer' : 'answers'}, kept on
-                this device.{' '}
-                <button
-                  type="button"
-                  className="link"
-                  onClick={() => {
-                    forgetHand();
-                    setHand({ ...NEW_HAND, ...(hand.style ? { style: hand.style } : {}) });
-                  }}
-                >
-                  Forget
-                </button>
-              </span>
-            )}
-          </div>
-
-          {problems.length > 0 && (
-            <div className="notice" data-testid="problems">
-              <strong>Check before you export</strong>
+          <p className="muted" style={{ fontSize: '0.88rem', marginBottom: 0 }}>
+            You can also drop a Word or PDF file anywhere on this page.
+          </p>
+          <p className="muted" style={{ fontSize: '0.88rem' }} data-testid="draft-note">
+            {restored
+              ? 'We brought back what you were working on. It is kept in this browser only.'
+              : 'Your text is kept in this browser while you work, and nowhere else.'}
+          </p>
+          {importError && (
+            <p className="error" role="alert">
+              {importError}
+            </p>
+          )}
+          {importWarnings.length > 0 && (
+            <div className="notice">
               <ul>
-                {problems.map((problem) => (
-                  <li key={problem}>{problem}</li>
+                {importWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          <div className="row" style={{ marginTop: '0.75rem' }}>
-            <button
-              type="button"
-              className="primary"
-              onClick={openExport}
-              data-testid="export-open"
-            >
-              Export PDF
-            </button>
-            <button
-              type="button"
-              onClick={() => set('seed', settings.seed + 1)}
-              data-testid="reroll"
-            >
-              Reroll look
-            </button>
-            <button
-              type="button"
-              aria-pressed={zoomed}
-              onClick={() => setZoomed((value) => !value)}
-              data-testid="zoom"
-            >
-              {zoomed ? 'Whole page' : 'Zoom in'}
-            </button>
+          <div data-testid="blocks" style={{ marginTop: '0.75rem' }}>
+            {blocks.map((block, index) => (
+              <BlockEditor
+                key={block.id}
+                block={block}
+                onChange={(change) => update(block.id, change)}
+                onMove={(by) => move(block.id, by)}
+                first={index === 0}
+                last={index === blocks.length - 1}
+                onRemove={() => remove(block.id)}
+                onBreakAfter={() => insertAfter(block.id, { type: 'pageBreak' })}
+              />
+            ))}
           </div>
-        </div>
+        </section>
 
-        <div className="panel settings-panel">
-          <h2>Settings</h2>
-          <Select
-            label="Writing style"
-            testId="preset"
-            value={settings.preset}
-            options={PRESET_LABELS}
-            onChange={(value) => {
-              setReplaced({
-                what: `The ${PRESET_LABELS[value as PresetName]} style also set its own pen, paper and corrections`,
-                blocks,
-                settings,
-              });
-              setSettings((s) => applyPreset(s, value as PresetName));
-            }}
-          />
-          <Select
-            label="Pen"
-            value={settings.ink}
-            options={INK_LABELS}
-            onChange={(value) => set('ink', value as InkName | 'preset')}
-          />
-          <Select
-            label="Paper"
-            testId="paper"
-            value={settings.paper}
-            options={PAPER_LABELS}
-            onChange={(value) => set('paper', value as PaperSpec['kind'])}
-          />
-          {settings.paper === 'ruled' && (
+        <section className="preview-column" aria-label="Preview and settings">
+          <div className="panel preview-panel">
+            <div className={`preview${zoomed ? ' zoomed' : ''}`} data-testid="preview">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={`Preview of page ${pageIndex + 1}`}
+                  data-testid="preview-image"
+                />
+              ) : (
+                <p className="muted" style={{ padding: '2rem' }}>
+                  Drawing the preview...
+                </p>
+              )}
+            </div>
+            {previewError && (
+              <p className="error" role="alert">
+                {previewError}
+              </p>
+            )}
+            <div className="row pager">
+              <button
+                type="button"
+                className="small"
+                disabled={pageIndex === 0}
+                onClick={() => setPageIndex((i) => i - 1)}
+              >
+                Previous
+              </button>
+              <span data-testid="page-count">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+              {drawing && previewUrl && (
+                <span className="redrawing" role="status">
+                  Updating
+                </span>
+              )}
+              <button
+                type="button"
+                className="small"
+                disabled={pageIndex >= pageCount - 1}
+                onClick={() => setPageIndex((i) => i + 1)}
+              >
+                Next
+              </button>
+            </div>
+
+            {problems.length > 0 && (
+              <div className="notice" data-testid="problems">
+                <strong>Check before you export</strong>
+                <ul>
+                  {problems.map((problem) => (
+                    <li key={problem}>{problem}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="row" style={{ marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                className="primary"
+                onClick={openExport}
+                data-testid="export-open"
+              >
+                Export PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => set('seed', settings.seed + 1)}
+                data-testid="reroll"
+              >
+                Reroll look
+              </button>
+              <button
+                type="button"
+                aria-pressed={zoomed}
+                onClick={() => setZoomed((value) => !value)}
+                data-testid="zoom"
+              >
+                {zoomed ? 'Whole page' : 'Zoom in'}
+              </button>
+            </div>
+            <div className="hand-question" data-testid="hand-question">
+              <span>
+                {loaded.isDemo ? 'How does this writing look?' : 'Does this look like you?'}
+              </span>
+              <span className="row">
+                <button type="button" className="small" onClick={() => answer('too-neat')}>
+                  Too neat
+                </button>
+                <button type="button" className="small" onClick={() => answer('right')}>
+                  Looks right
+                </button>
+                <button type="button" className="small" onClick={() => answer('too-messy')}>
+                  Too messy
+                </button>
+              </span>
+              {hand.answers > 0 && (
+                <span className="muted" data-testid="hand-learned">
+                  Learned from {hand.answers} {hand.answers === 1 ? 'answer' : 'answers'}, kept on
+                  this device.{' '}
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      forgetHand();
+                      setHand({ ...NEW_HAND, ...(hand.style ? { style: hand.style } : {}) });
+                    }}
+                  >
+                    Forget
+                  </button>
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="panel settings-panel">
+            <h2>Settings</h2>
             <Select
-              label="Line spacing"
-              value={settings.ruling}
-              options={{ narrow: 'Narrow', college: 'College', wide: 'Wide' }}
-              onChange={(value) => set('ruling', value as Ruling)}
+              label="Writing style"
+              testId="preset"
+              value={settings.preset}
+              options={PRESET_LABELS}
+              onChange={(value) => {
+                setReplaced({
+                  what: `The ${PRESET_LABELS[value as PresetName]} style also set its own pen, paper and corrections`,
+                  blocks,
+                  settings,
+                });
+                setSettings((s) => applyPreset(s, value as PresetName));
+              }}
             />
-          )}
-          <Select
-            label="Finish"
-            testId="finish"
-            value={settings.finish ?? 'scan'}
-            options={FINISH_LABELS}
-            onChange={(value) => set('finish', value as FinishMode)}
-          />
-          <Select
-            label="Page size"
-            value={settings.pageSize}
-            options={{ A4: 'A4', Letter: 'Letter', A5: 'A5' }}
-            onChange={(value) => set('pageSize', value as PageSizeName)}
-          />
-          <Slider
-            label="Writing size"
-            show={(v) => `${Math.round(v * 100)}% of a line`}
-            value={settings.size}
-            min={0.28}
-            max={0.42}
-            step={0.01}
-            onChange={(v) => set('size', v)}
-          />
-          <Slider
-            label="Unevenness"
-            show={(v) => `${Math.round(v * 100)}%`}
-            value={settings.unevenness}
-            min={0.4}
-            max={1.6}
-            step={0.05}
-            onChange={(v) => set('unevenness', v)}
-          />
-          <Slider
-            label="Tiredness down the page"
-            show={(v) => (v === 0 ? 'Off' : `${Math.round(v * 100)}%`)}
-            value={settings.fatigue}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => set('fatigue', v)}
-          />
-          <Slider
-            label="Corrections"
-            show={(v) => (v === 0 ? 'Off' : v <= 0.015 ? 'Rare' : v <= 0.03 ? 'Some' : 'Often')}
-            value={settings.corrections}
-            min={0}
-            max={0.05}
-            step={0.005}
-            onChange={(v) => set('corrections', v)}
-          />
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={settings.marginLine}
-              onChange={(e) => set('marginLine', e.target.checked)}
+            <Select
+              label="Pen"
+              value={settings.ink}
+              options={INK_LABELS}
+              onChange={(value) => set('ink', value as InkName | 'preset')}
             />
-            Margin line
-          </label>
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={settings.pageNumbers}
-              onChange={(e) => set('pageNumbers', e.target.checked)}
+            <Select
+              label="Paper"
+              testId="paper"
+              value={settings.paper}
+              options={PAPER_LABELS}
+              onChange={(value) => set('paper', value as PaperSpec['kind'])}
             />
-            Page numbers
-          </label>
-        </div>
-      </section>
+            <Select
+              label="Finish"
+              testId="finish"
+              value={settings.finish ?? 'scan'}
+              options={FINISH_LABELS}
+              onChange={(value) => set('finish', value as FinishMode)}
+            />
+            <details className="more-settings" data-testid="more-settings">
+              <summary>More settings</summary>
+              <div className="more-settings-body">
+                {settings.paper === 'ruled' && (
+                  <Select
+                    label="Line spacing"
+                    value={settings.ruling}
+                    options={{ narrow: 'Narrow', college: 'College', wide: 'Wide' }}
+                    onChange={(value) => set('ruling', value as Ruling)}
+                  />
+                )}
+                <Select
+                  label="Page size"
+                  value={settings.pageSize}
+                  options={{ A4: 'A4', Letter: 'Letter', A5: 'A5' }}
+                  onChange={(value) => set('pageSize', value as PageSizeName)}
+                />
+                <Slider
+                  label="Writing size"
+                  show={(v) => `${Math.round(v * 100)}% of a line`}
+                  value={settings.size}
+                  min={0.28}
+                  max={0.42}
+                  step={0.01}
+                  onChange={(v) => set('size', v)}
+                />
+                <Slider
+                  label="Unevenness"
+                  show={(v) => `${Math.round(v * 100)}%`}
+                  value={settings.unevenness}
+                  min={0.4}
+                  max={1.6}
+                  step={0.05}
+                  onChange={(v) => set('unevenness', v)}
+                />
+                <Slider
+                  label="Tiredness down the page"
+                  show={(v) => (v === 0 ? 'Off' : `${Math.round(v * 100)}%`)}
+                  value={settings.fatigue}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(v) => set('fatigue', v)}
+                />
+                <Slider
+                  label="Corrections"
+                  show={(v) =>
+                    v === 0 ? 'Off' : v <= 0.015 ? 'Rare' : v <= 0.03 ? 'Some' : 'Often'
+                  }
+                  value={settings.corrections}
+                  min={0}
+                  max={0.05}
+                  step={0.005}
+                  onChange={(v) => set('corrections', v)}
+                />
+                <label className="row">
+                  <input
+                    type="checkbox"
+                    checked={settings.marginLine}
+                    onChange={(e) => set('marginLine', e.target.checked)}
+                  />
+                  Margin line
+                </label>
+                <label className="row">
+                  <input
+                    type="checkbox"
+                    checked={settings.pageNumbers}
+                    onChange={(e) => set('pageNumbers', e.target.checked)}
+                  />
+                  Page numbers
+                </label>
+              </div>
+            </details>
+          </div>
+        </section>
+      </div>
+
+      {/* On a phone the page scrolls long: the way forward stays in reach. */}
+      <div className="action-bar" data-testid="action-bar">
+        <span className="muted">
+          {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+        </span>
+        <button
+          type="button"
+          className="primary"
+          onClick={openExport}
+          data-testid="export-open-bar"
+        >
+          Export PDF
+        </button>
+      </div>
 
       {quote && (
         <div

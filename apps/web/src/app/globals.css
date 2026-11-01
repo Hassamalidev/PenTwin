@@ -1127,7 +1127,7 @@ p.error {
 
   /* Tall pages should not push the buttons off screen. */
   .preview-panel .preview img {
-    max-height: 66vh;
+    max-height: calc(100vh - 19rem);
     width: auto;
     max-width: 100%;
     margin: 0 auto;
@@ -2017,4 +2017,130 @@ button.small.icon svg {
 
 .hand-question .muted {
   font-size: 0.82rem;
+}
+
+/* The way forward: one clear next step at the end of a stage. */
+.next-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-bright) 35%, var(--line));
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.next-step p {
+  margin: 0.15rem 0 0;
+}
+
+.stepper a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.editor-page .stepper {
+  max-width: 1320px;
+  margin: 0 auto 0.75rem;
+}
+
+[data-testid='demo-notice'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.more-settings {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.more-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.more-settings-body {
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 900px) {
+  .more-settings-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1rem;
+  }
+
+  .more-settings-body > label {
+    grid-column: 1 / -1;
+  }
+}
+
+.editor.dragging {
+  outline: 2px dashed var(--accent-bright);
+  outline-offset: 6px;
+  border-radius: var(--radius);
+}
+
+.editor-loading {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.skeleton {
+  height: 60vh;
+  border-radius: var(--radius);
+  background: var(--desk);
+}
+
+/* Only on a phone: on a wide screen the export button is always in view. */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1rem -1rem -1rem;
+  padding: 0.6rem 1rem;
+  background: color-mix(in srgb, var(--page) 92%, transparent);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (min-width: 900px) {
+  .action-bar {
+    display: none;
+  }
+}
+
+.stepper-of {
+  display: none;
+}
+
+/* On a phone the page itself needs the room: only the current step is shown. */
+@media (max-width: 700px) {
+  .stepper li:not(.current) {
+    display: none;
+  }
+
+  .stepper-of {
+    display: inline;
+    font-weight: 400;
+    color: var(--muted);
+  }
 }

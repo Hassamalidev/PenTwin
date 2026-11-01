@@ -56,6 +56,16 @@ export function saveBank(stored: StoredBank): LoadedBank {
   return loaded;
 }
 
+/** The handwriting saved on this device, if any. */
+export function savedBank(): StoredBank | undefined {
+  try {
+    const saved = localStorage.getItem(KEY);
+    return saved ? (JSON.parse(saved) as StoredBank) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function clearBank(): void {
   localStorage.removeItem(KEY);
 }

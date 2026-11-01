@@ -17,7 +17,8 @@ import {
 import { BRAND, type StyleFeatures } from '@pentwin/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { track } from '../../lib/analytics';
-import { clearBank, saveBank } from '../../lib/bank';
+import { Journey } from '../../components/Journey';
+import { clearBank, saveBank, savedBank } from '../../lib/bank';
 import { forgetHand, NEW_HAND, saveHand } from '../../lib/hand-memory';
 import { downloadBytes, readPhoto } from '../../lib/photo';
 import { rasterizePreview } from '../../lib/preview';
@@ -52,6 +53,11 @@ export default function SamplePage() {
   const [testUrl, setTestUrl] = useState<string>();
   const [confirmed, setConfirmed] = useState(false);
   const [saved, setSaved] = useState(false);
+  /** Handwriting from an earlier visit is on this device. */
+  const [returning, setReturning] = useState(false);
+  /** They chose to start again, though handwriting is already saved. */
+  const [replacing, setReplacing] = useState(false);
+  useEffect(() => setReturning(savedBank() !== undefined), []);
   /** How steady this writer's hand is, measured from their page. Stays on this device. */
   const [style, setStyle] = useState<StyleFeatures>();
   /** The photo that was read, shown back so the user sees what we saw. Never uploaded. */
@@ -222,24 +228,10 @@ export default function SamplePage() {
   );
   const selectedVariants = selected ? (filled?.bank.metadata.glyphs[selected] ?? []) : [];
 
-  const step = saved ? 3 : own ? 2 : 1;
-  const STEPS = ['Write and photograph', 'Check your letters', 'Save'];
-
   return (
     <div className="panel narrow">
       <h1>My handwriting</h1>
-      <ol className="stepper" aria-label="Progress">
-        {STEPS.map((label, index) => (
-          <li
-            key={label}
-            className={index + 1 < step ? 'done' : index + 1 === step ? 'current' : undefined}
-            aria-current={index + 1 === step ? 'step' : undefined}
-          >
-            <span className="stepper-number">{index + 1}</span>
-            {label}
-          </li>
-        ))}
-      </ol>
+      <Journey step={saved || (returning && !own && !replacing) ? 3 : own ? 2 : 1} />
       {photoUrl && (own || issues.length > 0 || error) && (
         <figure className="photo-back" data-testid="photo-back">
           <img src={photoUrl} alt="The photo of your handwriting that was read" />
@@ -247,7 +239,32 @@ export default function SamplePage() {
         </figure>
       )}
 
-      {!own && (
+      {returning && !own && !replacing && (
+        <section className="card" data-testid="returning">
+          <h2>Your handwriting is ready</h2>
+          <p className="muted">It is saved on this device. You can write with it right away.</p>
+          <div className="row">
+            <a className="button primary" href="/editor" data-testid="go-to-editor">
+              Write a document
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                const stored = savedBank();
+                if (stored) setOwn(stored);
+              }}
+              data-testid="review-saved"
+            >
+              Check my letters
+            </button>
+            <button type="button" onClick={() => setReplacing(true)} data-testid="replace-saved">
+              Start with a new photo
+            </button>
+          </div>
+        </section>
+      )}
+
+      {!own && (!returning || replacing) && (
         <section>
           <p className="lead">
             Write one short text by hand, take a photo, and {BRAND.name} learns your letters from
@@ -271,6 +288,10 @@ export default function SamplePage() {
             </button>
             {photoButton('Take or choose a photo', 'sample-photo', onSamplePhoto)}
           </div>
+          <p className="muted" style={{ marginTop: '0.9rem' }}>
+            No pen to hand? <a href="/editor">Try the editor with the sample handwriting</a> and
+            come back later.
+          </p>
         </section>
       )}
 
@@ -287,6 +308,11 @@ export default function SamplePage() {
               <li key={issue.code}>{issue.message}</li>
             ))}
           </ul>
+          {!own && (
+            <div className="row" style={{ marginTop: '0.6rem' }}>
+              {photoButton('Try another photo', 'retry-photo', onSamplePhoto)}
+            </div>
+          )}
         </div>
       )}
       {error && (
@@ -431,9 +457,15 @@ export default function SamplePage() {
             {photoButton('Retake the photo', 'retake-photo', onSamplePhoto)}
           </div>
           {saved && (
-            <p data-testid="saved">
-              Saved on this device. <a href="/editor">Open the editor</a>
-            </p>
+            <div className="next-step" data-testid="saved">
+              <div>
+                <strong>Your handwriting is saved.</strong>
+                <p className="muted">Next, add the document you want written.</p>
+              </div>
+              <a className="button primary" href="/editor" data-testid="next-editor">
+                Add my document
+              </a>
+            </div>
           )}
         </section>
       )}
@@ -452,6 +484,7 @@ export default function SamplePage() {
             }
             clearBank();
             forgetHand();
+            setReturning(false);
             reset();
           }}
         >
