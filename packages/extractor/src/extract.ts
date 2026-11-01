@@ -56,6 +56,7 @@ const COMMON_PAIRS = new Set(
   ),
 );
 const MAX_PAIR_VARIANTS = 3;
+const MAX_WORD_VARIANTS = 3;
 
 /** Two neighbouring glyphs as one, exactly as they sat next to each other on the page. */
 function joinPair(a: NormalizedGlyph, b: NormalizedGlyph): NormalizedGlyph {
@@ -168,8 +169,14 @@ export function extractGlyphBank(
 
   const scale = BANK_X_HEIGHT / metrics.xHeight;
   const round = (v: number): number => Math.round(v * scale * 10) / 10;
-  const chosen = chooseVariants(singles, options.maxVariants ?? 6);
+  // An "e" can appear over a hundred times on a page: keep every good sample there is.
+  const chosen = chooseVariants(singles, options.maxVariants ?? 12);
   const pairs = collectPairs(glyphs);
+  const words = new Map<string, NormalizedGlyph[]>();
+  for (const glyph of glyphs.filter((g) => g.char.length > 2)) {
+    const list = words.get(glyph.char) ?? [];
+    if (list.length < MAX_WORD_VARIANTS) words.set(glyph.char, [...list, glyph]);
+  }
 
   const metadata: GlyphMetadata = {
     version: 1,
@@ -205,6 +212,11 @@ export function extractGlyphBank(
   };
   timed('vectorize', () => {
     for (const [char, variants] of chosen) metadata.glyphs[char] = trace(char, variants);
+    if (words.size > 0) {
+      metadata.words = Object.fromEntries(
+        [...words].map(([word, variants]) => [word, trace(word, variants)]),
+      );
+    }
     if (pairs.size > 0) {
       metadata.bigrams = Object.fromEntries(
         [...pairs].map(([pair, variants]) => [pair, trace(pair, variants)]),

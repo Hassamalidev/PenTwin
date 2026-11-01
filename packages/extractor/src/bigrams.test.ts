@@ -1,11 +1,17 @@
-import { buildGlyphBank, pathBounds, PRESETS, renderText, sceneToSvg } from '@pentwin/engine';
+import {
+  buildGlyphBank,
+  pathBounds,
+  HAND_SET_PRESETS,
+  renderText,
+  sceneToSvg,
+} from '@pentwin/engine';
 import { describe, expect, it } from 'vitest';
 import { extractGlyphBank } from './extract';
 import { renderSamplePage, SAMPLE_TEXT, toRgba } from './testing';
 
 const extract = (seed: string, tracking = 0) =>
   extractGlyphBank(
-    toRgba(renderSamplePage({ seed, jitter: { ...PRESETS.normal, tracking } }).gray),
+    toRgba(renderSamplePage({ seed, jitter: { ...HAND_SET_PRESETS.normal, tracking } }).gray),
     SAMPLE_TEXT,
   );
 
@@ -50,7 +56,7 @@ describe('letter pairs', { timeout: 240_000 }, () => {
     const always = render(1);
     const never = render(0);
     expect(never.report.bigramCount).toBe(0);
-    expect(never.pages[0]!.strokes.every((s) => s.char.length === 1)).toBe(true);
+    expect(never.pages[0]!.strokes.every((s) => s.char.length !== 2)).toBe(true);
 
     expect(always.report.bigramCount).toBeGreaterThan(15);
     expect(always.report.glyphCount).toBe(never.report.glyphCount - always.report.bigramCount);

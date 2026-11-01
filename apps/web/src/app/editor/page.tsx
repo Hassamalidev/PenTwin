@@ -24,6 +24,15 @@ import { FeedbackForm } from '../../components/FeedbackForm';
 import { pageRange, track, trackOnce } from '../../lib/analytics';
 import { currentSession } from '../../lib/auth';
 import { loadBank, type LoadedBank } from '../../lib/bank';
+import {
+  forgetHand,
+  learnFromAnswer,
+  loadHand,
+  NEW_HAND,
+  saveHand,
+  type HandAnswer,
+  type HandMemory,
+} from '../../lib/hand-memory';
 import { ACCEPTED_FILES, importFile } from '../../lib/import-file';
 import { downloadBytes } from '../../lib/photo';
 import { rasterizePreview } from '../../lib/preview';
@@ -154,6 +163,14 @@ export default function EditorPage() {
   // The draft is read after the first render (the server cannot see browser storage),
   // and nothing is saved until it has been read, or the starter text would replace it.
   const [drawing, setDrawing] = useState(false);
+  /** What has been learned about this writer, in this browser only. */
+  const [hand, setHand] = useState<HandMemory>(NEW_HAND);
+  useEffect(() => setHand(loadHand()), []);
+  const answer = (value: HandAnswer): void => {
+    const learned = learnFromAnswer(hand, value);
+    setHand(learned);
+    saveHand(learned);
+  };
   /** What the text and settings were before a file or "Start over" replaced them. */
   const [replaced, setReplaced] = useState<{
     what: string;
@@ -226,7 +243,7 @@ export default function EditorPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [quote]);
 
-  const options = useMemo(() => toRenderOptions(settings), [settings]);
+  const options = useMemo(() => toRenderOptions(settings, hand), [settings, hand]);
 
   // What actually gets written: the blocks without editor bookkeeping, with typographic
   // characters made plain. The same list feeds the preview, the quote and the export.
@@ -523,6 +540,39 @@ export default function EditorPage() {
             >
               Next
             </button>
+          </div>
+
+          <div className="hand-question" data-testid="hand-question">
+            <span>
+              {loaded.isDemo ? 'How does this writing look?' : 'Does this look like you?'}
+            </span>
+            <span className="row">
+              <button type="button" className="small" onClick={() => answer('too-neat')}>
+                Too neat
+              </button>
+              <button type="button" className="small" onClick={() => answer('right')}>
+                Looks right
+              </button>
+              <button type="button" className="small" onClick={() => answer('too-messy')}>
+                Too messy
+              </button>
+            </span>
+            {hand.answers > 0 && (
+              <span className="muted" data-testid="hand-learned">
+                Learned from {hand.answers} {hand.answers === 1 ? 'answer' : 'answers'}, kept on
+                this device.{' '}
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    forgetHand();
+                    setHand({ ...NEW_HAND, ...(hand.style ? { style: hand.style } : {}) });
+                  }}
+                >
+                  Forget
+                </button>
+              </span>
+            )}
           </div>
 
           {problems.length > 0 && (

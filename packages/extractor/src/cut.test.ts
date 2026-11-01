@@ -1,4 +1,4 @@
-import { PRESETS } from '@pentwin/engine';
+import { HAND_SET_PRESETS } from '@pentwin/engine';
 import { describe, expect, it } from 'vitest';
 import type { LabeledGlyph } from './align';
 import { cutGlyph } from './cut';
@@ -17,7 +17,7 @@ describe('character cutting', { timeout: 180_000 }, () => {
   const clean = extractLabels(degrade(page.gray, CONDITIONS.good!));
   // Letters pushed together until many touch: the hard case for cutting.
   const tightPage = renderSamplePage({
-    jitter: { ...PRESETS.normal, tracking: -0.12 },
+    jitter: { ...HAND_SET_PRESETS.normal, tracking: -0.12 },
     seed: 't',
   });
   const tight = extractLabels(degrade(tightPage.gray, CONDITIONS.good!));

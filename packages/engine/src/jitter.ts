@@ -304,7 +304,7 @@ export function createJitterStyler(
       const i = landing++;
       return {
         shift: wordBounce * xHeight * (1 + 2 * tired) * (0.4 * bounce(i / 3) + 0.6 * jump()),
-        scale: 1 + wordBounce * 0.45 * jump(),
+        scale: 1 + wordBounce * 0.15 * jump(),
         ...moves,
       };
     },

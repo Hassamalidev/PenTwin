@@ -1,4 +1,4 @@
-import { PRESETS } from '@pentwin/engine';
+import { HAND_SET_PRESETS } from '@pentwin/engine';
 import { describe, expect, it } from 'vitest';
 import { cleanImage } from './clean';
 import type { BinaryImage } from './image';
@@ -19,7 +19,7 @@ describe('segmentPage', { timeout: 120_000 }, () => {
   });
 
   it.each(['neat', 'rushed'] as const)('copes with %s writing', (preset) => {
-    const other = renderSamplePage({ jitter: PRESETS[preset], seed: preset });
+    const other = renderSamplePage({ jitter: HAND_SET_PRESETS[preset], seed: preset });
     const { binary } = cleanImage(toRgba(degrade(other.gray, CONDITIONS.good!)));
     expect(segmentPage(binary).lines).toHaveLength(other.lineCount);
     expect(Math.abs(wordsOn(binary) - other.wordCount)).toBeLessThanOrEqual(other.wordCount * 0.04);
@@ -48,7 +48,7 @@ describe('segmentPage', { timeout: 120_000 }, () => {
   });
 
   it('joins a dot to its letter but keeps neighbouring letters apart', () => {
-    const dots = renderSamplePage({ text: 'jiij: i; i! i?', jitter: PRESETS.neat });
+    const dots = renderSamplePage({ text: 'jiij: i; i! i?', jitter: HAND_SET_PRESETS.neat });
     const { binary } = cleanImage(toRgba(dots.gray));
     const [line] = segmentPage(binary).lines;
     expect(line!.words.map((w) => w.segments.length)).toEqual([5, 2, 2, 2]);

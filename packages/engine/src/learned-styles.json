@@ -1,0 +1,78 @@
+{
+  "trainedOn": {
+    "pages": 10,
+    "writers": 8
+  },
+  "styles": {
+    "neat": {
+      "baselineDrift": 1.037,
+      "lineSlope": 0.797,
+      "rotation": 1.72,
+      "size": 0.071,
+      "wordSpacing": 0.294,
+      "letterSpacing": 0.058,
+      "slantVariation": 1.745,
+      "marginDrift": 0.781,
+      "wordBounce": 0.28,
+      "lineRide": 0.198,
+      "wordTilt": 2.666,
+      "wordGapScale": 1.54
+    },
+    "normal": {
+      "baselineDrift": 1.481,
+      "lineSlope": 1.138,
+      "rotation": 2.457,
+      "size": 0.101,
+      "wordSpacing": 0.724,
+      "letterSpacing": 0.083,
+      "slantVariation": 4.221,
+      "marginDrift": 3.262,
+      "wordBounce": 0.4,
+      "lineRide": 0.296,
+      "wordTilt": 3.808,
+      "wordGapScale": 2.2
+    },
+    "rushed": {
+      "baselineDrift": 2.602,
+      "lineSlope": 2.4,
+      "rotation": 3.64,
+      "size": 0.125,
+      "wordSpacing": 0.936,
+      "letterSpacing": 0.113,
+      "slantVariation": 7.28,
+      "marginDrift": 5.5,
+      "wordBounce": 0.46,
+      "lineRide": 0.55,
+      "wordTilt": 4.946,
+      "wordGapScale": 2.798
+    },
+    "exam": {
+      "baselineDrift": 2.263,
+      "lineSlope": 1.622,
+      "rotation": 3.5,
+      "size": 0.12,
+      "wordSpacing": 0.9,
+      "letterSpacing": 0.102,
+      "slantVariation": 7,
+      "marginDrift": 4.102,
+      "wordBounce": 0.433,
+      "lineRide": 0.507,
+      "wordTilt": 4.5,
+      "wordGapScale": 2.69
+    },
+    "lecture": {
+      "baselineDrift": 1.9,
+      "lineSlope": 1.517,
+      "rotation": 2.826,
+      "size": 0.105,
+      "wordSpacing": 0.758,
+      "letterSpacing": 0.098,
+      "slantVariation": 6.271,
+      "marginDrift": 3.392,
+      "wordBounce": 0.416,
+      "lineRide": 0.382,
+      "wordTilt": 4.301,
+      "wordGapScale": 2.587
+    }
+  }
+}

@@ -48,6 +48,17 @@ export const glyphMetadataSchema = z.object({
       z.array(variantSchema).min(1),
     )
     .optional(),
+  /**
+   * Short common words written as one shape ("the", "and"), keyed by the word. Joins are
+   * where handwriting looks most human, and a joined-up writer's letters cannot be cut
+   * apart, so the whole word is kept as they wrote it. Optional.
+   */
+  words: z
+    .record(
+      z.string().refine((key) => [...key].length >= 3, 'Word keys must be three letters or more'),
+      z.array(variantSchema).min(1),
+    )
+    .optional(),
 });
 
 export type GlyphMetadata = z.infer<typeof glyphMetadataSchema>;
@@ -74,6 +85,8 @@ export interface GlyphBank {
   glyphs: ReadonlyMap<string, readonly Glyph[]>;
   /** Letter pairs available as a single glyph, keyed by the two characters. */
   bigrams?: ReadonlyMap<string, readonly Glyph[]>;
+  /** Short words available as a single shape, keyed by the word. */
+  words?: ReadonlyMap<string, readonly Glyph[]>;
 }
 
 const range = (from: string, to: string): string[] =>
@@ -125,6 +138,7 @@ export function buildGlyphBank(metadata: unknown, readSvg: (file: string) => str
     paint: meta.paint,
     glyphs,
     ...(meta.bigrams ? { bigrams: load(meta.bigrams) } : {}),
+    ...(meta.words ? { words: load(meta.words) } : {}),
   };
 }
 
@@ -165,7 +179,7 @@ export function createVariantPicker(bank: GlyphBank, rng: Rng, avoidWindow = 2):
 
   return {
     pick(char) {
-      const variants = bank.glyphs.get(char) ?? bank.bigrams?.get(char);
+      const variants = bank.glyphs.get(char) ?? bank.bigrams?.get(char) ?? bank.words?.get(char);
       if (!variants || variants.length === 0) return undefined;
       if (variants.length === 1) return variants[0];
 

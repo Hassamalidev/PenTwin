@@ -14,10 +14,11 @@ import {
   type ExtractedBank,
   type QualityIssue,
 } from '@pentwin/extractor';
-import { BRAND } from '@pentwin/shared';
+import { BRAND, type StyleFeatures } from '@pentwin/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { track } from '../../lib/analytics';
 import { clearBank, saveBank } from '../../lib/bank';
+import { forgetHand, NEW_HAND, saveHand } from '../../lib/hand-memory';
 import { downloadBytes, readPhoto } from '../../lib/photo';
 import { rasterizePreview } from '../../lib/preview';
 
@@ -51,6 +52,8 @@ export default function SamplePage() {
   const [testUrl, setTestUrl] = useState<string>();
   const [confirmed, setConfirmed] = useState(false);
   const [saved, setSaved] = useState(false);
+  /** How steady this writer's hand is, measured from their page. Stays on this device. */
+  const [style, setStyle] = useState<StyleFeatures>();
   /** The photo that was read, shown back so the user sees what we saw. Never uploaded. */
   const [photoUrl, setPhotoUrl] = useState<string>();
   useEffect(
@@ -128,6 +131,7 @@ export default function SamplePage() {
         return;
       }
       setOwn(result.bank);
+      if (result.style) setStyle(result.style);
       track('sample_uploaded', { source: 'sample' });
       setSeconds((performance.now() - started) / 1000);
       const joined = result.flagged.filter((f) => f.reason === 'letters-joined').length;
@@ -188,6 +192,7 @@ export default function SamplePage() {
     if (!filled) return;
     try {
       saveBank(filled.bank);
+      if (style) saveHand({ ...NEW_HAND, style });
       setSaved(true);
     } catch {
       setError('Your handwriting could not be saved on this device (storage may be full).');
@@ -446,6 +451,7 @@ export default function SamplePage() {
               return;
             }
             clearBank();
+            forgetHand();
             reset();
           }}
         >

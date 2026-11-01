@@ -16,6 +16,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { createRng } from '../packages/shared/src/rng';
 import {
   buildGlyphBank,
+  HAND_SET_PRESETS,
   PRESETS,
   renderText,
   type JitterParams,
@@ -42,19 +43,23 @@ const TEXT =
   'had been suddenly whisked away from her own country and set down in the midst of a ' +
   'strange land.';
 
-/** The settings the loop may move, each with its limits. Bounded, so it cannot run away. */
+/**
+ * The settings the loop may move, each with its limits. Bounded, so it cannot run away. The
+ * limits on size, letter spacing, rotation and tilt come from looking at the pages: beyond
+ * them words jump in size and letters drift apart, which no measure here sees.
+ */
 const TUNABLE: [keyof JitterParams, number, number][] = [
   ['baselineDrift', 0.1, 2.5],
   ['lineSlope', 0.2, 4],
-  ['rotation', 0.5, 7],
-  ['size', 0.02, 0.4],
+  ['rotation', 0.5, 3.5],
+  ['size', 0.02, 0.12],
   ['wordSpacing', 0.1, 0.9],
-  ['letterSpacing', 0.02, 0.35],
-  ['slantVariation', 0.8, 12],
+  ['letterSpacing', 0.02, 0.12],
+  ['slantVariation', 0.8, 7],
   ['marginDrift', 0.3, 5.5],
-  ['wordBounce', 0.03, 0.55],
+  ['wordBounce', 0.03, 0.4],
   ['lineRide', 0.03, 0.55],
-  ['wordTilt', 1, 7.5],
+  ['wordTilt', 1, 4.5],
   ['wordGapScale', 0.9, 2.6],
 ];
 
@@ -102,13 +107,13 @@ const measure = (jitter: JitterParams, seed: string): PageMeasure | undefined =>
     jitter,
     paper: { kind: 'plain' },
     lineHeight: 11,
-    ink: 'ballpoint-blue',
   });
-  const pixels = sceneToPixels({ ...written[0]!, inkEffects: undefined }, 150);
+  // Enough to read the shape of a page, and four times quicker than print resolution.
+  const pixels = sceneToPixels({ ...written[0]!, inkEffects: undefined }, 110);
   return measurePage(cleanImage(pixels).binary);
 };
 
-const SEEDS = ['learn-a', 'learn-b', 'learn-c'];
+const SEEDS = ['learn-a', 'learn-b'];
 const score = (jitter: JitterParams, aim: MeasureSummary): number => {
   const scores = SEEDS.map((seed) => {
     const measured = measure(jitter, seed);
@@ -122,9 +127,25 @@ const round = (value: number): number => Math.round(value * 1000) / 1000;
 function train(style: PresetName): { best: JitterParams; before: number; after: number } {
   const rng = createRng(`learn/${style}/${pages}`);
   const aim = aimFor(style);
-  let best: JitterParams = { ...PRESETS[style] };
+  // From the hand-set style each time, so a run depends only on the real measurements.
+  let best: JitterParams = { ...HAND_SET_PRESETS[style] };
   const before = score(best, aim);
   let bestScore = before;
+  // First a big jump: the gap to real writing is too wide for small steps to cross.
+  for (const factor of [1.5, 2, 3, 4]) {
+    const candidate = { ...HAND_SET_PRESETS[style] };
+    for (const [key, low, high] of TUNABLE) {
+      const now = (candidate[key] as number | undefined) ?? low;
+      const moved = key === 'wordGapScale' ? 1 + (factor - 1) * 0.4 : now * factor;
+      candidate[key] = round(Math.max(low, Math.min(high, moved))) as never;
+    }
+    const candidateScore = score(candidate, aim);
+    console.log(`  ${style} scale ${factor}: ${candidateScore.toFixed(3)}`);
+    if (candidateScore < bestScore) {
+      best = candidate;
+      bestScore = candidateScore;
+    }
+  }
   for (let step = 0; step < steps; step++) {
     const candidate = { ...best };
     // A few settings at a time: moving one alone rarely shows, moving all rarely helps.
@@ -158,6 +179,24 @@ for (const style of styles) {
   learned.styles[style] = Object.fromEntries(
     TUNABLE.map(([key]) => [key, best[key]]).filter(([, value]) => value !== undefined),
   );
+}
+
+// Whatever the search found, a style must keep its place, steadiest first. Each setting is
+// sorted along the chain, with neat kept clearly apart and each step a little above the last.
+const CHAIN: PresetName[] = ['neat', 'normal', 'lecture', 'exam', 'rushed'];
+if (CHAIN.every((style) => learned.styles[style])) {
+  for (const [key] of TUNABLE) {
+    const values = CHAIN.map((style) => learned.styles[style]![key] as number).sort(
+      (x, y) => x - y,
+    );
+    values[0] = Math.min(values[0]!, round(values[1]! * 0.7));
+    for (let i = 2; i < values.length; i++) {
+      values[i] = Math.max(values[i]!, round(values[i - 1]! * 1.04));
+    }
+    CHAIN.forEach((style, i) => {
+      (learned.styles[style]![key] as number) = values[i]!;
+    });
+  }
 }
 
 if (write) {

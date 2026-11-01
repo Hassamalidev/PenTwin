@@ -1,6 +1,6 @@
 import type { StyleFeatures } from '@pentwin/shared';
 import type { JitterParams } from './jitter';
-import { PRESETS } from './presets';
+import { HAND_SET_PRESETS } from './presets';
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
@@ -17,12 +17,14 @@ const clamp = (value: number, min: number, max: number): number =>
  *   (`SHARE`). The slow, page-level drift is not in the glyphs at all and is scaled from
  *   how unsteady the writer is overall.
  *
- * `xHeight` is the size the text will be written at, in mm.
+ * `xHeight` is the size the text will be written at, in mm. The base is a hand-set style:
+ * learned styles widen everything to match real pages, which a writer's own letters do by
+ * themselves.
  */
 export function tuneJitter(
   style: StyleFeatures,
   xHeight: number,
-  base: JitterParams = PRESETS.normal,
+  base: JitterParams = HAND_SET_PRESETS.normal,
 ): JitterParams {
   const SHARE = 0.5;
   // One number for "how unsteady": about 0.4 for very neat writing, 2 or more for rushed.
@@ -35,6 +37,8 @@ export function tuneJitter(
   return {
     ...base,
     slant: 0,
+    // Their word gaps are measured from their own page already.
+    wordGapScale: 1,
     slantVariation: clamp(style.slantVariation * SHARE, 0.3, 5),
     rotation: clamp(style.slantVariation * 0.4, 0.3, 3.5),
     size: clamp(style.sizeVariation * SHARE, 0.01, 0.12),

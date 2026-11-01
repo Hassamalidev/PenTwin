@@ -1,4 +1,6 @@
 import {
+  HAND_SET_PRESETS,
+  tuneJitter,
   presetOptions,
   type FinishMode,
   RULING_SPACING,
@@ -10,6 +12,8 @@ import {
   type Ruling,
 } from '@pentwin/engine';
 import type { PageSizeName } from '@pentwin/shared';
+
+import { NEW_HAND, type HandMemory } from './hand-memory';
 
 /** What the user can set in the editor. Everything else follows from these. */
 export interface Settings {
@@ -115,11 +119,16 @@ export function applyPreset(settings: Settings, preset: PresetName): Settings {
 }
 
 /** The render options for these settings. The preview and the export both use exactly these. */
-export function toRenderOptions(settings: Settings): RenderOptions {
+export function toRenderOptions(settings: Settings, hand: HandMemory = NEW_HAND): RenderOptions {
   const bundle = presetOptions(settings.preset);
-  const jitter: JitterParams = { ...bundle.jitter, fatigue: settings.fatigue };
+  const lineSpacing = settings.paper === 'ruled' ? RULING_SPACING[settings.ruling] : 8;
+  // A writer's own sample says how uneven their hand really is.
+  const base = hand.style
+    ? tuneJitter(hand.style, lineSpacing * settings.size, HAND_SET_PRESETS[settings.preset])
+    : bundle.jitter;
+  const jitter: JitterParams = { ...base, fatigue: settings.fatigue };
   for (const [key, max] of SCALED) {
-    jitter[key] = Math.min(max, (jitter[key] ?? 0) * settings.unevenness);
+    jitter[key] = Math.min(max, (jitter[key] ?? 0) * settings.unevenness * hand.scale);
   }
 
   const paper: PaperSpec =

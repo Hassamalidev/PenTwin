@@ -84,6 +84,7 @@ const jitter = z.object({
   coherence: z.number().min(0).max(1).optional(),
   speed: z.number().min(0).max(1).optional(),
   layout: z.number().min(0).max(1).optional(),
+  wordGapScale: z.number().min(0.5).max(3).optional(),
 });
 
 const options = z.strictObject({

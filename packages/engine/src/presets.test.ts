@@ -1,8 +1,8 @@
-import { wholeLetters } from './writer';
 import { describe, expect, it } from 'vitest';
 import { NO_JITTER } from './jitter';
 import { pathBounds } from './path';
 import { PRESETS, type PresetName } from './presets';
+import { auditTells } from './tells';
 import { renderText } from './render';
 import { sceneToSvg } from './svg';
 import { loadSampleBank } from './testing';
@@ -15,15 +15,9 @@ const names: PresetName[] = ['neat', 'normal', 'rushed'];
 const render = (name: PresetName) =>
   renderText(text, bank, { seed: 'presets', jitter: PRESETS[name] });
 
-/** Average distance of the ink's bottom edge from its ideal baseline, in mm. */
-const baselineError = (name: PresetName): number => {
-  const scene = render(name).pages[0]!;
-  const errors = wholeLetters(scene.strokes).map((stroke) => {
-    const bottom = pathBounds(stroke.path).maxY;
-    return Math.min(...scene.baselines.map((b) => Math.abs(b - bottom)));
-  });
-  return errors.reduce((a, b) => a + b, 0) / errors.length;
-};
+/** Spread of letter feet around each line, in x-heights: how uneven the line is. */
+const baselineError = (name: PresetName): number =>
+  auditTells(render(name).pages, 8 * 0.35).baselineSpread;
 
 /** Spread of the pen widths used on the page. */
 const penSpread = (name: PresetName): number => {

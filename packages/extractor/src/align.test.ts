@@ -1,4 +1,4 @@
-import { PRESETS } from '@pentwin/engine';
+import { HAND_SET_PRESETS } from '@pentwin/engine';
 import { describe, expect, it } from 'vitest';
 import {
   CONDITIONS,
@@ -46,7 +46,7 @@ describe('alignToText', { timeout: 180_000 }, () => {
   // shape check. `it.fails` keeps it visible in every run; when it gets under the limit
   // this turns red, and it becomes a plain `it`.
   it.fails('refuses letters joined by the pen instead of guessing', () => {
-    const joined = renderSamplePage({ jitter: { ...PRESETS.rushed }, seed: 'rushed' });
+    const joined = renderSamplePage({ jitter: { ...HAND_SET_PRESETS.rushed }, seed: 'rushed' });
     const { alignment } = extractLabels(degrade(joined.gray, CONDITIONS.good!));
     const score = scoreAlignment(alignment.glyphs, joined.truth);
     expect(score.wrong).toBeLessThanOrEqual(0.01);

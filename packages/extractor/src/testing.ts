@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  DEFAULT_JITTER,
   pathBounds,
-  PRESETS,
   renderText,
   wholeLetters,
   type Bounds,
@@ -66,7 +66,7 @@ export interface SamplePageOptions {
  * together with a fresh `pnpm extract:measure`.
  */
 export const SAMPLE_HAND: JitterParams = {
-  ...PRESETS.normal,
+  ...DEFAULT_JITTER,
   wordBounce: 0,
   lineRide: 0,
   pressure: 0,

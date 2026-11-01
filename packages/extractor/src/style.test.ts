@@ -1,10 +1,10 @@
-import { PRESETS, type JitterParams } from '@pentwin/engine';
+import { HAND_SET_PRESETS, type JitterParams } from '@pentwin/engine';
 import { describe, expect, it } from 'vitest';
 import { normalizeGlyphs } from './normalize';
 import { measureStyle, type StyleFeatures } from './style';
 import { extractLabels, renderSamplePage } from './testing';
 
-const styleOf = (seed: string, jitter: JitterParams = PRESETS.normal): StyleFeatures => {
+const styleOf = (seed: string, jitter: JitterParams = HAND_SET_PRESETS.normal): StyleFeatures => {
   const { alignment, page, binary } = extractLabels(renderSamplePage({ seed, jitter }).gray);
   const { glyphs, metrics } = normalizeGlyphs(alignment, page, binary.width);
   return measureStyle(glyphs, metrics);
@@ -40,8 +40,8 @@ describe('measureStyle', { timeout: 240_000 }, () => {
   });
 
   it('tells writers apart', () => {
-    const upright = styleOf('upright', { ...PRESETS.normal, slant: 0 });
-    const leaning = styleOf('leaning', { ...PRESETS.normal, slant: 14 });
+    const upright = styleOf('upright', { ...HAND_SET_PRESETS.normal, slant: 0 });
+    const leaning = styleOf('leaning', { ...HAND_SET_PRESETS.normal, slant: 14 });
     expect(leaning.slant - upright.slant).toBeGreaterThan(9);
     expect(leaning.slant - upright.slant).toBeLessThan(19);
     expect(Math.abs(upright.slant)).toBeLessThanOrEqual(3);

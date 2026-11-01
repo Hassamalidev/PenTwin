@@ -121,6 +121,8 @@ export interface WriterSetup {
   lineCount?: number;
 }
 
+/** Chance of writing a word as one kept shape when the bank has it: not always, so it varies. */
+const WORD_SHAPE_RATE = 0.7;
 /** How far a crossbar may run on at full speed, as a fraction of the x-height. */
 const BAR_REACH = 0.7;
 
@@ -226,6 +228,7 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
   const bigrams = bank.bigrams?.size ? bank.bigrams : undefined;
   const bigramRate = setup.bigramRate ?? 0.7;
   const bigramRng = createRng(`${setup.pageSeed}/bigrams`);
+  const wordRng = createRng(`${setup.pageSeed}/words`);
   const { ink } = setup;
   const inkRng = createRng(`${setup.pageSeed}/ink`);
   const flow = createNoise(inkRng);
@@ -338,7 +341,16 @@ export function createPageWriter(setup: WriterSetup): PageWriter {
         let char = chars[i]!;
         const pair = char + (chars[i + 1] ?? '');
         const retraced = token.retrace === i || token.retrace === i + 1;
-        if (!retraced && bigrams?.has(pair) && bigramRng.next() < bigramRate) {
+        const wholeWord =
+          i === 0 &&
+          !token.struck &&
+          token.retrace === undefined &&
+          bank.words?.has(token.text) === true &&
+          wordRng.next() < WORD_SHAPE_RATE;
+        if (wholeWord) {
+          char = token.text;
+          i = chars.length - 1;
+        } else if (!retraced && bigrams?.has(pair) && bigramRng.next() < bigramRate) {
           char = pair;
           i++;
           report.bigramCount++;

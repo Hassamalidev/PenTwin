@@ -213,6 +213,13 @@ const NAMES: MeasureName[] = [
   'strokeWidth',
 ];
 
+/**
+ * Measures fit to aim at. For joined writing a "mark" is several letters, so the size of
+ * marks and their number per word describe how much is joined, not how a letter varies.
+ * Aiming at them makes words jump in size.
+ */
+const SCORED = NAMES.filter((name) => name !== 'sizeVariation' && name !== 'marksPerWord');
+
 /** The middle of each measure, with the range the middle 80% of pages falls in. */
 export function summarizeMeasures(pages: readonly PageMeasure[]): MeasureSummary {
   const at = (sorted: number[], share: number): number =>
@@ -231,12 +238,12 @@ export function summarizeMeasures(pages: readonly PageMeasure[]): MeasureSummary
  */
 export function distanceFromReal(page: PageMeasure, real: MeasureSummary): number {
   let total = 0;
-  for (const name of NAMES) {
+  for (const name of SCORED) {
     const { low, high, median: middle } = real[name];
     const width = Math.max(high - low, Math.abs(middle) * 0.1, 1e-3);
     const value = page[name];
     const outside = value < low ? low - value : value > high ? value - high : 0;
     total += (outside / width) ** 2;
   }
-  return Math.sqrt(total / NAMES.length);
+  return Math.sqrt(total / SCORED.length);
 }

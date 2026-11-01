@@ -2006,3 +2006,15 @@ button.small.icon svg {
     width: 100%;
   }
 }
+
+/* Asking the writer whether the page looks like them. */
+.hand-question {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.hand-question .muted {
+  font-size: 0.82rem;
+}

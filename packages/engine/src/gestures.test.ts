@@ -223,3 +223,24 @@ describe('speed ties several things together', () => {
     expect(tall(1)).toBeLessThan(tall(0.05));
   });
 });
+
+describe('whole-word shapes', () => {
+  const the = bank.glyphs.get('t')![0]!;
+  const withWords = {
+    ...bank,
+    words: new Map([['the', [{ ...the, char: 'the', advance: the.advance * 3 }]]]),
+  };
+
+  it('writes a kept word as one shape, and the text still reads the same', () => {
+    const text = 'the cat and the dog and the bird and the fish and the frog';
+    const { pages } = renderText(text, withWords, { ...base, jitter: NO_JITTER });
+    const letters = wholeLetters(pages[0]!.strokes).filter((s) => s.char !== '');
+    expect(letters.some((s) => s.char === 'the')).toBe(true);
+    expect(letters.map((s) => s.char).join('')).toBe(text.replace(/\s+/g, ''));
+  });
+
+  it('never uses one on a capitalised word or a part of a longer word', () => {
+    const { pages } = renderText('The bathe other', withWords, { ...base, jitter: NO_JITTER });
+    expect(pages[0]!.strokes.some((s) => s.char === 'the')).toBe(false);
+  });
+});

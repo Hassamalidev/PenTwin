@@ -34,6 +34,16 @@ export interface Alignment {
   expectedChars: number;
 }
 
+/**
+ * Short common words kept whole when the writer's word was found cleanly. Joined writing
+ * cannot be cut into letters, and joins are what make a page look written by that person.
+ */
+const COMMON_WORDS = new Set(
+  'the and was you her she his had but not for are with that this have from they one all'.split(
+    ' ',
+  ),
+);
+
 const NARROW = new Set("iljtfrI1.,;:!'|()/-");
 const WIDE = new Set('mwMW&');
 
@@ -355,6 +365,24 @@ export function alignToText(
 
     const segments = group.detected.flatMap((i) => detected[i]!.segments);
     const chars = [...text];
+    const lower = text.toLowerCase();
+    if (group.detected.length === 1 && group.expected.length === 1 && COMMON_WORDS.has(lower)) {
+      const first = segments[0]!;
+      const box = segments.reduce<Box>((all, s) => union(all, s), first);
+      // A word about as wide as its letters should be: a bad match is usually far off.
+      const fit = (box.x1 - box.x0) / (chars.length * page.bandHeight);
+      if (fit > 0.5 && fit < 1.7) {
+        joined.push({
+          ...box,
+          char: lower,
+          componentIds: segments.flatMap((s) => s.componentIds),
+          cut: 'clean',
+          line,
+          word: wordIndex,
+          confidence: 0.7,
+        });
+      }
+    }
     const steps = alignChars(segments, chars);
     // A repair is any letter that did not come from exactly one segment. The two ticks of
     // a double quote are expected, so they do not count.

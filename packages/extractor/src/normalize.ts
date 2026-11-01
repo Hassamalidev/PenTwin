@@ -108,7 +108,10 @@ export function normalizeGlyphs(
   );
 
   // Gaps to the neighbours, in reading order.
-  const ordered = [...cuts].sort((a, b) => a.glyph.line - b.glyph.line || a.bitmap.x - b.bitmap.x);
+  // Whole words overlap their own letters, so they say nothing about the gaps between them.
+  const ordered = cuts
+    .filter((c) => c.glyph.char.length <= 2)
+    .sort((a, b) => a.glyph.line - b.glyph.line || a.bitmap.x - b.bitmap.x);
   const letterGaps: number[] = [];
   const wordGaps: number[] = [];
   const gapAfter = new Map<Cut, number>();

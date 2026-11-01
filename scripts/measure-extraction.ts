@@ -4,7 +4,7 @@
  *
  *   pnpm extract:measure
  */
-import { PRESETS } from '../packages/engine/src/index';
+import { HAND_SET_PRESETS } from '../packages/engine/src/index';
 import {
   CONDITIONS,
   degrade,
@@ -24,15 +24,19 @@ const cases: [name: string, page: SamplePage, condition: Degradation][] = [
     standard,
     d,
   ]),
-  ['neat writing', renderSamplePage({ jitter: PRESETS.neat, seed: 'neat' }), CONDITIONS.good!],
+  [
+    'neat writing',
+    renderSamplePage({ jitter: HAND_SET_PRESETS.neat, seed: 'neat' }),
+    CONDITIONS.good!,
+  ],
   [
     'rushed writing',
-    renderSamplePage({ jitter: PRESETS.rushed, seed: 'rushed' }),
+    renderSamplePage({ jitter: HAND_SET_PRESETS.rushed, seed: 'rushed' }),
     CONDITIONS.good!,
   ],
   [
     'touching letters',
-    renderSamplePage({ jitter: { ...PRESETS.normal, tracking: -0.12 }, seed: 't' }),
+    renderSamplePage({ jitter: { ...HAND_SET_PRESETS.normal, tracking: -0.12 }, seed: 't' }),
     CONDITIONS.good!,
   ],
 ];

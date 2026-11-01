@@ -2,7 +2,7 @@ import { wholeLetters } from '@pentwin/engine';
 import {
   buildGlyphBank,
   pathBounds,
-  PRESETS,
+  HAND_SET_PRESETS,
   renderText,
   sceneToSvg,
   tuneJitter,
@@ -15,7 +15,7 @@ import { renderSamplePage, SAMPLE_TEXT, toRgba } from './testing';
 
 /** A writer's profile: the bank and style extracted from one sample page. */
 const profileOf = (preset: 'neat' | 'rushed') => {
-  const photo = renderSamplePage({ seed: preset, jitter: PRESETS[preset] });
+  const photo = renderSamplePage({ seed: preset, jitter: HAND_SET_PRESETS[preset] });
   const { bank, style } = extractGlyphBank(toRgba(photo.gray), SAMPLE_TEXT);
   return {
     bank: buildGlyphBank(bank!.metadata, (file) => bank!.files[file]!),

@@ -30,19 +30,19 @@ at all, in two hands: the demo handwriting the site uses and the plain test lett
 | ------------ | --------------------- | ----------------- | -------------------- | ----------------- | ----------------------- | ------------------ |
 |              | limit                 | <= 0.02 share     | >= 0.025 x-height    | >= 0.15 relative  | >= 0.05 x-height        | >= 0.5 degrees     |
 | demo hand    | no variation          | 0.691 **FAIL**    | 0.029 pass           | 0.000 **FAIL**    | 0.069 pass              | 0.460 **FAIL**     |
-| demo hand    | normal, before review | 0.000 pass        | 0.035 pass           | 0.069 **FAIL**    | 0.074 pass              | 0.592 pass         |
-| demo hand    | neat                  | 0.000 pass        | 0.042 pass           | 0.602 pass        | 0.073 pass              | 0.924 pass         |
-| demo hand    | normal                | 0.000 pass        | 0.044 pass           | 0.920 pass        | 0.113 pass              | 0.999 pass         |
-| demo hand    | rushed                | 0.000 pass        | 0.060 pass           | 0.952 pass        | 0.243 pass              | 1.044 pass         |
-| demo hand    | exam                  | 0.000 pass        | 0.059 pass           | 0.935 pass        | 0.207 pass              | 1.135 pass         |
-| demo hand    | lecture               | 0.000 pass        | 0.048 pass           | 0.821 pass        | 0.148 pass              | 0.996 pass         |
+| demo hand    | normal, before review | 0.000 pass        | 0.058 pass           | 0.069 **FAIL**    | 0.084 pass              | 0.575 pass         |
+| demo hand    | neat                  | 0.000 pass        | 0.070 pass           | 0.603 pass        | 0.075 pass              | 1.030 pass         |
+| demo hand    | normal                | 0.000 pass        | 0.072 pass           | 0.920 pass        | 0.104 pass              | 0.999 pass         |
+| demo hand    | rushed                | 0.000 pass        | 0.102 pass           | 0.953 pass        | 0.210 pass              | 1.840 pass         |
+| demo hand    | exam                  | 0.000 pass        | 0.130 pass           | 0.935 pass        | 0.202 pass              | 1.945 pass         |
+| demo hand    | lecture               | 0.000 pass        | 0.106 pass           | 0.820 pass        | 0.143 pass              | 1.696 pass         |
 | test letters | no variation          | 0.734 **FAIL**    | 0.017 **FAIL**       | 0.000 **FAIL**    | 0.031 **FAIL**          | 0.148 **FAIL**     |
-| test letters | normal, before review | 0.000 pass        | 0.029 pass           | 0.074 **FAIL**    | 0.051 pass              | 0.391 **FAIL**     |
-| test letters | neat                  | 0.000 pass        | 0.042 pass           | 0.611 pass        | 0.054 pass              | 0.771 pass         |
-| test letters | normal                | 0.000 pass        | 0.046 pass           | 0.993 pass        | 0.104 pass              | 0.822 pass         |
-| test letters | rushed                | 0.000 pass        | 0.072 pass           | 1.027 pass        | 0.222 pass              | 1.220 pass         |
-| test letters | exam                  | 0.000 pass        | 0.066 pass           | 1.010 pass        | 0.210 pass              | 1.122 pass         |
-| test letters | lecture               | 0.000 pass        | 0.052 pass           | 0.866 pass        | 0.152 pass              | 0.910 pass         |
+| test letters | normal, before review | 0.000 pass        | 0.061 pass           | 0.075 **FAIL**    | 0.060 pass              | 0.659 pass         |
+| test letters | neat                  | 0.000 pass        | 0.071 pass           | 0.611 pass        | 0.054 pass              | 0.885 pass         |
+| test letters | normal                | 0.000 pass        | 0.079 pass           | 0.994 pass        | 0.104 pass              | 0.954 pass         |
+| test letters | rushed                | 0.000 pass        | 0.115 pass           | 1.026 pass        | 0.220 pass              | 1.801 pass         |
+| test letters | exam                  | 0.000 pass        | 0.113 pass           | 1.010 pass        | 0.204 pass              | 2.531 pass         |
+| test letters | lecture               | 0.000 pass        | 0.085 pass           | 0.866 pass        | 0.146 pass              | 2.053 pass         |
 
 "No variation" is expected to fail: it is the mechanical page the audit exists to catch.
 "Normal, before review" is the normal style as it was before the release review

@@ -1,11 +1,12 @@
 import type { InkName } from './ink';
+import LEARNED from './learned-styles.json' with { type: 'json' };
 import { DEFAULT_JITTER, type JitterParams } from './jitter';
 import type { PaperSpec } from './paper';
 
 export type PresetName = 'neat' | 'normal' | 'rushed' | 'exam' | 'lecture';
 
-/** How steady the hand is in each preset. Pass one as `jitter` in the render options. */
-export const PRESETS: Record<PresetName, JitterParams> = {
+/** Each style as first set by hand, before it was tuned against real writing. */
+export const HAND_SET_PRESETS: Record<PresetName, JitterParams> = {
   /** Careful, slow writing: upright, even, close to the lines. */
   neat: {
     baselineDrift: 0.2,
@@ -118,6 +119,19 @@ export const PRESETS: Record<PresetName, JitterParams> = {
     layout: 0.9,
   },
 };
+
+/**
+ * How steady the hand is in each preset. Pass one as `jitter` in the render options.
+ *
+ * Hand-set values with the ones `pnpm learn` found by measuring real handwriting on top
+ * (`learned-styles.json`, see docs/learning-loop.md).
+ */
+export const PRESETS: Record<PresetName, JitterParams> = Object.fromEntries(
+  (Object.keys(HAND_SET_PRESETS) as PresetName[]).map((name) => [
+    name,
+    { ...HAND_SET_PRESETS[name], ...LEARNED.styles[name] },
+  ]),
+) as Record<PresetName, JitterParams>;
 
 /** Everything a preset decides: the hand, plus the pen, paper and slips that go with it. */
 export interface PresetOptions {
