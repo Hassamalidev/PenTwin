@@ -15,7 +15,7 @@
     "@pentwin/extractor": "workspace:*",
     "@pentwin/importers": "workspace:*",
     "@pentwin/shared": "workspace:*",
-    "next": "^16.4.0",
+    "next": "^16.4.1",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
