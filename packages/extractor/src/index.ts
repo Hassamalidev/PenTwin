@@ -15,3 +15,4 @@ export * from './topup';
 export * from './style';
 export * from './sample';
 export * from './measure';
+export * from './verify';

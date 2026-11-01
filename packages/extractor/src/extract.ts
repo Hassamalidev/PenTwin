@@ -8,6 +8,7 @@ import { assessQuality, type QualityReport } from './quality';
 import { segmentPage } from './segment';
 import { measureStyle, type StyleFeatures } from './style';
 import { vectorize } from './vectorize';
+import { verifyGlyphs } from './verify';
 
 /** A glyph bank in the engine's format: metadata plus one SVG document per variant. */
 export interface ExtractedBank {
@@ -42,6 +43,11 @@ export interface Extraction {
   /** Milliseconds spent in each stage. */
   timings: Record<string, number>;
 }
+
+/** Letters smaller than this many pixels are read again at a higher resolution. */
+const GOOD_BAND = 30;
+/** Upper limit on that resolution, for the phones this runs on. */
+const MAX_WORKING_WIDTH = 3000;
 
 /** The x-height of every extracted bank, in glyph units. */
 export const BANK_X_HEIGHT = 100;
@@ -121,7 +127,8 @@ function chooseVariants(glyphs: NormalizedGlyph[], max: number): Map<string, Nor
     else byChar.set(glyph.char, [glyph]);
   }
   for (const [char, list] of byChar) {
-    list.sort((a, b) => b.confidence - a.confidence);
+    const worth = (g: NormalizedGlyph): number => g.confidence * (0.5 + (g.typicality ?? 1) / 2);
+    list.sort((a, b) => worth(b) - worth(a));
     const trusted = list.filter((g) => g.confidence >= TRUSTED).slice(0, max);
     byChar.set(char, trusted.length >= 3 ? trusted : list.slice(0, Math.min(max, 3)));
   }
@@ -156,12 +163,28 @@ export function extractGlyphBank(
     return { quality, flagged: [], bigrams: [], bankBytes: 0, timings };
   }
 
-  const { binary } = timed('clean', () => cleanImage(photo));
-  const page = timed('segment', () => segmentPage(binary));
+  let { binary } = timed('clean', () => cleanImage(photo));
+  let page = timed('segment', () => segmentPage(binary));
+  // Small writing needs more pixels than the working size gives it.
+  if (page.bandHeight > 0 && page.bandHeight < GOOD_BAND && photo.width > binary.width) {
+    const maxWidth = Math.min(
+      photo.width,
+      MAX_WORKING_WIDTH,
+      Math.ceil((binary.width * GOOD_BAND) / page.bandHeight),
+    );
+    binary = timed('clean', () => cleanImage(photo, { maxWidth })).binary;
+    page = timed('segment', () => segmentPage(binary));
+  }
   const alignment = timed('align', () => alignToText(page, binary.width, expectedText));
-  const { glyphs, metrics } = timed('normalize', () =>
-    normalizeGlyphs(alignment, page, binary.width),
+  const normalized = timed('normalize', () => normalizeGlyphs(alignment, page, binary.width));
+  const { metrics } = normalized;
+  // The writer's letters check each other before any of them is kept.
+  const { kept: glyphs, refused } = timed('verify', () =>
+    verifyGlyphs(normalized.glyphs, metrics.xHeight),
   );
+  for (const glyph of refused) {
+    alignment.flagged.push({ expected: glyph.char, line: glyph.line, reason: 'unclear' });
+  }
   if (glyphs.length === 0) {
     return { quality, flagged: alignment.flagged, bigrams: [], bankBytes: 0, timings };
   }

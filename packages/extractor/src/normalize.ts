@@ -18,6 +18,8 @@ export interface PageMetrics {
 export interface NormalizedGlyph {
   char: string;
   confidence: number;
+  /** How much this cut resembles the writer's other samples of the letter. Best used first. */
+  typicality?: number;
   cut: LabeledGlyph['cut'];
   line: number;
   /** Index of the word this glyph belongs to. */
@@ -102,9 +104,13 @@ export function normalizeGlyphs(
     heights((char) => CAP_HIGH.test(char)),
     xHeight * 1.5,
   );
-  const descender = median(
-    cuts.filter((c) => HANGS.has(c.glyph.char)).map((c) => bottom(c) - baselineOf(c)),
-    xHeight * 0.5,
+  // A poor baseline fit can put a tail above the line; a tail always hangs below it.
+  const descender = Math.max(
+    xHeight * 0.25,
+    median(
+      cuts.filter((c) => HANGS.has(c.glyph.char)).map((c) => bottom(c) - baselineOf(c)),
+      xHeight * 0.5,
+    ),
   );
 
   // Gaps to the neighbours, in reading order.
@@ -158,6 +164,18 @@ export function normalizeGlyphs(
     }
   }
 
+  /**
+   * Where the line crosses a cut. With few letters on a line the fit can be far out, which
+   * would float the letter off the line when it is used, so a letter's own foot overrules it.
+   */
+  const sensibleBaseline = (c: Cut): number => {
+    const fitted = baselineOf(c) - c.bitmap.y;
+    const { char } = c.glyph;
+    if (char.length !== 1 || !/[a-zA-Z0-9]/.test(char)) return fitted;
+    const foot = HANGS.has(char) ? c.bitmap.height - descender : c.bitmap.height;
+    return Math.abs(fitted - foot) > xHeight * 0.35 ? foot : fitted;
+  };
+
   return {
     metrics: {
       xHeight,
@@ -174,7 +192,7 @@ export function normalizeGlyphs(
       line: c.glyph.line,
       word: c.glyph.word,
       bitmap: c.bitmap,
-      baseline: baselineOf(c) - c.bitmap.y,
+      baseline: sensibleBaseline(c),
       lsb: bearing(gapBefore.get(c)),
       rsb: bearing(gapAfter.get(c)),
     })),

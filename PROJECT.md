@@ -451,7 +451,8 @@ On 03/14/2025 at 9:45 pm, I paid $678.50 for 12 books (all good!). "Really?" she
 > memory (`docs/perf.md`). The site was redesigned in the same review.
 
 > **Realism round (2026-11-01).** The pipeline met real handwriting for the first time
-> (CSAFE Handwriting Database, CC BY 4.0; `docs/real-data.md`): generated pages were 2 to 5
+> (CSAFE Handwriting Database, CC BY 4.0, 51 pages from 26 writers; `docs/real-data.md`):
+> generated pages were 2 to 5
 > times too regular, and the extractor failed on real lines. Lines are now followed mark by
 > mark, whole words are kept, the styles are trained against real measurements, and exports
 > can be finished as a scan or a phone photo. **The blind test, real users' samples and a

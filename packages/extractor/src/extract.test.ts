@@ -243,6 +243,7 @@ describe('extractGlyphBank', { timeout: 120_000 }, () => {
       'segment',
       'align',
       'normalize',
+      'verify',
       'vectorize',
     ]);
   });

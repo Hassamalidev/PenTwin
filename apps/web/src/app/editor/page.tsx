@@ -328,6 +328,16 @@ export default function EditorPage() {
     }
   };
 
+  // A time-based estimate while the worker renders: it cannot report pages yet, so this
+  // never claims to be exact, and it stops short of the end until the answer arrives.
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (exportState.status !== 'working') return;
+    setElapsed(0);
+    const timer = setInterval(() => setElapsed((seconds) => seconds + 1), 1000);
+    return () => clearInterval(timer);
+  }, [exportState.status]);
+
   const openExport = (): void => {
     if (!loaded || !prepared) return;
     setQuote(quoteExport(prepared.blocks, loaded.bank, options));
@@ -776,6 +786,20 @@ export default function EditorPage() {
                 to do anything.
               </p>
             )}
+            {exportState.status === 'working' && quote.pageCount > 3 && (
+              <div data-testid="export-progress">
+                <progress
+                  aria-label="Exporting"
+                  max={estimateSeconds(quote.pageCount, settings.finish ?? 'scan')}
+                  value={Math.min(
+                    elapsed,
+                    estimateSeconds(quote.pageCount, settings.finish ?? 'scan') * 0.95,
+                  )}
+                  style={{ width: '100%' }}
+                />
+                <p className="muted">Writing your pages. Please keep this tab open.</p>
+              </div>
+            )}
             {exportState.status === 'done' && (
               <p data-testid="export-result">
                 Your PDF is ready: {exportState.pageCount}{' '}
@@ -1042,6 +1066,10 @@ function Select({
     </div>
   );
 }
+
+/** Rough time an export takes, from measurements in docs/perf.md. */
+const estimateSeconds = (pages: number, finish: FinishMode): number =>
+  Math.max(2, pages * (finish === 'none' ? 0.7 : 3.5));
 
 function Slider({
   label,

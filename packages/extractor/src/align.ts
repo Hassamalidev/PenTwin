@@ -64,7 +64,12 @@ interface DetectedWord {
   segments: Segment[];
   /** Rough x-height of the writing, in pixels. */
   xHeight: number;
+  /** The word's outline from left to right: which parts rise above and hang below the line. */
+  outline: { tall: boolean; deep: boolean }[];
 }
+
+/** Slices a word's outline is compared in. */
+const OUTLINE_SLICES = 12;
 
 const TALL = new Set('bdfhklt0123456789ij!?/()$&');
 const DEEP = new Set('gjpqy');
@@ -138,6 +143,75 @@ function shapeDisagrees(box: Box, char: string, baseline: number, xHeight: numbe
   return (heightCounts && tall !== expectTall) || deep !== DEEP.has(char);
 }
 
+/** Reads a word's outline from its ink: holds up even when every letter is joined. */
+function readOutline(
+  word: Box & { segments: Segment[] },
+  page: Segmentation,
+  imageWidth: number,
+): DetectedWord['outline'] {
+  const ids = new Set(word.segments.flatMap((s) => s.componentIds));
+  const width = Math.max(1, word.x1 - word.x0);
+  const tops = new Array<number>(OUTLINE_SLICES).fill(Infinity);
+  const bottoms = new Array<number>(OUTLINE_SLICES).fill(-Infinity);
+  for (let y = word.y0; y < word.y1; y++) {
+    for (let x = word.x0; x < word.x1; x++) {
+      if (!ids.has(page.labels[y * imageWidth + x]!)) continue;
+      const slice = Math.min(
+        OUTLINE_SLICES - 1,
+        Math.floor(((x - word.x0) / width) * OUTLINE_SLICES),
+      );
+      tops[slice] = Math.min(tops[slice]!, y);
+      bottoms[slice] = Math.max(bottoms[slice]!, y);
+    }
+  }
+  const feet = bottoms.filter(Number.isFinite).sort((a, b) => a - b);
+  // Most of a word stands on the line, so its lower middle foot is close to the baseline.
+  const baseline = feet[Math.floor(feet.length * 0.4)] ?? word.y1;
+  return tops.map((top, i) => ({
+    tall: baseline - top > page.bandHeight * 1.3,
+    deep: bottoms[i]! - baseline > page.bandHeight * 0.3,
+  }));
+}
+
+/** How badly a word's outline disagrees with the rises and tails of the text, 0 to 1. */
+function outlineMismatch(word: DetectedWord, text: string): number {
+  const chars = [...text.replace(/[.,;:!?'"]+$/, '')];
+  // Signs and digits have no rises or tails worth comparing.
+  if (chars.length === 0 || word.outline.length === 0 || !/^[a-zA-Z]+$/.test(chars.join(''))) {
+    return 0;
+  }
+  const widths = chars.map(relativeWidth);
+  const total = widths.reduce((sum, w) => sum + w, 0);
+  let wrong = 0;
+  word.outline.forEach((part, i) => {
+    const at = ((i + 0.5) / OUTLINE_SLICES) * total;
+    let run = 0;
+    let index = 0;
+    while (index < chars.length - 1 && run + widths[index]! < at) run += widths[index++]!;
+    const char = chars[index]!;
+    const expectTall = TALL.has(char) || (char >= 'A' && char <= 'Z');
+    // A rise or a tail only has to appear near its letter: neighbours are written loosely.
+    if (
+      part.tall &&
+      !expectTall &&
+      !chars
+        .slice(Math.max(0, index - 1), index + 2)
+        .some((c) => TALL.has(c) || (c >= 'A' && c <= 'Z'))
+    )
+      wrong++;
+    if (
+      part.deep &&
+      !DEEP.has(char) &&
+      !chars.slice(Math.max(0, index - 1), index + 2).some((c) => DEEP.has(c))
+    )
+      wrong++;
+  });
+  // Rises the text promises but the word lacks.
+  const tallLetters = chars.filter((c) => /[bdfhklt]/.test(c)).length;
+  const missing = tallLetters > 0 && !word.outline.some((part) => part.tall) ? 3 : 0;
+  return Math.min(1, (wrong + missing) / OUTLINE_SLICES);
+}
+
 interface Group {
   detected: number[];
   expected: number[];
@@ -178,7 +252,13 @@ function alignWords(detected: DetectedWord[], expected: string[]): Group[] {
       if (here === Infinity) continue;
       if (i < n && j < m) {
         const shape = shapeMismatch(detected[i]!, expected[j]!);
-        relax(i + 1, j + 1, here + mismatch(counts[i]!, marks[j]!) + 0.5 * shape, 1);
+        const outline = outlineMismatch(detected[i]!, expected[j]!);
+        relax(
+          i + 1,
+          j + 1,
+          here + mismatch(counts[i]!, marks[j]!) + 0.5 * shape + 1.2 * outline,
+          1,
+        );
       }
       if (i < n) relax(i + 1, j, here + SKIP, 2);
       if (j < m) relax(i, j + 1, here + SKIP, 3);
@@ -347,6 +427,7 @@ export function alignToText(
       line: lineIndex,
       segments: word.segments,
       xHeight: page.bandHeight,
+      outline: readOutline(word, page, imageWidth),
     })),
   );
   const expected = expectedText.split(/\s+/).filter(Boolean);
@@ -371,7 +452,8 @@ export function alignToText(
       const box = segments.reduce<Box>((all, s) => union(all, s), first);
       // A word about as wide as its letters should be: a bad match is usually far off.
       const fit = (box.x1 - box.x0) / (chars.length * page.bandHeight);
-      if (fit > 0.5 && fit < 1.7) {
+      const outline = outlineMismatch(detected[group.detected[0]!]!, text);
+      if (fit > 0.5 && fit < 1.7 && outline === 0) {
         joined.push({
           ...box,
           char: lower,

@@ -22,6 +22,7 @@
     "benchmark": "tsx scripts/make-benchmark.ts",
     "tells": "tsx scripts/tells.ts",
     "real:measure": "tsx scripts/real-measure.ts",
+    "real:render": "tsx scripts/real-render.ts",
     "learn": "tsx scripts/learn.ts",
     "learn:cycle": "tsx scripts/learn-cycle.ts",
     "closeup": "tsx scripts/closeup.ts",

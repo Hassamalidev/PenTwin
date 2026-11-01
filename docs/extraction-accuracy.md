@@ -22,6 +22,23 @@ only 4 lines, and over half of most pages' letters are refused, because in joine
 single letters cannot be cut out. Whole words and pairs are the next step. Three of the nine
 pages are rightly called cropped: the dataset's trim clips the tops of their first lines.
 
+### Writing new text with real letters (2026-11-01)
+
+`pnpm real:render` on 26 real writers, each with both of their pages, shows what a user would
+get. The first render was unreadable or full of wrong letters. What fixed it:
+
+1. Reading small writing at a higher resolution instead of shrinking every page.
+2. Comparing each word's outline of rises and tails with the text, so words stop sliding.
+3. Letting a writer's letters check each other (`verify.ts`): a cut unlike its own letter, more
+   like another, or far too wide is refused. The most typical samples are used first.
+4. Slicing pairs and whole words along their letters and checking each slice.
+
+Five of the 26 writers now cover the test text with no gaps, the best with 63 characters and
+over 300 samples, and those pages read mostly correctly in that person's own hand. **Letters
+are still sometimes wrong** ("eold" for "cold"), and writers with fully joined hands keep
+far fewer characters. There is no letter-by-letter truth for these pages, so this comes from
+looking at them, not a measured error rate.
+
 ## Read this first
 
 **Every number here comes from synthetic photos, not real handwriting.** The test pages
@@ -43,8 +60,8 @@ One page of the copy-paragraph: 591 characters, 126 words, 17 lines.
 | shadowed photo   | 17/17 | 99.8%             | 0.0%            | 0.2%     | 584        | 3     | 3      | 0             |
 | blurry photo     | 17/17 | 98.5%             | 0.0%            | 1.5%     | 576        | 4     | 2      | 4             |
 | neat writing     | 17/17 | 99.7%             | 0.0%            | 0.3%     | 583        | 0     | 6      | 0             |
-| rushed writing   | 17/17 | 71.6%             | 2.7%            | 25.7%    | 420        | 13    | 7      | 37            |
-| touching letters | 18/18 | 86.0%             | 1.5%            | 12.5%    | 510        | 2     | 3      | 26            |
+| rushed writing   | 17/17 | 71.7%             | 3.0%            | 25.2%    | 430        | 4     | 5      | 43            |
+| touching letters | 18/18 | 86.3%             | 1.4%            | 12.4%    | 507        | 4     | 4      | 27            |
 
 **The last three rows changed on 2026-10-09, and not because the extractor did.** Those
 pages are written in the engine's neat, rushed and normal styles, and on that day the
