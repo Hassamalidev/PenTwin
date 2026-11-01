@@ -5,9 +5,11 @@ import {
   buildGlyphBank,
   renderDocument,
   scenesToPdf,
+  type FinishMode,
   type PageScene,
   type PdfOptions,
 } from '@pentwin/engine';
+import { scenesToFinishedPdf } from '@pentwin/engine/node';
 import { BRAND } from '@pentwin/shared';
 import { exportRequestSchema, type ExportRequest } from './schema';
 
@@ -180,14 +182,28 @@ export function createExportService(config: ExportServiceOptions) {
     return { pages, unknownChars: report.unknownChars };
   };
 
+  const finishOf = (request: ExportRequest) => ({
+    mode: request.options.finish ?? ('none' as const),
+    seed: request.options.seed,
+  });
+
   /** Makes the PDF and stores it. Returns its size in bytes. */
   const produce = async (
     id: string,
     pages: readonly PageScene[],
     unknownChars: Record<string, number>,
     watermarked: boolean,
+    finish: { mode: FinishMode; seed: string | number },
   ): Promise<number> => {
-    const bytes = await toPdf(pages, watermarked ? { watermark: WATERMARK } : undefined);
+    const watermark = watermarked ? { watermark: WATERMARK } : undefined;
+    const bytes =
+      finish.mode === 'none'
+        ? await toPdf(pages, watermark)
+        : await scenesToFinishedPdf(pages, {
+            finish: finish.mode,
+            seed: finish.seed,
+            ...watermark,
+          });
     const meta: Meta = { createdAt: now(), pageCount: pages.length, unknownChars };
 
     await mkdir(config.storageDir, { recursive: true });
@@ -238,7 +254,7 @@ export function createExportService(config: ExportServiceOptions) {
       if (!job) {
         job = (async (): Promise<Meta> => {
           const { pages, unknownChars } = layOut(request);
-          await produce(id, pages, unknownChars, false);
+          await produce(id, pages, unknownChars, false, finishOf(request));
           return { createdAt: now(), pageCount: pages.length, unknownChars };
         })().finally(() => inFlight.delete(id));
         inFlight.set(id, job);
@@ -275,7 +291,7 @@ export function createExportService(config: ExportServiceOptions) {
         const reused = await cachedMeta(id);
         const outputBytes = reused
           ? (await stat(pdfPath(id))).size
-          : await produce(id, pages, unknownChars, reservation.watermarked);
+          : await produce(id, pages, unknownChars, reservation.watermarked, finishOf(request));
         await reservation.settle({
           ok: true,
           computeMs: reused ? 0 : performance.now() - started,

@@ -37,6 +37,8 @@ WORKDIR /app
 # /data is where a persistent volume is mounted in production.
 RUN mkdir -p /data/exports /data/profiles && chown -R node:node /data
 COPY --from=build --chown=node:node /repo/dist/worker/main.cjs ./main.cjs
+# The page rasterizer is a native module, so it cannot go in the bundle.
+RUN npm install --omit=dev --no-save --no-package-lock @resvg/resvg-js@2.6.2 && chown -R node:node /app
 USER node
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

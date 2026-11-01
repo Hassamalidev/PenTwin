@@ -10,7 +10,11 @@
   "dependencies": {
     "@pentwin/shared": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
+    "jpeg-js": "0.4.4",
     "pdf-lib": "^1.17.1",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/jpeg-js": "^0.3.7"
   }
 }

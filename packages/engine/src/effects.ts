@@ -21,10 +21,17 @@ export interface EffectOptions {
   crease?: boolean;
 }
 
+/** Pixels between two readings of the light. */
+const LIGHT_STEP = 8;
+
 const clamp = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v);
 
-/** Turns the page a little, as paper never lies perfectly square. Edges fill with paper white. */
-function rotate(image: RasterImage, degrees: number): Uint8ClampedArray {
+/**
+ * Turns the page a little, as paper never lies perfectly square, and tips it away from the
+ * camera (`keystone`, the share by which the top comes out narrower). The page fills the
+ * frame: anything beyond its edge repeats the edge, as a cropped photo would.
+ */
+function rotate(image: RasterImage, degrees: number, keystone = 0): Uint8ClampedArray {
   const { width, height, data } = image;
   const out = new Uint8ClampedArray(data.length);
   const angle = (degrees * Math.PI) / 180;
@@ -36,15 +43,12 @@ function rotate(image: RasterImage, degrees: number): Uint8ClampedArray {
     const dy = y - cy;
     for (let x = 0; x < width; x++) {
       const dx = x - cx;
-      const sx = cos * dx - sin * dy + cx;
-      const sy = sin * dx + cos * dy + cy;
+      const narrowing = 1 - keystone * (1 - y / (height - 1));
+      const sx = Math.max(0, Math.min(width - 1.001, (cos * dx - sin * dy) / narrowing + cx));
+      const sy = Math.max(0, Math.min(height - 1.001, sin * dx + cos * dy + cy));
       const x0 = Math.floor(sx);
       const y0 = Math.floor(sy);
       const o = (y * width + x) * 4;
-      if (x0 < 0 || y0 < 0 || x0 >= width - 1 || y0 >= height - 1) {
-        out[o] = out[o + 1] = out[o + 2] = out[o + 3] = 255;
-        continue;
-      }
       const fx = sx - x0;
       const fy = sy - y0;
       const i = (y0 * width + x0) * 4;
@@ -71,7 +75,10 @@ export function applyEffects(image: RasterImage, options: EffectOptions): Raster
   const photo = options.mode === 'photo';
 
   // Chosen once per page.
-  const turn = rng.float(-1, 1) * (photo ? 1.2 : 0.35) * strength;
+  // Never perfectly square: a scan sits 0.3 to 0.7 degrees off, a photo 0.5 to 1.5.
+  const lean = rng.float(-1, 1);
+  const turn =
+    Math.sign(lean || 1) * (photo ? 0.5 + Math.abs(lean) : 0.3 + 0.4 * Math.abs(lean)) * strength;
   const lightAngle = rng.float(0, Math.PI * 2);
   const lightX = Math.cos(lightAngle);
   const lightY = Math.sin(lightAngle);
@@ -101,10 +108,11 @@ export function applyEffects(image: RasterImage, options: EffectOptions): Raster
     b: look.float(1.2, 2.6),
     p: look.float(0, Math.PI * 2),
   }));
-  const soften = (photo ? 0.45 : 0) * strength;
+  const soften = (photo ? 0.45 : 0.2) * strength;
+  const keystone = photo ? look.float(0.004, 0.012) * strength : 0;
   const lift = (photo ? 11 : 0) * strength;
 
-  const data = rotate(image, turn);
+  const data = rotate(image, turn, keystone);
   // The camera's softness: a light blur mixed into the sharp page.
   const sharp = soften > 0 ? new Uint8ClampedArray(data) : data;
   if (soften > 0) {
@@ -133,22 +141,26 @@ export function applyEffects(image: RasterImage, options: EffectOptions): Raster
       const d = (y - creaseY) / creaseWidth;
       fold = -Math.sign(d) * Math.exp(-d * d) * 0.07 * strength;
     }
+    let light = 1;
     for (let x = 0; x < width; x++) {
       const u = (x / (width - 1)) * 2 - 1;
-      let light =
-        base *
-          (1 - falloff * (0.5 + 0.5 * (u * lightX + v * lightY))) *
-          (1 - vignette * (u * u + v * v) * 0.5) +
-        fold;
-      if (photo) {
-        const dx = u - shadowX;
-        const dy = v - shadowY;
-        light *= 1 - shadow * Math.exp(-(dx * dx + dy * dy) / (2 * 0.55 * 0.55));
-        light *=
-          1 +
-          cockle *
-            Math.sin(wave[0]!.a * u + wave[0]!.b * v + wave[0]!.p) *
-            Math.sin(wave[1]!.a * u - wave[1]!.b * v + wave[1]!.p);
+      // Light changes slowly across a page: worked out every few pixels, not at each one.
+      if (x % LIGHT_STEP === 0) {
+        light =
+          base *
+            (1 - falloff * (0.5 + 0.5 * (u * lightX + v * lightY))) *
+            (1 - vignette * (u * u + v * v) * 0.5) +
+          fold;
+        if (photo) {
+          const dx = u - shadowX;
+          const dy = v - shadowY;
+          light *= 1 - shadow * Math.exp(-(dx * dx + dy * dy) / (2 * 0.55 * 0.55));
+          light *=
+            1 +
+            cockle *
+              Math.sin(wave[0]!.a * u + wave[0]!.b * v + wave[0]!.p) *
+              Math.sin(wave[1]!.a * u - wave[1]!.b * v + wave[1]!.p);
+        }
       }
       // One noise value for all channels: luminance grain, not colour speckle.
       const grain = rng.float(-noise, noise);

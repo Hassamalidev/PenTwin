@@ -1,4 +1,4 @@
-import { sceneToSvg, type PageScene } from '@pentwin/engine';
+import { finishPage, sceneToSvg, type FinishMode, type PageScene } from '@pentwin/engine';
 
 /** Width of the preview image in pixels. Deliberately low: the preview is free. */
 export const PREVIEW_WIDTH = 640;
@@ -11,6 +11,7 @@ export async function rasterizePreview(
   scene: PageScene,
   watermark: string,
   width = PREVIEW_WIDTH,
+  finish: { mode: FinishMode; seed: string | number } = { mode: 'none', seed: 0 },
 ): Promise<string> {
   const svg = sceneToSvg(scene);
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -30,6 +31,21 @@ export async function rasterizePreview(
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (finish.mode !== 'none') {
+      // The same finish as the export, so the preview shows what will be delivered.
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+      const done = finishPage(pixels, {
+        mode: finish.mode,
+        seed: finish.seed,
+        pxPerMm: canvas.width / scene.width,
+        patch: scene.inkEffects?.grain ?? 0,
+      });
+      context.putImageData(
+        new ImageData(new Uint8ClampedArray(done.data), done.width, done.height),
+        0,
+        0,
+      );
+    }
 
     // The watermark is part of the picture itself, repeated down the page.
     context.save();

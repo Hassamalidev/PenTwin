@@ -5,6 +5,7 @@ import {
   renderDocument,
   type Block,
   type ExportQuote,
+  type FinishMode,
   type InkName,
   type PaperSpec,
   type PresetName,
@@ -29,6 +30,7 @@ import { rasterizePreview } from '../../lib/preview';
 import {
   applyPreset,
   DEFAULT_SETTINGS,
+  FINISH_LABELS,
   INK_LABELS,
   PAPER_LABELS,
   PRESET_LABELS,
@@ -248,6 +250,7 @@ export default function EditorPage() {
             pages[index]!,
             'PREVIEW',
             zoomed ? ZOOM_WIDTH : undefined,
+            { mode: options.finish ?? 'none', seed: `${options.seed}/${index}` },
           );
           if (cancelled) return;
           setPageCount(pages.length);
@@ -598,6 +601,13 @@ export default function EditorPage() {
             />
           )}
           <Select
+            label="Finish"
+            testId="finish"
+            value={settings.finish ?? 'scan'}
+            options={FINISH_LABELS}
+            onChange={(value) => set('finish', value as FinishMode)}
+          />
+          <Select
             label="Page size"
             value={settings.pageSize}
             options={{ A4: 'A4', Letter: 'Letter', A5: 'A5' }}
@@ -673,6 +683,12 @@ export default function EditorPage() {
               {quote.credits === 1 ? 'credit' : 'credits'}
             </p>
             <p className="muted">1 credit = 1 page. Previews are free.</p>
+            {(settings.finish ?? 'scan') !== 'none' && quote.pageCount > 10 && (
+              <p className="muted" data-testid="export-time">
+                A finished page takes a few seconds, so this will take a few minutes. Please keep
+                this tab open.
+              </p>
+            )}
             {balance && (
               <p data-testid="balance">
                 You have {balance.totalPages} {balance.totalPages === 1 ? 'page' : 'pages'} left.

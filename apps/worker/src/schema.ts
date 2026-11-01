@@ -117,6 +117,7 @@ const options = z.strictObject({
     .optional(),
   bigrams: z.number().min(0).max(1).optional(),
   corrections: z.number().min(0).max(1).optional(),
+  finish: z.enum(['none', 'scan', 'photo']).optional(),
   header: z
     .array(z.strictObject({ label: z.string().max(60).optional(), value: z.string().max(120) }))
     .max(8)

@@ -432,3 +432,24 @@ describe('what the worker writes to its log', () => {
     }
   });
 });
+
+describe('a finished export', () => {
+  it('writes picture pages for a scan finish, and not through the vector exporter', async () => {
+    const { service, storageDir, toPdf } = setup();
+    const result = await service.exportDocument(request({ finish: 'scan', pageSize: 'A5' }));
+    expect(toPdf).not.toHaveBeenCalled();
+    const bytes = readFileSync(join(storageDir, `${result.id}.pdf`));
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(result.pageCount);
+    // A JPEG picture fills the page.
+    expect(new TextDecoder('latin1').decode(bytes)).toContain('/DCTDecode');
+  }, 60_000);
+
+  it('treats a different finish as a different document', async () => {
+    const { service } = setup();
+    const clean = await service.exportDocument(request({ pageSize: 'A5' }));
+    const photo = await service.exportDocument(request({ finish: 'photo', pageSize: 'A5' }));
+    expect(photo.id).not.toBe(clean.id);
+    expect(photo.billablePages).toBeGreaterThan(0);
+  }, 60_000);
+});

@@ -1,5 +1,5 @@
 import { MM_TO_PT } from '@pentwin/shared';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib';
 import { parsePath, type PathCommand } from './path';
 import type { PageScene } from './render';
 import { groupInk } from './svg';
@@ -94,6 +94,46 @@ async function deflate(text: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(compressed).arrayBuffer());
 }
 
+/** Text across every page, light enough to read through. */
+function drawWatermark(page: PDFPage, font: PDFFont, text: string): void {
+  const size = page.getWidth() / 14;
+  for (let y = page.getHeight() * 0.12; y < page.getHeight(); y += page.getHeight() * 0.28) {
+    page.drawText(text, {
+      x: page.getWidth() * 0.14,
+      y,
+      size,
+      font,
+      color: rgb(0.45, 0.47, 0.55),
+      opacity: 0.22,
+      rotate: degrees(28),
+    });
+  }
+}
+
+/** One finished page: a JPEG that fills the sheet. Sizes in mm. */
+export interface PagePicture {
+  jpeg: Uint8Array;
+  width: number;
+  height: number;
+}
+
+/** Writes pages that are pictures (scan and photo finishes) to a PDF. */
+export async function picturesToPdf(
+  pictures: readonly PagePicture[],
+  options: PdfOptions = {},
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const font = options.watermark ? await doc.embedFont(StandardFonts.Helvetica) : undefined;
+  for (const picture of pictures) {
+    const width = picture.width * MM_TO_PT;
+    const height = picture.height * MM_TO_PT;
+    const page = doc.addPage([width, height]);
+    page.drawImage(await doc.embedJpg(picture.jpeg), { x: 0, y: 0, width, height });
+    if (options.watermark && font) drawWatermark(page, font, options.watermark);
+  }
+  return doc.save();
+}
+
 export interface PdfOptions {
   /** Text printed across every page, e.g. to mark free-plan output. */
   watermark?: string;
@@ -145,19 +185,7 @@ export async function scenesToPdf(
     );
 
     if (options.watermark && watermarkFont) {
-      // Drawn over the writing, repeated down the page, light enough to read through.
-      const size = page.getWidth() / 14;
-      for (let y = page.getHeight() * 0.12; y < page.getHeight(); y += page.getHeight() * 0.28) {
-        page.drawText(options.watermark, {
-          x: page.getWidth() * 0.14,
-          y,
-          size,
-          font: watermarkFont,
-          color: rgb(0.45, 0.47, 0.55),
-          opacity: 0.22,
-          rotate: degrees(28),
-        });
-      }
+      drawWatermark(page, watermarkFont, options.watermark);
     }
   }
   return doc.save();

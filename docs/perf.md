@@ -143,3 +143,13 @@ costs about 1.7 times the time of the same page without it.
 - One machine, two runs: treat these as a rough baseline, not a precise benchmark.
 - Not measured on the actual deployment target (Phase 7.3), nor under concurrent load.
 - The glyph set is synthetic. Re-run once a real extracted bank exists (Phase 2).
+
+## Finished pages (scan and photo, 2026-11-01)
+
+A finished export renders each page to pixels, makes ink and paper one image and stores it
+as a JPEG. Laptop profile of three A4 pages at 200 dpi: about 2.2 s per page when the
+machine is idle, about 5 s when it is busy, and 917 KB per page (575 KB at 150 dpi). A
+50-page finished export therefore takes minutes, which needs a background job with progress
+before deployment. The export dialog warns about this above ten pages. **The 512 MB
+container test has not been repeated for finished exports**, and the Dockerfile's new
+native rasterizer step has not been built: Docker was not running.

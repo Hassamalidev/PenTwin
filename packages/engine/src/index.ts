@@ -17,6 +17,7 @@ export * from './effects';
 export * from './document';
 export * from './furniture';
 export * from './quote';
+export * from './finish';
 export * from './pen';
 export * from './marks';
 export * from './tells';

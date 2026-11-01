@@ -25,6 +25,8 @@ const INK_NAMES = {
   pencil: 'Pencil',
 } as const;
 
+const FINISH_NAMES = { scan: 'Scanned page', photo: 'Phone photo' } as const;
+
 /**
  * Works out what an export will produce before it is made: the page count, the cost,
  * and a summary of the settings.
@@ -50,6 +52,9 @@ export function quoteExport(
       `Page size: ${options.pageSize ?? 'A4'}`,
       `Paper: ${PAPER_NAMES[paper.kind]}${paper.kind === 'ruled' ? ` (${paper.ruling ?? 'college'} ruled)` : ''}${paper.marginLine ? ', with margin line' : ''}`,
       `Pen: ${options.ink ? ink : 'Plain blue'}`,
+      ...(options.finish && options.finish !== 'none'
+        ? [`Finish: ${FINISH_NAMES[options.finish]}`]
+        : []),
       ...(options.header?.length
         ? [`Header: ${options.header.map((f) => f.label ?? f.value).join(', ')}`]
         : []),

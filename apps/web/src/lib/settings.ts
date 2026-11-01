@@ -1,5 +1,6 @@
 import {
   presetOptions,
+  type FinishMode,
   RULING_SPACING,
   type InkName,
   type JitterParams,
@@ -25,6 +26,8 @@ export interface Settings {
   unevenness: number;
   fatigue: number;
   corrections: number;
+  /** One look per export. */
+  finish: FinishMode;
   pageNumbers: boolean;
   /** Changing it rewrites the page with different random choices: "reroll the look". */
   seed: number;
@@ -41,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   unevenness: 1,
   fatigue: 0,
   corrections: 0,
+  finish: 'scan',
   pageNumbers: false,
   seed: 1,
 };
@@ -60,6 +64,12 @@ export const INK_LABELS: Record<InkName | 'preset', string> = {
   gel: 'Gel pen',
   fountain: 'Fountain pen',
   pencil: 'Pencil',
+};
+
+export const FINISH_LABELS: Record<FinishMode, string> = {
+  scan: 'Scanned page',
+  photo: 'Phone photo',
+  none: 'Clean PDF',
 };
 
 export const PAPER_LABELS: Record<PaperSpec['kind'], string> = {
@@ -130,6 +140,7 @@ export function toRenderOptions(settings: Settings): RenderOptions {
     ink: settings.ink === 'preset' ? bundle.ink : settings.ink,
     jitter,
     corrections: settings.corrections,
+    finish: settings.finish ?? 'scan',
     pageNumbers: settings.pageNumbers,
     xHeight: Math.round(lineHeight * settings.size * 100) / 100,
     ...(settings.paper === 'plain' ? { lineHeight } : {}),

@@ -2,6 +2,7 @@ import { createRng, PAGE_SIZES, type PageSizeName, type Seed } from '@pentwin/sh
 import { addCorrections, readMarkers, RETRACE, STRUCK, type CorrectionCounts } from './corrections';
 import { layoutHeader, writeFurniture, type FurnitureOptions } from './furniture';
 import type { GlyphBank } from './glyphs';
+import type { FinishMode } from './finish';
 import { INKS, type Ink, type InkName } from './ink';
 import { createLayoutHabits, type JitterParams } from './jitter';
 import { layoutText, type Margins } from './layout';
@@ -44,6 +45,11 @@ export interface RenderOptions extends FurnitureOptions {
    * and anything capitalised are always written exactly as given.
    */
   corrections?: number;
+  /**
+   * How an export is finished: `scan` or `photo` makes ink and paper one raster image,
+   * `none` (or left out) keeps a clean vector PDF. Read by the exporters, not the layout.
+   */
+  finish?: FinishMode;
 }
 
 /** A picture placed on the page. Lengths in mm. */
